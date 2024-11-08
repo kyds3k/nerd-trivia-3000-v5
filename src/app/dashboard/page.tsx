@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import pb from "../../lib/pocketbase";
 import { Edition } from "../../types/pocketbase";
+import { Button } from "@nextui-org/button";
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -68,15 +69,15 @@ export default function DashboardPage() {
         {editions.map((edition) => (
           <li key={edition.id}>
             <strong>{edition.title}</strong> - {edition.date}
-            <div>
-              <Link href={`/editions/${edition.id}/edit`}>Edit</Link>
-              <button onClick={() => handleDelete(edition.id)}>Delete</button>
-              <Link href={`/editions/${edition.id}/moderate`}>Moderate</Link>
+            <div className="my-4">
+              <Button as={Link} href={`/editions/${edition.id}/edit`}>Edit</Button>
+              <Button data-test="test" className="mx-4" onClick={() => handleDelete(edition.id)}>Delete</Button>
+              <Button as={Link} href={`/editions/${edition.id}/moderate`}>Moderate</Button>
             </div>
           </li>
         ))}
       </ul>
-      <Link href="/editions/new">Create New Edition</Link>
+      <Button as={Link} href="/editions/new">Create New Edition</Button>
     </div>
   );
 }
