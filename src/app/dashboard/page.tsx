@@ -62,7 +62,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div>
+    <div className="p-10">
       <h1>Welcome to the Nerd Trivia 3000 Admin Dashboard, {session.user?.name}!</h1>
       <h2>Editions</h2>
       <ul>

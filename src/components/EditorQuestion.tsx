@@ -1,3 +1,5 @@
+"use client"
+
 import React from "react";
 
 // Assuming Editor and Input components are imported here
