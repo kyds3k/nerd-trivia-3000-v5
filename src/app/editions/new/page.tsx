@@ -10,11 +10,13 @@ import {
   SelectItem,
   Divider,
   Textarea,
+  DatePicker
 } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import pb from "@/lib/pocketbase";
 import { Editor } from "@/components/DynamicEditor";
 import EditorQuestion from "@/components/EditorQuestion";
+import blocksToFullHTML from "@blocknote/mantine";
 
 export default function NewEditionPage() {
   const [title, setTitle] = useState("");
@@ -34,8 +36,26 @@ export default function NewEditionPage() {
   });
   const [numImpossibleAnswers, setNumImpossibleAnswers] = useState<number>(1);
   const [numImpossibleAnswers2, setNumImpossibleAnswers2] = useState<number>(1);
+  const [numImpossibleSongs, setNumImpossibleSongs] = useState<number>(1);
+  const [numImpossibleSongs2, setNumImpossibleSongs2] = useState<number>(1);
+  const [value, setValue] = useState<Selection>();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  /* function grabInfo to find the data-identifier of everything on the page and output to console */
+  const grabInfo = () => {
+    const elements = document.querySelectorAll("[data-identifier]");
+    elements.forEach((element) => {
+      // console.log(element.getAttribute("data-identifier"));
+      // console.log(element.getAttribute("data-type"));
+      
+      if (element.getAttribute("data-type") === "question" || element.getAttribute("data-type") === "answer") {
+        // console log its data-html attribute
+        console.log(element.getAttribute("data-html")); 
+      }
+    });
+  };
+  
 
   const handleCreateEdition = async () => {
     try {
@@ -74,47 +94,55 @@ export default function NewEditionPage() {
 
   return (
     <div className="p-10">
-      <h1 className="mb-6">Create New Edition</h1>
+      <h1 className="mb-6 text-2xl">Create New Edition</h1>
       {error && <p>{error}</p>}
       <Tabs
         aria-label="Rounds"
         destroyInactiveTabPanel={false}
         size="lg"
         variant="bordered"
-        classNames={{ tabList: "mb-10 sticky top-14" }}
+        classNames={{ tabList: "mb-4 sticky top-14" }}
       >
         <Tab key="landing" title="Landing">
-          <div className="mb-4 w-1/4">
+          <div className="mb-4 w-1/2">
             <label className="mb-2 block" htmlFor="edition_title">
               Title:
             </label>
             <Input
               id="edition_title"
               type="text"
+              data-type="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
-          <div className="mb-4 w-1/4">
+          <div className="mb-4 w-1/6">
             <label className="mb-2 block" htmlFor="edition_date">
               Date:
             </label>
-            <Input
-              id="edition_date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
+            <DatePicker label="Edition date" className="max-w-[284px]" />
           </div>
           <div className="mb-4 w-1/4">
+            <label className="mb-2 block" htmlFor="edition_gif">
+              Edition GIF:
+            </label>
+            <Input
+              id="edition_gif"
+              type="text"
+              data-type="gif"
+              value={editionGif}
+              onChange={(e) => setEditionGif(e.target.value)}
+            />
+          </div>
+          <div className="mb-4 w-1/2">
             <label className="mb-2 block" htmlFor="edition_blurb">
               Blurb:
             </label>
             <Textarea
               id="edition_blurb"
               value={blurb}
+              data-type="text"
               onChange={(e) => setBlurb(e.target.value)}
               required
             />
@@ -126,42 +154,10 @@ export default function NewEditionPage() {
             <Input
               id="edition_home_song"
               type="text"
+              data-type="song"
               value={homeSong}
               onChange={(e) => setHomeSong(e.target.value)}
               required
-            />
-          </div>
-          <div className="mb-4 w-1/4">
-            <label className="mb-2 block" htmlFor="edition_gif">
-              Edition GIF:
-            </label>
-            <Input
-              id="edition_gif"
-              type="text"
-              value={editionGif}
-              onChange={(e) => setEditionGif(e.target.value)}
-            />
-          </div>
-          <div className="mb-4 w-1/4">
-            <label className="mb-2 block" htmlFor="edition_end_gif_1">
-              End GIF 1:
-            </label>
-            <Input
-              id="edition_end_gif_1"
-              type="text"
-              value={endGif1}
-              onChange={(e) => setEndGif1(e.target.value)}
-            />
-          </div>
-          <div className="mb-4 w-1/4">
-            <label className="mb-2 block" htmlFor="edition_end_gif_2">
-              End GIF 2:
-            </label>
-            <Input
-              id="edition_end_gif_2"
-              type="text"
-              value={endGif2}
-              onChange={(e) => setEndGif2(e.target.value)}
             />
           </div>
         </Tab>
@@ -179,19 +175,65 @@ export default function NewEditionPage() {
           <div className="ml-5">
             <div className="mb-4">
               <h4 className="mb-2">Theme</h4>
-              <Input data-identifier="i1_theme" type="text" className="w-1/2" />
+              <Input data-identifier="i1_theme" data-type="text" type="text" className="w-1/2" />
             </div>
 
             <div className="mb-4">
               <h4 className="mb-2">Theme GIF</h4>
-              <Input data-identifier="i1_gif" type="text" className="w-1/2" />
+              <Input data-identifier="i1_gif" type="text" data-type="gif" className="w-1/2" />
             </div>
 
             <div className="mb-4">
               <h4 className="mb-2">Question</h4>
-              <Editor data-identifier="i1_question" classNames="py-10 w-3/4" />
+              <Editor dataIdentifier="i1_question" dataType="question" classNames="py-10 w-3/4" />
             </div>
 
+
+            {/* Songs */}
+            <div className="mb-4">
+              <h4 className="mb-2">Songs</h4>
+              <Select
+                label="Number of Songs"
+                data-identifier="i1_num_songs"
+                className="w-80 mb-8"
+                value="1"
+                onSelectionChange={(keys) => {
+                  const selectedValue = Array.from(keys)[0];
+                  console.log("selectedValue from select", selectedValue);
+                  if (typeof selectedValue === "string") {
+                    setNumImpossibleSongs(parseInt(selectedValue));
+                  } else if (typeof selectedValue === "number") {
+                    setNumImpossibleSongs(selectedValue);
+                  }
+                }}
+              >
+                {Array.from({ length: 3 }, (_, index) => (
+                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                    {index + 1}
+                  </SelectItem>
+                ))}
+              </Select>
+
+              {/* Render the Song Inputs Based on State */}
+              <div className="song_list ml-4" data-impossible="1">
+                {Array.from({ length: numImpossibleSongs }).map((_, index) => (
+                  <div key={index}>
+                    <div className="mb-4">
+                      <h4 className="mb-2">Song {index + 1}</h4>
+                      <Input
+                        data-identifier={`i1_song${index + 1}`}
+                        type="text"
+                        data-type="song"
+                        onChange={(e) => setHomeSong(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Answers */}
             <div className="mb-4">
               <h4 className="mb-2">Answers</h4>
               <Select
@@ -215,22 +257,26 @@ export default function NewEditionPage() {
                 ))}
               </Select>
 
+              <hr className="block my-10 bg-gray-500"></hr>
+
               {/* Render the Answer Inputs Based on State */}
               <div className="answer_list ml-4" data-impossible="1">
                 {Array.from({ length: numImpossibleAnswers }).map((_, index) => (
                   <div key={index}>
-                  <div className="mb-4">
-                    <h4 className="mb-2">Answer {index + 1}</h4>
-                    <Editor
-                      data-identifier={`i1_answer${index + 1}`}
-                      classNames="py-10 w-3/4"
-                    />
+                    <div className="mb-4">
+                      <h4 className="mb-2">Answer {index + 1}</h4>
+                      <Editor
+                        dataIdentifier={`i1a${index + 1}`}
+                        dataType="answer"
+                        classNames="py-10 w-3/4"
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <h4 className="mb-2">Answer {index + 1} GIF</h4>
+                      <Input data-identifier={`i1_a${index + 1}_gif`} data-type="gif" type="text" className="w-1/2" />
+                    </div>
+                    <hr className="block my-10 bg-gray-300"></hr>
                   </div>
-                  <div className="mb-4">
-                  <h4 className="mb-2">Answer {index + 1} GIF</h4>
-                  <Input data-identifier={`i1_a${index + 1}_gif`} type="text" className="w-1/2" />
-                </div>   
-                </div>                       
                 ))}
               </div>
             </div>
@@ -241,7 +287,7 @@ export default function NewEditionPage() {
             <div key={`round2-question${index + 1}`}>
               <EditorQuestion round={2} question={index + 1} />
               <Divider className="my-4" />
-              <hr className="block my-10 bg-gray-500"></hr>
+              <hr className="block my-10 bg-gray-300"></hr>
             </div>
           ))}
         </Tab>
@@ -250,19 +296,65 @@ export default function NewEditionPage() {
           <div className="ml-5">
             <div className="mb-4">
               <h4 className="mb-2">Theme</h4>
-              <Input data-identifier="i2_theme" type="text" className="w-1/2" />
+              <Input data-identifier="i2_theme" data-type="text" type="text" className="w-1/2" />
             </div>
 
             <div className="mb-4">
               <h4 className="mb-2">Theme GIF</h4>
-              <Input data-identifier="i2_gif" type="text" className="w-1/2" />
+              <Input data-identifier="i2_gif" data-type="gif" type="text" className="w-1/2" />
             </div>
 
             <div className="mb-4">
               <h4 className="mb-2">Question</h4>
-              <Editor data-identifier="i2_question" classNames="py-10 w-3/4" />
+              <Editor dataIdentifier="i2_question" dataType="question" classNames="py-10 w-3/4" />
             </div>
 
+
+            {/* Songs */}
+            <div className="mb-4">
+              <h4 className="mb-2">Songs</h4>
+              <Select
+                label="Number of Songs"
+                data-identifier="i2_num_songs"
+                className="w-80 mb-8"
+                value="1"
+                onSelectionChange={(keys) => {
+                  const selectedValue = Array.from(keys)[0];
+                  console.log("selectedValue from select", selectedValue);
+                  if (typeof selectedValue === "string") {
+                    setNumImpossibleSongs(parseInt(selectedValue));
+                  } else if (typeof selectedValue === "number") {
+                    setNumImpossibleSongs(selectedValue);
+                  }
+                }}
+              >
+                {Array.from({ length: 3 }, (_, index) => (
+                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                    {index + 1}
+                  </SelectItem>
+                ))}
+              </Select>
+
+              {/* Render the Song Inputs Based on State */}
+              <div className="song_list ml-4" data-impossible="2">
+                {Array.from({ length: numImpossibleSongs }).map((_, index) => (
+                  <div key={index}>
+                    <div className="mb-4">
+                      <h4 className="mb-2">Song {index + 1}</h4>
+                      <Input
+                        data-identifier={`i1_song${index + 1}`}
+                        type="text"
+                        data-type="song"
+                        onChange={(e) => setHomeSong(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Answers */}
             <div className="mb-4">
               <h4 className="mb-2">Answers</h4>
               <Select
@@ -286,46 +378,162 @@ export default function NewEditionPage() {
                 ))}
               </Select>
 
+              <hr className="block my-10 bg-gray-500"></hr>
+
               {/* Render the Answer Inputs Based on State */}
               <div className="answer_list ml-4" data-impossible="2">
                 {Array.from({ length: numImpossibleAnswers2 }).map((_, index) => (
                   <div key={index}>
-                  <div className="mb-4">
-                    <h4 className="mb-2">Answer {index + 1}</h4>
-                    <Editor
-                      data-identifier={`i2_answer${index + 1}`}
-                      classNames="py-10 w-3/4"
-                    />
+                    <div className="mb-4">
+                      <h4 className="mb-2">Answer {index + 1}</h4>
+                      <Editor
+                        dataIdentifier={`i2_answer${index + 1}`}
+                        dataType="answer"
+                        classNames="py-10 w-3/4"
+                      />
+                    </div>
+                    <div className="mb-4">
+                      <h4 className="mb-2">Answer {index + 1} GIF</h4>
+                      <Input data-identifier={`i1_a${index + 1}_gif`} data-type="gif" type="text" className="w-1/2" />
+                    </div>
+                    <hr className="block my-10 bg-gray-300"></hr>
                   </div>
-                  <div className="mb-4">
-                  <h4 className="mb-2">Answer {index + 1} GIF</h4>
-                  <Input data-identifier={`i1_a${index + 1}_gif`} type="text" className="w-1/2" />
-                </div>   
-                </div>                       
                 ))}
               </div>
             </div>
           </div>
         </Tab>
+
         <Tab key="round3" title="Round 3">
           {Array.from({ length: 5 }, (_, index) => (
             <div key={`round3-question${index + 1}`}>
               <EditorQuestion round={3} question={index + 1} />
               <Divider className="my-4" />
-              <hr className="block my-10 bg-gray-500"></hr>
+              <hr className="block my-10 bg-gray-300"></hr>
             </div>
           ))}
         </Tab>
-        <Tab key="wager-final" title="Wager/Final">
-          <h3 className="mb-4 text-lg">Wager/Final Question</h3>
+
+        <Tab key="wager" title="Wager">
+          <h3 className="mb-4 text-lg">Wager</h3>
           <div className="ml-5">
-            <Editor data-id="wager-final-editor" classNames="py-10 w-3/4" />
+            <div className="mb-8 w-1/4">
+              <label className="mb-2 block" htmlFor="edition_gif">
+                Wager Intro GIF:
+              </label>
+              <Input
+                id="edition_gif"
+                type="text"
+                data-type="gif"
+                onChange={(e) => setEditionGif(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-8 w-1/4">
+              <label className="mb-2 block" htmlFor="final_category">
+                Final Category:
+              </label>
+              <Input
+                id="final_category"
+                type="text"
+                data-type="text"
+                onChange={(e) => setEditionGif(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-8 w-1/4">
+              <label className="mb-2 block" htmlFor="final_cat_gif">
+                Final Category GIF:
+              </label>
+              <Input
+                id="final_cat_gif"
+                type="text"
+                data-type="gif"
+                onChange={(e) => setEditionGif(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-8 w-1/4">
+              <label className="mb-2 block" htmlFor="wager_placing_gif">
+                Wager Placing GIF:
+              </label>
+              <Input
+                id="wager_placing_gif"
+                type="text"
+                data-type="gif"
+                onChange={(e) => setEditionGif(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-8 w-1/4">
+              <label className="mb-2 block" htmlFor="wager_song">
+                Wager Placing Song:
+              </label>
+              <Input
+                id="wager_song"
+                type="text"
+                data-type="song"
+                onChange={(e) => setEditionGif(e.target.value)}
+              />
+            </div>
+
+          </div>
+        </Tab>
+
+        <Tab key="final" title="Final">
+          <h3 className="mb-4 text-lg">Final Question</h3>
+          <div className="ml-5">
+            <div className="mb-4">
+              <h4 className="mb-2">Question</h4>
+              <Editor dataIdentifier="final_question" dataType="question" classNames="py-10 w-3/4" />
+            </div>
+
+            <div className="mb-4">
+              <h4 className="mb-2">Answer</h4>
+              <Editor dataIdentifier="final_answer" dataType="answer" classNames="py-10 w-3/4" />
+            </div>
+
+            <div className="mb-4">
+              <h4 className="mb-2">Answer GIF:</h4>
+              <Input data-identifier="final_answer_gif" data-type="gif" className="w-1/2" />
+            </div>
+
+            <div className="mb-4">
+              <h4 className="mb-2">Song:</h4>
+              <Input data-identifier="final_song" data-type="song" className="w-1/2" />
+            </div>
+
+            <div className="mb-4 w-1/4">
+              <label className="mb-2 block" htmlFor="edition_end_gif_1">
+                End GIF 1:
+              </label>
+              <Input
+                id="edition_end_gif_1"
+                type="text"
+                data-type="gif"
+                value={endGif1}
+                onChange={(e) => setEndGif1(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-4 w-1/4">
+              <label className="mb-2 block" htmlFor="edition_end_gif_2">
+                End GIF 2:
+              </label>
+              <Input
+                id="edition_end_gif_2"
+                type="text"
+                data-type="gif"
+                value={endGif2}
+                onChange={(e) => setEndGif2(e.target.value)}
+              />
+            </div>
+            <Button type="submit" onClick={grabInfo} className="mt-6">
+              Create Edition
+            </Button>
           </div>
         </Tab>
       </Tabs>
-      <Button type="submit" onClick={handleCreateEdition} className="mt-6">
-        Create Edition
-      </Button>
     </div>
   );
 }

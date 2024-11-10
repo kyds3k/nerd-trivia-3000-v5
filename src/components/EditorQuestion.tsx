@@ -23,23 +23,23 @@ const EditorQuestion: React.FC<QuestionProps> = ({ round, question }) => {
       <h3 className="mb-4 text-lg">Question {question}</h3>
       <div className="ml-5">
         <div className="mb-4">
-          <h4 className="mb-2">Content</h4>
-          <Editor dataIdentifier={questionIdentifier} classNames="py-10 w-3/4" />
+          <h4 className="mb-2">Question:</h4>
+          <Editor dataIdentifier={questionIdentifier} dataType="question" classNames="py-10 w-3/4" />
         </div>
 
         <div className="mb-4">
-          <h4 className="mb-2">Answer</h4>
-          <Editor dataIdentifier={answerIdentifier} classNames="py-10 w-3/4" />
+          <h4 className="mb-2">Answer:</h4>
+          <Editor dataIdentifier={answerIdentifier} dataType="answer" classNames="py-10 w-3/4" />
         </div>
 
         <div className="mb-4">
           <h4 className="mb-2">Answer GIF:</h4>
-          <Input data-identifier={gifIdentifier} className="w-1/2" />
+          <Input data-identifier={gifIdentifier} data-type="gif" className="w-1/2" />
         </div>
 
         <div className="mb-4">
           <h4 className="mb-2">Song:</h4>
-          <Input data-identifier={songIdentifier} className="w-1/2" />
+          <Input data-identifier={songIdentifier} data-type="song" className="w-1/2" />
         </div>
       </div>
     </div>
