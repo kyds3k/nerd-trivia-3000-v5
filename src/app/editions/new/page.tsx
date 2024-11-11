@@ -46,16 +46,23 @@ export default function NewEditionPage() {
   const grabInfo = () => {
     const elements = document.querySelectorAll("[data-identifier]");
     elements.forEach((element) => {
-      // console.log(element.getAttribute("data-identifier"));
-      // console.log(element.getAttribute("data-type"));
-      
+
+      console.log(element.getAttribute("data-identifier"));
+      console.log(element.getAttribute("data-type"));
+
       if (element.getAttribute("data-type") === "question" || element.getAttribute("data-type") === "answer") {
         // console log its data-html attribute
-        console.log(element.getAttribute("data-html")); 
+        console.log(element.getAttribute("data-html"));
       }
+
+      if (element.getAttribute("data-type") === "date") {
+        // find the hidden input inside it and console log its value
+        console.log(element.querySelector("input")?.value);
+      }
+
     });
   };
-  
+
 
   const handleCreateEdition = async () => {
     try {
@@ -70,35 +77,36 @@ export default function NewEditionPage() {
         end_gif_2: endGif2,
       });
 
-      // Step 2: Create Rounds and Questions
-      const rounds = [
-        { round_number: 1, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round1 },
-        { round_number: 1, type: "Impossible", edition_id: newEdition.id, questions: roundQuestions.impossible1 },
-        { round_number: 2, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round2 },
-        { round_number: 2, type: "Impossible", edition_id: newEdition.id, questions: roundQuestions.impossible2 },
-        { round_number: 3, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round3 },
-        { round_number: 4, type: "Wager/Final", edition_id: newEdition.id, questions: roundQuestions.wagerFinal },
-      ];
+      // // Step 2: Create Rounds and Questions
+      // const rounds = [
+      //   { round_number: 1, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round1 },
+      //   { round_number: 1, type: "Impossible", edition_id: newEdition.id, questions: roundQuestions.impossible1 },
+      //   { round_number: 2, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round2 },
+      //   { round_number: 2, type: "Impossible", edition_id: newEdition.id, questions: roundQuestions.impossible2 },
+      //   { round_number: 3, type: "Normal", edition_id: newEdition.id, questions: roundQuestions.round3 },
+      //   { round_number: 4, type: "Wager/Final", edition_id: newEdition.id, questions: roundQuestions.wagerFinal },
+      // ];
 
-      await Promise.all(
-        rounds.map((round) => pb.collection("rounds").create(round))
-      );
+      // await Promise.all(
+      //   rounds.map((round) => pb.collection("rounds").create(round))
+      // );
 
       // Redirect to the dashboard after successful creation
-      router.push("/dashboard");
-    } catch (err) {
-      console.error("Failed to create edition:", err);
-      setError("Failed to create the edition. Please try again later.");
-    }
+      //router.push("/dashboard");
+      } catch (err) {
+        console.error("Failed to create edition:", err);
+        setError("Failed to create the edition. Please try again later.");
+      }
   };
 
   return (
     <div className="p-10">
       <h1 className="mb-6 text-2xl">Create New Edition</h1>
+      <p>home song is this man {homeSong}</p>
       {error && <p>{error}</p>}
       <Tabs
         aria-label="Rounds"
-        destroyInactiveTabPanel={false}
+        destroyInactiveTabPanel={true}
         size="lg"
         variant="bordered"
         classNames={{ tabList: "mb-4 sticky top-14" }}
@@ -111,9 +119,8 @@ export default function NewEditionPage() {
             <Input
               id="edition_title"
               type="text"
+              data-identifier="edition_title"
               data-type="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
@@ -121,7 +128,7 @@ export default function NewEditionPage() {
             <label className="mb-2 block" htmlFor="edition_date">
               Date:
             </label>
-            <DatePicker label="Edition date" className="max-w-[284px]" />
+            <DatePicker label="Edition date" data-type="date" data-identifier="edition_date" className="max-w-[284px]" />
           </div>
           <div className="mb-4 w-1/4">
             <label className="mb-2 block" htmlFor="edition_gif">
@@ -131,8 +138,7 @@ export default function NewEditionPage() {
               id="edition_gif"
               type="text"
               data-type="gif"
-              value={editionGif}
-              onChange={(e) => setEditionGif(e.target.value)}
+              data-identifier="edition_gif"
             />
           </div>
           <div className="mb-4 w-1/2">
@@ -141,9 +147,8 @@ export default function NewEditionPage() {
             </label>
             <Textarea
               id="edition_blurb"
-              value={blurb}
               data-type="text"
-              onChange={(e) => setBlurb(e.target.value)}
+              data-identifier="edition_blurb"
               required
             />
           </div>
@@ -155,8 +160,9 @@ export default function NewEditionPage() {
               id="edition_home_song"
               type="text"
               data-type="song"
+              data-identifier="edition_home_song"
               value={homeSong}
-              onChange={(e) => setHomeSong(e.target.value)}
+              onValueChange={(value) => setHomeSong(value)}
               required
             />
           </div>
@@ -208,7 +214,7 @@ export default function NewEditionPage() {
                 }}
               >
                 {Array.from({ length: 3 }, (_, index) => (
-                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                  <SelectItem key={`${index + 1}`} textValue="song_count" value={index + 1}>
                     {index + 1}
                   </SelectItem>
                 ))}
@@ -224,7 +230,6 @@ export default function NewEditionPage() {
                         data-identifier={`i1_song${index + 1}`}
                         type="text"
                         data-type="song"
-                        onChange={(e) => setHomeSong(e.target.value)}
                         required
                       />
                     </div>
@@ -251,7 +256,7 @@ export default function NewEditionPage() {
                 }}
               >
                 {Array.from({ length: 20 }, (_, index) => (
-                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                  <SelectItem key={`${index + 1}`} textValue="answer_count" value={index + 1}>
                     {index + 1}
                   </SelectItem>
                 ))}
@@ -329,7 +334,7 @@ export default function NewEditionPage() {
                 }}
               >
                 {Array.from({ length: 3 }, (_, index) => (
-                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                  <SelectItem key={`${index + 1}`} textValue="song_count" value={index + 1}>
                     {index + 1}
                   </SelectItem>
                 ))}
@@ -345,7 +350,6 @@ export default function NewEditionPage() {
                         data-identifier={`i1_song${index + 1}`}
                         type="text"
                         data-type="song"
-                        onChange={(e) => setHomeSong(e.target.value)}
                         required
                       />
                     </div>
@@ -372,7 +376,7 @@ export default function NewEditionPage() {
                 }}
               >
                 {Array.from({ length: 20 }, (_, index) => (
-                  <SelectItem key={`${index + 1}`} value={index + 1}>
+                  <SelectItem key={`${index + 1}`} textValue="answer_count" value={index + 1}>
                     {index + 1}
                   </SelectItem>
                 ))}
@@ -425,7 +429,6 @@ export default function NewEditionPage() {
                 id="edition_gif"
                 type="text"
                 data-type="gif"
-                onChange={(e) => setEditionGif(e.target.value)}
               />
             </div>
 
@@ -437,7 +440,6 @@ export default function NewEditionPage() {
                 id="final_category"
                 type="text"
                 data-type="text"
-                onChange={(e) => setEditionGif(e.target.value)}
               />
             </div>
 
@@ -449,7 +451,6 @@ export default function NewEditionPage() {
                 id="final_cat_gif"
                 type="text"
                 data-type="gif"
-                onChange={(e) => setEditionGif(e.target.value)}
               />
             </div>
 
@@ -461,7 +462,6 @@ export default function NewEditionPage() {
                 id="wager_placing_gif"
                 type="text"
                 data-type="gif"
-                onChange={(e) => setEditionGif(e.target.value)}
               />
             </div>
 
@@ -473,7 +473,6 @@ export default function NewEditionPage() {
                 id="wager_song"
                 type="text"
                 data-type="song"
-                onChange={(e) => setEditionGif(e.target.value)}
               />
             </div>
 
@@ -511,8 +510,6 @@ export default function NewEditionPage() {
                 id="edition_end_gif_1"
                 type="text"
                 data-type="gif"
-                value={endGif1}
-                onChange={(e) => setEndGif1(e.target.value)}
               />
             </div>
 
@@ -524,16 +521,14 @@ export default function NewEditionPage() {
                 id="edition_end_gif_2"
                 type="text"
                 data-type="gif"
-                value={endGif2}
-                onChange={(e) => setEndGif2(e.target.value)}
               />
             </div>
-            <Button type="submit" onClick={grabInfo} className="mt-6">
-              Create Edition
-            </Button>
           </div>
         </Tab>
       </Tabs>
+      <Button type="submit" onClick={grabInfo} className="mt-6">
+              Create Edition
+            </Button>      
     </div>
   );
 }
