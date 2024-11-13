@@ -24,7 +24,7 @@ const EditorQuestion: React.FC<QuestionProps> = ({ round, question }) => {
       <div className="ml-5">
         <div className="mb-4">
           <h4 className="mb-2">Question:</h4>
-          <Editor dataIdentifier={questionIdentifier} dataType="question" classNames="py-10 w-3/4" />
+          <Editor dataIdentifier={questionIdentifier} dataType="regular_question" classNames="py-10 w-3/4" />
         </div>
 
         <div className="mb-4">
