@@ -17,6 +17,9 @@ importers:
       '@blocknote/react':
         specifier: ^0.19.0
         version: 0.19.0(@tiptap/pm@2.9.1)(@types/hast@3.0.4)(react-dom@19.0.0-rc-02c0e824-20241028(react@19.0.0-rc-02c0e824-20241028))(react@19.0.0-rc-02c0e824-20241028)
+      '@internationalized/date':
+        specifier: ^3.5.6
+        version: 3.5.6
       '@nextui-org/react':
         specifier: 2.5.0-beta.7
         version: 2.5.0-beta.7(@types/react@18.3.12)(framer-motion@12.0.0-alpha.1(react-dom@19.0.0-rc-02c0e824-20241028(react@19.0.0-rc-02c0e824-20241028))(react@19.0.0-rc-02c0e824-20241028))(react-dom@19.0.0-rc-02c0e824-20241028(react@19.0.0-rc-02c0e824-20241028))(react@19.0.0-rc-02c0e824-20241028)(tailwindcss@3.4.14)
@@ -5264,7 +5267,7 @@ snapshots:
 
   '@react-aria/calendar@3.5.11(react-dom@19.0.0-rc-02c0e824-20241028(react@19.0.0-rc-02c0e824-20241028))(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@react-aria/i18n': 3.12.2(react@19.0.0-rc-02c0e824-20241028)
       '@react-aria/interactions': 3.22.4(react@19.0.0-rc-02c0e824-20241028)
       '@react-aria/live-announcer': 3.4.0
@@ -5314,7 +5317,7 @@ snapshots:
 
   '@react-aria/datepicker@3.11.2(react-dom@19.0.0-rc-02c0e824-20241028(react@19.0.0-rc-02c0e824-20241028))(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@internationalized/number': 3.5.4
       '@internationalized/string': 3.2.4
       '@react-aria/focus': 3.18.4(react@19.0.0-rc-02c0e824-20241028)
@@ -5402,7 +5405,7 @@ snapshots:
 
   '@react-aria/i18n@3.12.2(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@internationalized/message': 3.1.5
       '@internationalized/number': 3.5.4
       '@internationalized/string': 3.2.4
@@ -5791,7 +5794,7 @@ snapshots:
 
   '@react-stately/calendar@3.5.4(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@react-stately/utils': 3.10.4(react@19.0.0-rc-02c0e824-20241028)
       '@react-types/calendar': 3.4.9(react@19.0.0-rc-02c0e824-20241028)
       '@react-types/shared': 3.25.0(react@19.0.0-rc-02c0e824-20241028)
@@ -5834,7 +5837,7 @@ snapshots:
 
   '@react-stately/datepicker@3.10.2(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@internationalized/string': 3.2.4
       '@react-stately/form': 3.0.6(react@19.0.0-rc-02c0e824-20241028)
       '@react-stately/overlays': 3.6.11(react@19.0.0-rc-02c0e824-20241028)
@@ -6063,7 +6066,7 @@ snapshots:
 
   '@react-types/calendar@3.4.9(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@react-types/shared': 3.25.0(react@19.0.0-rc-02c0e824-20241028)
       react: 19.0.0-rc-02c0e824-20241028
 
@@ -6084,7 +6087,7 @@ snapshots:
 
   '@react-types/datepicker@3.8.2(react@19.0.0-rc-02c0e824-20241028)':
     dependencies:
-      '@internationalized/date': 3.5.5
+      '@internationalized/date': 3.5.6
       '@react-types/calendar': 3.4.10(react@19.0.0-rc-02c0e824-20241028)
       '@react-types/overlays': 3.8.10(react@19.0.0-rc-02c0e824-20241028)
       '@react-types/shared': 3.25.0(react@19.0.0-rc-02c0e824-20241028)

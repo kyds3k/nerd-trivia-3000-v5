@@ -4,7 +4,7 @@ import React from "react";
 
 // Assuming Editor and Input components are imported here
 import { Editor } from "@/components/DynamicEditor";
-import {Input} from "@nextui-org/react";
+import { Input } from "@nextui-org/react";
 
 interface QuestionProps {
   round: number;
@@ -36,6 +36,21 @@ const EditorQuestion: React.FC<QuestionProps> = ({ round, question }) => {
           <h4 className="mb-2">Answer GIF:</h4>
           <Input data-identifier={gifIdentifier} data-type="gif" className="w-1/2" />
         </div>
+
+        {/* Conditionally render this div only if round is 1 and question is 3 */}
+        {round === 1 && question === 3 && (
+          <div className="mt-8">
+            <div className="mb-4">
+              <h4 className="mb-2">Bantha Answer:</h4>
+              <Editor dataIdentifier="bantha_answer" dataType="answer" classNames="py-10 w-3/4" />
+            </div>
+
+            <div className="mb-4">
+              <h4 className="mb-2">Bantha Answer GIF:</h4>
+              <Input data-identifier="bantha_answer_gif" data-type="gif" className="w-1/2" />
+            </div>
+          </div>
+        )}
 
         <div className="mb-4">
           <h4 className="mb-2">Song:</h4>
