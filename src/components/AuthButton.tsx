@@ -1,12 +1,14 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import {Button, ButtonGroup} from "@nextui-org/button";
+
 
 export default function AuthButton() {
   const { data: session } = useSession();
 
   if (session) {
-    return <button onClick={() => signOut()}>Logout</button>;
+    return <Button onClick={() => signOut()}>Logout</Button>;
   }
-  return <button onClick={() => signIn("google")}>Login with Google</button>;
+  return <Button onClick={() => signIn("google")}>Login with Google</Button>;
 }

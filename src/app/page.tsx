@@ -2,19 +2,20 @@
 
 import AuthButton from "../components/AuthButton";
 import { useSession } from "next-auth/react";
+import { Button } from "@nextui-org/react";
 import Link from "next/link";
 
 export default function HomePage() {
   const { data: session } = useSession();
 
   return (
-    <div>
-      <h1>Welcome to Nerd Trivia 3000!</h1>
+    <div className="p-10">
+      <h1 className="text-2xl pb-6">Welcome to Nerd Trivia 3000!</h1>
       <AuthButton />
       {session && (
-        <div>
+        <div className="mt-6">
           <p>
-            Access the admin dashboard <Link href="/dashboard">here</Link>.
+            <Button as={Link} href="/dashboard">Admin Dashboard</Button>
           </p>
         </div>
       )}
