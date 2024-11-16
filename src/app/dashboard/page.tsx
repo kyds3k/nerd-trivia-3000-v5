@@ -53,7 +53,7 @@ export default function DashboardPage() {
   }
 
   if (error) {
-    return <p>{error}</p>;
+    return <div className="p-10">{error}</div>;
   }
 
   const handleDelete = async (id: string) => {
