@@ -1067,7 +1067,7 @@ export default function NewEditionPage() {
         </Tab>
       </Tabs>
       <Button type="submit" onClick={handleUpdateEdition} className="mt-6">
-        Create Edition
+        Update Edition
       </Button>
     </div>
   );
