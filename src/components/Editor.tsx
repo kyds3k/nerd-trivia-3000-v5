@@ -1,65 +1,92 @@
-"use client"; // this registers <Editor> as a Client Component
+import { Block, BlockNoteEditor, PartialBlock } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
-import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
 import "@blocknote/mantine/style.css";
-import { useEffect, useState, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-// Define a prop type for Editor
-interface EditorProps {
-  dataIdentifier?: string;
-  dataType?: string;
-  classNames?: string;
+// Function to save content to local storage using a unique key
+async function saveToStorage(editorId: string, jsonBlocks: Block[]) {
+  localStorage.setItem(`editorContent_${editorId}`, JSON.stringify(jsonBlocks));
 }
 
-// Our <Editor> component we can reuse later
-const Editor = forwardRef<HTMLDivElement, EditorProps>(
-  ({ dataIdentifier, dataType, classNames }, ref) => {
-    const [html, setHTML] = useState<string>("");
-    const internalRef = useRef<HTMLDivElement>(null); // Internal reference
+// Function to load content from local storage using a unique key
+async function loadFromStorage(editorId: string) {
+  const storageString = localStorage.getItem(`editorContent_${editorId}`);
+  return storageString ? (JSON.parse(storageString) as PartialBlock[]) : undefined;
+}
 
-    // Creates a new editor instance.
-    const editor = useCreateBlockNote({
-      domAttributes: {
-        editor: {
-          "data-identifier": `${dataIdentifier}`,
-          "data-type": `${dataType}`,
-          "data-html": `${html}`,
-          class: `${classNames}`,
-        },
-      },
-    });
+interface EditorProps {
+  editorId: string;
+  dataIdentifier: string; // Unique identifier for DOM attributes
+  dataType?: string; // Optional data-type
+  classNames?: string; // Optional class names
+}
 
-    const onChange = async () => {
-      // Converts the editor's contents from Block objects to HTML and store to state.
-      let updatedHtml = await editor.blocksToHTMLLossy(editor.document);
+export default function Editor({ editorId, dataIdentifier, dataType = "", classNames = "" }: EditorProps) {
+  const [initialContent, setInitialContent] = useState<PartialBlock[] | undefined | "loading">(
+    "loading"
+  );
+  const [htmlContent, setHtmlContent] = useState<string>("");
+  const editorRef = useRef<HTMLDivElement>(null); // Ref for the editor wrapper element
 
-      // Strip the last <p></p> from the HTML, if it exists
-      updatedHtml = updatedHtml.replace(/<p>\s*<\/p>$/, "");
-      setHTML(updatedHtml);
-    };
-
-    // Sync external ref (if provided) with internal ref
-    useImperativeHandle(ref, () => internalRef.current as HTMLDivElement);
-
-    // Effect to update the data-html attribute dynamically on the specific child element
-    useEffect(() => {
-      if (internalRef.current) {
-        // Select the child element that has the `data-html` attribute
-        const targetElement = internalRef.current.querySelector("[data-html]");
-        if (targetElement) {
-          targetElement.setAttribute("data-html", html);
-        }
+  // Load the previously stored editor contents for a specific editor instance
+  useEffect(() => {
+    loadFromStorage(editorId).then(async (content) => {
+      if (content) {
+        // Create a temporary editor instance to convert blocks to HTML
+        const tempEditor = BlockNoteEditor.create({ initialContent: content });
+        const contentHtml = await tempEditor.blocksToHTMLLossy(tempEditor.document);
+        setHtmlContent(contentHtml);
       }
-    }, [html]);
+      setInitialContent(content);
+    });
+  }, [editorId]);
 
-    // Renders the editor instance using a React component.
-    return (
-      <div ref={internalRef}>
-        <BlockNoteView editor={editor} onChange={onChange} />
-      </div>
-    );
+  // Create a new editor instance when the initial content is loaded
+  const editor = useMemo(() => {
+    if (initialContent === "loading") {
+      return undefined;
+    }
+
+    return BlockNoteEditor.create({
+      initialContent,
+    });
+  }, [initialContent]);
+
+  // Handle the update of editor content
+  const handleEditorChange = async () => {
+    if (editor) {
+      const currentHtmlContent = await editor.blocksToHTMLLossy(editor.document);
+      setHtmlContent(currentHtmlContent); // Update the local htmlContent state
+
+      // Save to local storage
+      saveToStorage(editorId, editor.document);
+    }
+  };
+
+  // Use an effect to update the DOM attributes on the editor wrapper
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.setAttribute("data-identifier", dataIdentifier);
+      editorRef.current.setAttribute("data-type", dataType);
+      editorRef.current.setAttribute("data-html", htmlContent);
+      if (classNames) {
+        editorRef.current.className = classNames;
+      }
+    }
+  }, [dataIdentifier, dataType, htmlContent, classNames]);
+
+  if (editor === undefined) {
+    return "Loading content...";
   }
-);
 
-export default Editor;
+  // Render the editor instance and handle content changes
+  return (
+    <div ref={editorRef}>
+      <BlockNoteView
+        editor={editor}
+        onChange={handleEditorChange}
+      />
+    </div>
+  );
+}

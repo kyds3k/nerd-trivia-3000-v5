@@ -17,7 +17,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (session) {
       const randomRequestKey = Math.random().toString(36).substring(7);
-      pb.collection("editions").getFullList({ requestKey: randomRequestKey })
+      pb.collection("editions").getFullList({ requestKey: randomRequestKey, sort: '-created' })
         .then((data) => {
           const transformedEditions: Edition[] = data.map((item) => ({
             id: item.id,
