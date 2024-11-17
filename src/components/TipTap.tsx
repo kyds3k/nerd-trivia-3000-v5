@@ -1,6 +1,7 @@
 'use client'
 
 import { BubbleMenu, useEditor, EditorContent } from '@tiptap/react'
+import { Extension } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
 import Strike from '@tiptap/extension-strike'
 import { Color } from '@tiptap/extension-color'
@@ -10,31 +11,59 @@ import TextStyle from '@tiptap/extension-text-style'
 import { useEffect } from 'react'
 
 interface TiptapProps {
-  blurb: string
-  setBlurb: (value: string) => void
+  state: string
+  setState: (value: string) => void
+  identifier: string
+  classes: string
 }
 
-const Tiptap = ({ blurb, setBlurb }: TiptapProps) => {
+const CustomAttributes = Extension.create({
+  name: 'customAttributes',
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['paragraph', 'heading', 'text'],
+        attributes: {
+          'data-editor-id': {
+            default: null,
+            parseHTML: element => element.getAttribute('data-editor-id'),
+            renderHTML: attributes => {
+              if (!attributes['data-editor-id']) {
+                return {}
+              }
+              return {
+                'data-editor-id': attributes['data-editor-id'],
+              }
+            },
+          },
+        },
+      },
+    ]
+  },
+})
+
+const Tiptap = ({ state, setState, classes, identifier }: TiptapProps) => {
   const editor = useEditor({
     extensions: [StarterKit, Strike, TextStyle, Color, ListItem],
-    content: blurb, // Initialize with the blurb content
+    content: state, // Initialize with the blurb content
     editorProps: {
       attributes: {
-        class: 'tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc'
+        class: classes,
+        'data-identifier': identifier,
       },
     },
     onUpdate: ({ editor }) => {
-      setBlurb(editor.getHTML()) // Update the blurb state on content change
+      setState(editor.getHTML()) // Update the blurb state on content change
     },
   })
 
   // Optional: Update the editor content if `blurb` changes externally
   useEffect(() => {
-    if (editor && editor.getHTML() !== blurb) {
-      console.log('blurb content, should be html:', blurb)
-      editor.commands.setContent(`${blurb}`)
+    if (editor && editor.getHTML() !== state) {
+      editor.commands.setContent(`${state}`)
     }
-  }, [blurb, editor])
+  }, [state, editor])
 
   return (
     <>

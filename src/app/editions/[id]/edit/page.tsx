@@ -131,28 +131,15 @@ export default function NewEditionPage() {
       setBlurb(getEdition.blurb);
       setHomeSong(getEdition.home_song);
       setIsLoaded(true);
-      // set the value attribute of the object with data-identifer "edition_title" to the title of the edition
-      //document.querySelector("[data-identifier='edition_title']")?.setAttribute("defaultValue", getEdition.title);
-      //setDate(getEdition.date);
 
 
-      console.log(getEdition);
+      // console.log(getEdition);
 
-      // const newEdition = await pb.collection("editions").create({
-      // //console.log({      
-      //   title,
-      //   date: formattedDate,
-      //   blurb: blurb,
-      //   home_song: homeSong,
-      //   edition_gif: editionGif,
-      //   end_gif_1: endGif1,
-      //   end_gif_2: endGif2
-      // });
+      const getQuestions = await pb.collection("questions").getFullList({filter: `edition_id = "${editionEditId}"`});
+      console.log(getQuestions);
+      
 
-      // const editionId = newEdition.id;
-      // //const editionId = "12345";
-
-      // // Step 2: Create the Questions
+      // Step 2: Import the Questions
       // const regularquestions = document.querySelectorAll("[data-type='regular_question']");
 
       // for (const [index, question] of Array.from(regularquestions).entries()) {
@@ -522,15 +509,6 @@ export default function NewEditionPage() {
 
 
   useEffect(() => {
-    console.log("Updated imp1Answers:", imp1Answers);
-  }, [imp1Answers]);
-
-  useEffect(() => {
-    console.log("Updated imp2Answers:", imp2Answers);
-  }, [imp2Answers]);
-
-
-  useEffect(() => {
     refreshAuthState();
   }, []);
 
@@ -595,10 +573,10 @@ export default function NewEditionPage() {
               />
             </div>
             <div className="mb-4 w-1/2">
-              <label className="mb-2 block" htmlFor="edition_blurb_2">
+              <label className="mb-2 block" htmlFor="edition_blurb">
                 Blurb
               </label>
-              <Tiptap blurb={blurb} setBlurb={setBlurb} />
+              <Tiptap state={blurb} setState={setBlurb} identifier="edition_blurb" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
             </div>
             <div className="mb-4 w-1/4">
               <label className="mb-2 block" htmlFor="edition_home_song">
@@ -628,13 +606,15 @@ export default function NewEditionPage() {
                 type="text"
                 data-type="gif"
                 data-identifier="r1_gif"
-                onBlur={(e) => setR1Gif(e.target.getAttribute("value") ?? "")}
+                value={r1Gif}
+                onValueChange={setR1Gif}
               />
             </div>
 
             {Array.from({ length: 5 }, (_, index) => (
               <div key={`round1-question${index + 1}`}>
-                <EditorQuestion round={1} question={index + 1} />
+                {/* <EditorQuestion round={1} question={index + 1} /> */}
+                <Tiptap state={blurb} setState={setBlurb} identifier="r1q{index}" classes="'tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc'" />
                 <Divider className="my-4" />
                 <hr className="block my-10 bg-gray-500"></hr>
               </div>
