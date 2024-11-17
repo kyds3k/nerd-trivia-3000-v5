@@ -13,6 +13,7 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        'editor-bg': "#232327",
       },
       fontFamily: {
         sans: ['var(--font-dos)'],
@@ -21,6 +22,7 @@ const config: Config = {
   },
   darkMode: "class",
   plugins: [
+    require('@tailwindcss/typography'),
     nextui({
     themes: {
         "light": {

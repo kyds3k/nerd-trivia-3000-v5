@@ -21,6 +21,7 @@ import { DateValue, getLocalTimeZone, today } from "@internationalized/date";
 import { useParams } from "next/navigation";
 import { useCallback } from 'react';
 import debounce from 'lodash/debounce';
+import Tiptap from "@/components/TipTap";
 
 
 export default function NewEditionPage() {
@@ -119,11 +120,6 @@ export default function NewEditionPage() {
 
     const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
 
-    // grab the data-html from the object whose data-identifier is "edition_blurb" and setBlurb to that
-    const blurbEditor = document.querySelector("[data-identifier='edition_blurb']");
-    setBlurb(blurbEditor?.getAttribute("data-html") ?? "");
-
-
     try {
       //Step 1: Get the Edition
 
@@ -131,6 +127,9 @@ export default function NewEditionPage() {
 
       const getEdition = await pb.collection("editions").getFirstListItem(`id = "${editionEditId}"`);
       setTitle(getEdition.title);
+      setEditionGif(getEdition.edition_gif);
+      setBlurb(getEdition.blurb);
+      setHomeSong(getEdition.home_song);
       setIsLoaded(true);
       // set the value attribute of the object with data-identifer "edition_title" to the title of the edition
       //document.querySelector("[data-identifier='edition_title']")?.setAttribute("defaultValue", getEdition.title);
@@ -314,7 +313,7 @@ export default function NewEditionPage() {
   };
 
 
-  const handleCreateEdition = async () => {
+  const handleUpdateEdition = async () => {
     console.log(pb.authStore.isValid);
     console.log(pb.authStore.token);
     console.log(pb.authStore.model?.id);
@@ -329,7 +328,7 @@ export default function NewEditionPage() {
 
     try {
       //Step 1: Create the Edition
-      const newEdition = await pb.collection("editions").create({
+      const newEdition = await pb.collection("editions").update(`${editionEditId}`,{
       //console.log({      
         title,
         date: formattedDate,
@@ -340,163 +339,163 @@ export default function NewEditionPage() {
         end_gif_2: endGif2
       });
 
-      const editionId = newEdition.id;
+      //const editionId = newEdition.id;
       //const editionId = "12345";
 
       // Step 2: Create the Questions
-      const regularquestions = document.querySelectorAll("[data-type='regular_question']");
+      // const regularquestions = document.querySelectorAll("[data-type='regular_question']");
 
-      for (const [index, question] of Array.from(regularquestions).entries()) {
-        const currentRound = question.getAttribute("data-identifier")?.split("r")[1]?.split("q")[0] ?? "";
-        const currentQuestion = question.getAttribute("data-identifier")?.split("q")[1] ?? "";
+      // for (const [index, question] of Array.from(regularquestions).entries()) {
+      //   const currentRound = question.getAttribute("data-identifier")?.split("r")[1]?.split("q")[0] ?? "";
+      //   const currentQuestion = question.getAttribute("data-identifier")?.split("q")[1] ?? "";
 
-        const questionText = question.getAttribute("data-html") ?? "";
+      //   const questionText = question.getAttribute("data-html") ?? "";
 
-        if (questionText === "")
-          return;
+      //   if (questionText === "")
+      //     return;
 
-        // Grab the data-html from the corresponding answer element
-        const answer = document.querySelector(`[data-identifier='r${currentRound}a${currentQuestion}']`);
-        const answerText = answer?.getAttribute("data-html") ?? "";
+      //   // Grab the data-html from the corresponding answer element
+      //   const answer = document.querySelector(`[data-identifier='r${currentRound}a${currentQuestion}']`);
+      //   const answerText = answer?.getAttribute("data-html") ?? "";
 
-        // Grab the attribute "value" from the corresponding gif element
-        const gif = document.querySelector(`[data-identifier='r${currentRound}g${currentQuestion}']`);
-        const gifText = gif?.getAttribute("value") ?? "";
+      //   // Grab the attribute "value" from the corresponding gif element
+      //   const gif = document.querySelector(`[data-identifier='r${currentRound}g${currentQuestion}']`);
+      //   const gifText = gif?.getAttribute("value") ?? "";
 
-        // Grab the attribute "value" from the corresponding song element
-        const song = document.querySelector(`[data-identifier='r${currentRound}s${currentQuestion}']`);
-        const songText = song?.getAttribute("value") ?? "";
+      //   // Grab the attribute "value" from the corresponding song element
+      //   const song = document.querySelector(`[data-identifier='r${currentRound}s${currentQuestion}']`);
+      //   const songText = song?.getAttribute("value") ?? "";
 
-        let banthaAnswerText = "";
-        let banthaAnswerGifUrl = "";
+      //   let banthaAnswerText = "";
+      //   let banthaAnswerGifUrl = "";
 
-        if (currentRound == "1" && currentQuestion === "3") {
-          const banthaAnswer = document.querySelector("[data-identifier='bantha_answer']");
-          banthaAnswerText = banthaAnswer?.getAttribute("data-html") ?? "";
+      //   if (currentRound == "1" && currentQuestion === "3") {
+      //     const banthaAnswer = document.querySelector("[data-identifier='bantha_answer']");
+      //     banthaAnswerText = banthaAnswer?.getAttribute("data-html") ?? "";
 
-          const banthaAnswerGif = document.querySelector("[data-identifier='bantha_answer_gif']");
-          banthaAnswerGifUrl = banthaAnswerGif?.getAttribute("value") ?? "";
-        }
+      //     const banthaAnswerGif = document.querySelector("[data-identifier='bantha_answer_gif']");
+      //     banthaAnswerGifUrl = banthaAnswerGif?.getAttribute("value") ?? "";
+      //   }
 
 
-        // Create the new question
-        await pb.collection("questions").create({
-        //console.log({        
-          edition_id: editionId,
-          round_number: currentRound,
-          question_number: currentQuestion,
-          question_text: questionText,
-          answer: answerText,
-          answer_gif: gifText,
-          bantha_answer: currentRound == "1" && currentQuestion === "3" ? banthaAnswerText : "",          
-          bantha_answer_gif: currentRound == "1" && currentQuestion === "3" ? banthaAnswerGifUrl : "",
-          song: songText,
-          is_banthashit_question: currentRound == "1" && currentQuestion === "3" ? true : false,
-          is_active: false
-        });
-      }
+      //   // Create the new question
+      //   await pb.collection("questions").create({
+      //   //console.log({        
+      //     edition_id: editionId,
+      //     round_number: currentRound,
+      //     question_number: currentQuestion,
+      //     question_text: questionText,
+      //     answer: answerText,
+      //     answer_gif: gifText,
+      //     bantha_answer: currentRound == "1" && currentQuestion === "3" ? banthaAnswerText : "",          
+      //     bantha_answer_gif: currentRound == "1" && currentQuestion === "3" ? banthaAnswerGifUrl : "",
+      //     song: songText,
+      //     is_banthashit_question: currentRound == "1" && currentQuestion === "3" ? true : false,
+      //     is_active: false
+      //   });
+      // }
 
-      //Step 3: Create the rounds. first we will loop from 1-3, creating a round which we will push to the rounds collection on pocketbase. "round_number" will be the index of the loop + 1. "type" will be "regular". "round_gif" will be {r1Gif, r2Gif, r3Gif} states respectively. "edition_id" will be the id of the edition we just created.
-      for (let i = 1; i < 4; i++) {
-        const roundGif = i === 1 ? r1Gif : i === 2 ? r2Gif : r3Gif;
-        await pb.collection("rounds").create({
-        //console.log({        
-          edition_id: editionId,
-          round: i,
-          type: "regular",
-          round_gif: roundGif
-        });
-      }
+      // //Step 3: Create the rounds. first we will loop from 1-3, creating a round which we will push to the rounds collection on pocketbase. "round_number" will be the index of the loop + 1. "type" will be "regular". "round_gif" will be {r1Gif, r2Gif, r3Gif} states respectively. "edition_id" will be the id of the edition we just created.
+      // for (let i = 1; i < 4; i++) {
+      //   const roundGif = i === 1 ? r1Gif : i === 2 ? r2Gif : r3Gif;
+      //   await pb.collection("rounds").create({
+      //   //console.log({        
+      //     edition_id: editionId,
+      //     round: i,
+      //     type: "regular",
+      //     round_gif: roundGif
+      //   });
+      // }
 
-      //Step 4: Create the Impossible and 2nd Impossible Questions
+      // //Step 4: Create the Impossible and 2nd Impossible Questions
 
-      const collectAnswers = (setId: number) => {
-        const collectedAnswers: { [key: string]: string } = {};
-        const elements = document.querySelectorAll(`[data-type="answer"][data-identifier*="i${setId}"]`);
-        elements.forEach((element, index) => {
-          const identifier = element.getAttribute('data-identifier');
-          const htmlData = element.getAttribute('data-html');
+      // const collectAnswers = (setId: number) => {
+      //   const collectedAnswers: { [key: string]: string } = {};
+      //   const elements = document.querySelectorAll(`[data-type="answer"][data-identifier*="i${setId}"]`);
+      //   elements.forEach((element, index) => {
+      //     const identifier = element.getAttribute('data-identifier');
+      //     const htmlData = element.getAttribute('data-html');
 
-          if (identifier && htmlData) {
-            collectedAnswers[index] = htmlData;
-          }
-        });
-        return collectedAnswers;
-      };
+      //     if (identifier && htmlData) {
+      //       collectedAnswers[index] = htmlData;
+      //     }
+      //   });
+      //   return collectedAnswers;
+      // };
 
-      const collectGifs = (setId: number) => {
-        const collectedGifs: { [key: string]: string } = {};
-        const elements = document.querySelectorAll(`[data-type="gif"][data-identifier*="i${setId}"]`);
-        elements.forEach((element, index) => {
-          const identifier = element.getAttribute('data-identifier');
-          const htmlData = element.getAttribute('value');
+      // const collectGifs = (setId: number) => {
+      //   const collectedGifs: { [key: string]: string } = {};
+      //   const elements = document.querySelectorAll(`[data-type="gif"][data-identifier*="i${setId}"]`);
+      //   elements.forEach((element, index) => {
+      //     const identifier = element.getAttribute('data-identifier');
+      //     const htmlData = element.getAttribute('value');
 
-          if (identifier && htmlData) {
-            collectedGifs[index] = htmlData;
-          }
-        });
-        return collectedGifs;
-      };      
+      //     if (identifier && htmlData) {
+      //       collectedGifs[index] = htmlData;
+      //     }
+      //   });
+      //   return collectedGifs;
+      // };      
 
-      // call collecedAnswers for 1 and 2 and put the results in the respective json objects
-      const imp1Answers = collectAnswers(1);
-      const imp2Answers = collectAnswers(2);
+      // // call collecedAnswers for 1 and 2 and put the results in the respective json objects
+      // const imp1Answers = collectAnswers(1);
+      // const imp2Answers = collectAnswers(2);
 
-      const imp1AnswerGifs = collectGifs(1);
-      const imp2AnswerGifs = collectGifs(2);
+      // const imp1AnswerGifs = collectGifs(1);
+      // const imp2AnswerGifs = collectGifs(2);
 
-      for (let i = 1; i <= 2; i++) {
-        const gif = i === 1 ? imp1Gif : imp2Gif;
-        const question_text = document.querySelector(`[data-identifier='i${i}_question']`)?.getAttribute("data-html") ?? "";
-        // "answers" will be a JSON object formed by grabbing the data-html from each element with data-type="answer" and data-identifier="i1a1", "i1a2", etc
+      // for (let i = 1; i <= 2; i++) {
+      //   const gif = i === 1 ? imp1Gif : imp2Gif;
+      //   const question_text = document.querySelector(`[data-identifier='i${i}_question']`)?.getAttribute("data-html") ?? "";
+      //   // "answers" will be a JSON object formed by grabbing the data-html from each element with data-type="answer" and data-identifier="i1a1", "i1a2", etc
 
-        const songs = i === 1 ? imp1Songs : imp2Songs;
+      //   const songs = i === 1 ? imp1Songs : imp2Songs;
         
-        console.log('imp1Answers type:', typeof imp1Answers);
-        console.log('songs type:', typeof songs);
+      //   console.log('imp1Answers type:', typeof imp1Answers);
+      //   console.log('songs type:', typeof songs);
 
-        await pb.collection("impossible_rounds").create({
-        //console.log ({
-          edition_id: editionId,
-          impossible_number: i,
-          intro_gif: gif,
-          theme: i === 1 ? imp1Theme : imp2Theme,
-          theme_gif: i === 1 ? imp1Gif : imp2Gif,
-          question_text: question_text,
-          point_value: i === 1 ? imp1Ppa : imp2Ppa,
-          answers: i === 1 ? imp1Answers : imp2Answers,
-          answer_gifs: i === 1 ? imp1AnswerGifs : imp2AnswerGifs,
-          spotify_ids: songs,
-          is_active: false
-        });
-      }
+      //   await pb.collection("impossible_rounds").create({
+      //   //console.log ({
+      //     edition_id: editionId,
+      //     impossible_number: i,
+      //     intro_gif: gif,
+      //     theme: i === 1 ? imp1Theme : imp2Theme,
+      //     theme_gif: i === 1 ? imp1Gif : imp2Gif,
+      //     question_text: question_text,
+      //     point_value: i === 1 ? imp1Ppa : imp2Ppa,
+      //     answers: i === 1 ? imp1Answers : imp2Answers,
+      //     answer_gifs: i === 1 ? imp1AnswerGifs : imp2AnswerGifs,
+      //     spotify_ids: songs,
+      //     is_active: false
+      //   });
+      // }
 
-      //create Wager round
-      await pb.collection("wager_rounds").create({
-        //console.log({
-        edition_id: editionId,
-        wager_intro_gif: wagerGif,
-        final_cat: finalCat,
-        final_cat_gif: finalCatGif,
-        wager_placing_gif: wagerPlacingGif,
-        wager_song: wagerSong
-      });
+      // //create Wager round
+      // await pb.collection("wager_rounds").create({
+      //   //console.log({
+      //   edition_id: editionId,
+      //   wager_intro_gif: wagerGif,
+      //   final_cat: finalCat,
+      //   final_cat_gif: finalCatGif,
+      //   wager_placing_gif: wagerPlacingGif,
+      //   wager_song: wagerSong
+      // });
 
-      // create final round
-      await pb.collection("final_rounds").create({
-      //console.log({
-        edition_id: editionId,
-        final_intro_gif: finalIntroGif,
-        question_text: document.querySelector("[data-identifier='final_question']")?.getAttribute("data-html") ?? "",
-        answer: document.querySelector("[data-identifier='final_answer']")?.getAttribute("data-html") ?? "",
-        final_answer_gif: finalAnswerGif,
-        final_song: finalSong,
-        is_active: false
-      });
+      // // create final round
+      // await pb.collection("final_rounds").create({
+      // //console.log({
+      //   edition_id: editionId,
+      //   final_intro_gif: finalIntroGif,
+      //   question_text: document.querySelector("[data-identifier='final_question']")?.getAttribute("data-html") ?? "",
+      //   answer: document.querySelector("[data-identifier='final_answer']")?.getAttribute("data-html") ?? "",
+      //   final_answer_gif: finalAnswerGif,
+      //   final_song: finalSong,
+      //   is_active: false
+      // });
 
 
       // Redirect to the dashboard after successful creation
-      setError("GREAT SUCCESS")!
+      setError("Edition updated successfully!");
     } catch (err) {
       console.error("Failed to create edition:", err);
       setError("Failed to create the edition. Please try again later.");
@@ -591,19 +590,15 @@ export default function NewEditionPage() {
                 type="text"
                 data-type="gif"
                 data-identifier="edition_gif"
-                onBlur={(e) => setEditionGif(e.target.getAttribute("value") ?? "")}
+                value={editionGif}
+                onValueChange={setEditionGif}
               />
             </div>
             <div className="mb-4 w-1/2">
-              <label className="mb-2 block" htmlFor="edition_blurb">
-                Blurb:
+              <label className="mb-2 block" htmlFor="edition_blurb_2">
+                Blurb
               </label>
-              <Editor
-                dataIdentifier="edition_blurb"
-                dataType="text"
-                classNames="py-10 w-3/4"
-                editorId={`edition_blurb_${editionEditId}`}
-              />
+              <Tiptap blurb={blurb} setBlurb={setBlurb} />
             </div>
             <div className="mb-4 w-1/4">
               <label className="mb-2 block" htmlFor="edition_home_song">
@@ -614,7 +609,8 @@ export default function NewEditionPage() {
                 type="text"
                 data-type="song"
                 data-identifier="edition_home_song"
-                onBlur={(e) => setHomeSong(e.target.getAttribute("value") ?? "")}
+                value={homeSong}
+                onValueChange={setHomeSong}
                 required
               />
             </div>
@@ -1049,7 +1045,8 @@ export default function NewEditionPage() {
               <Input
                 id="edition_end_gif_1"
                 type="text"
-                onBlur={(e) => setEndGif1(e.target.getAttribute("value") ?? "")}
+                value={endGif1}
+                onValueChange={setEndGif1}
                 data-type="gif"
               />
             </div>
@@ -1061,14 +1058,15 @@ export default function NewEditionPage() {
               <Input
                 id="edition_end_gif_2"
                 type="text"
-                onBlur={(e) => setEndGif2(e.target.getAttribute("value") ?? "")}
+                value={endGif2}
+                onValueChange={setEndGif2}
                 data-type="gif"
               />
             </div>
           </div>
         </Tab>
       </Tabs>
-      <Button type="submit" onClick={handleCreateEdition} className="mt-6">
+      <Button type="submit" onClick={handleUpdateEdition} className="mt-6">
         Create Edition
       </Button>
     </div>
