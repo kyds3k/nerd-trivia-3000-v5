@@ -48,7 +48,13 @@ export default function NewEditionPage() {
   const [round1Answers, setRound1Answers] = useState(Array(5).fill(""));
   const [round2Answers, setRound2Answers] = useState(Array(5).fill(""));
   const [round3Answers, setRound3Answers] = useState(Array(5).fill(""));
-  
+  const [round1Songs, setRound1Songs] = useState(Array(5).fill(""));
+  const [round2Songs, setRound2Songs] = useState(Array(5).fill(""));
+  const [round3Songs, setRound3Songs] = useState(Array(5).fill(""));
+  const [round1AnswerGifs, setRound1AnswerGifs] = useState(Array(5).fill(""));
+  const [round2AnswerGifs, setRound2AnswerGifs] = useState(Array(5).fill(""));
+  const [round3AnswerGifs, setRound3AnswerGifs] = useState(Array(5).fill(""));
+
   const [numImpossibleAnswers, setNumImpossibleAnswers] = useState<number>(1);
   const [numImpossibleAnswers2, setNumImpossibleAnswers2] = useState<number>(1);
   const [numImpossibleSongs, setNumImpossibleSongs] = useState<number>(1);
@@ -194,15 +200,37 @@ export default function NewEditionPage() {
 
 
       const getQuestions = await pb.collection("questions").getFullList({ filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
+
       console.log('this is not working:');
       console.log(getQuestions);
+
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
         const roundQuestions = getQuestions.filter((question) => question.round_number === index + 1);
         const questionTexts = roundQuestions.map((question) => question.question_text);
         setter(questionTexts);
-      }
-      );
+      });
+
+      const setRoundAnswers = [setRound1Answers, setRound2Answers, setRound3Answers];
+      setRoundAnswers.forEach((setter, index) => {
+        const roundAnswers = getQuestions.filter((question) => question.round_number === index + 1);
+        const answerTexts = roundAnswers.map((question) => question.answer);
+        setter(answerTexts);
+      });
+
+      const setRoundSongs = [setRound1Songs, setRound2Songs, setRound3Songs];
+      setRoundSongs.forEach((setter, index) => {
+        const roundSongs = getQuestions.filter((question) => question.round_number === index + 1);
+        const songTexts = roundSongs.map((question) => question.song);
+        setter(songTexts);
+      });
+      
+      const setRoundAnswerGifs = [setRound1AnswerGifs, setRound2AnswerGifs, setRound3AnswerGifs];
+      setRoundAnswerGifs.forEach((setter, index) => {
+        const roundAnswerGifs = getQuestions.filter((question) => question.round_number === index + 1);
+        const answerGifTexts = roundAnswerGifs.map((question) => question.answer_gif);
+        setter(answerGifTexts);
+      });
 
 
       setError("GREAT SUCCESS!");
@@ -524,16 +552,51 @@ export default function NewEditionPage() {
 
             {Array.from({ length: 5 }, (_, index) => (
               <div key={`round1-question${index + 1}`}>
+                <h3 className="mb-2">Question {index + 1}</h3>
                 <Tiptap
                   state={round1Questions[index]}
                   setState={(value) => updateQuestion(1, index, value)}
                   identifier={`r1q${index + 1}`}
-                  classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                 />
+                <h3 className="mb-2">Song</h3>
+                <Input
+                  data-identifier={`r1s${index + 1}`}
+                  type="text"
+                  data-type="song"
+                  className="w-1/2 mb-6"
+                  value={round1Songs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedSongs = [...round1Songs];
+                    updatedSongs[index] = e.target.value;
+                    setRound1Songs(updatedSongs); // Update the specific song in the array
+                  }}
+                />
+                <h3 className="mb-2">Answer {index + 1}</h3>
+                <Tiptap
+                  state={round1Answers[index]}
+                  setState={(value) => updateAnswer(1, index, value)}
+                  identifier={`r1a${index + 1}`}
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+                <h3 className="mb-2">GIF</h3>
+                <Input
+                  data-identifier={`r1g${index + 1}`}
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2 mb-6"
+                  value={round1AnswerGifs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedGifs = [...round1AnswerGifs];
+                    updatedGifs[index] = e.target.value;
+                    setRound1AnswerGifs(updatedGifs); // Update the specific gif in the array
+                  }}
+                />                
                 <Divider className="my-4" />
                 <hr className="block my-10 bg-gray-500"></hr>
               </div>
             ))}
+
 
 
           </div>
@@ -676,16 +739,56 @@ export default function NewEditionPage() {
                 data-identifier="r2_gif"
                 value={r2Gif}
                 onValueChange={setR2Gif}
-              />>
+              />
             </div>
 
             {Array.from({ length: 5 }, (_, index) => (
-              <div key={`round2-question${index + 1}`}>
-                <EditorQuestion round={2} question={index + 1} />
+              <div key={`round1-question${index + 1}`}>
+                <h3 className="mb-2">Question {index + 1}</h3>
+                <Tiptap
+                  state={round2Questions[index]}
+                  setState={(value) => updateQuestion(2, index, value)}
+                  identifier={`r2q${index + 1}`}
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+                <h3 className="mb-2">Song</h3>
+                <Input
+                  data-identifier={`r2s${index + 1}`}
+                  type="text"
+                  data-type="song"
+                  className="w-1/2 mb-6"
+                  value={round2Songs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedSongs = [...round2Songs];
+                    updatedSongs[index] = e.target.value;
+                    setRound2Songs(updatedSongs); // Update the specific song in the array
+                  }}
+                />
+                <h3 className="mb-2">Answer {index + 1}</h3>
+                <Tiptap
+                  state={round2Answers[index]}
+                  setState={(value) => updateAnswer(2, index, value)}
+                  identifier={`r2a${index + 1}`}
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+                <h3 className="mb-2">GIF</h3>
+                <Input
+                  data-identifier={`r2g${index + 1}`}
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2 mb-6"
+                  value={round2AnswerGifs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedGifs = [...round2AnswerGifs];
+                    updatedGifs[index] = e.target.value;
+                    setRound2AnswerGifs(updatedGifs); // Update the specific gif in the array
+                  }}
+                />                
                 <Divider className="my-4" />
-                <hr className="block my-10 bg-gray-300"></hr>
+                <hr className="block my-10 bg-gray-500"></hr>
               </div>
             ))}
+
           </div>
         </Tab>
         <Tab key="impossible2" title="Impossible 2">
@@ -826,11 +929,51 @@ export default function NewEditionPage() {
 
             {Array.from({ length: 5 }, (_, index) => (
               <div key={`round3-question${index + 1}`}>
-                <EditorQuestion round={3} question={index + 1} />
+                <h3 className="mb-2">Question {index + 1}</h3>
+                <Tiptap
+                  state={round3Questions[index]}
+                  setState={(value) => updateQuestion(3, index, value)}
+                  identifier={`r3q${index + 1}`}
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+                <h3 className="mb-2">Song</h3>
+                <Input
+                  data-identifier={`r3s${index + 1}`}
+                  type="text"
+                  data-type="song"
+                  className="w-1/2 mb-6"
+                  value={round3Songs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedSongs = [...round3Songs];
+                    updatedSongs[index] = e.target.value;
+                    setRound3Songs(updatedSongs); // Update the specific song in the array
+                  }}
+                />
+                <h3 className="mb-2">Answer {index + 1}</h3>
+                <Tiptap
+                  state={round3Answers[index]}
+                  setState={(value) => updateAnswer(3, index, value)}
+                  identifier={`r3a${index + 1}`}
+                  classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+                <h3 className="mb-2">GIF</h3>
+                <Input
+                  data-identifier={`r3g${index + 1}`}
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2 mb-6"
+                  value={round3AnswerGifs[index]} // Bind the value dynamically
+                  onChange={(e) => {
+                    const updatedGifs = [...round3AnswerGifs];
+                    updatedGifs[index] = e.target.value;
+                    setRound3AnswerGifs(updatedGifs); // Update the specific gif in the array
+                  }}
+                />                
                 <Divider className="my-4" />
-                <hr className="block my-10 bg-gray-300"></hr>
+                <hr className="block my-10 bg-gray-500"></hr>
               </div>
             ))}
+
           </div>
         </Tab>
 
