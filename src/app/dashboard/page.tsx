@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import pb from "../../lib/pocketbase";
@@ -96,7 +96,10 @@ export default function DashboardPage() {
           )}
         </ul>
       </div>
-      <Button className="mt-6" as={Link} href="/editions/new">Create New Edition</Button>
+      <div className="flex flex-col gap-4">
+        <Button className="mt-6 w-fit" as={Link} href="/editions/new">Create New Edition</Button>
+        <Button className="w-fit" onClick={() => signOut()}>Logout</Button>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "media.tenor.com",
+				port: ""
+			}
+		],
+	}
 };
 
 export default nextConfig;
