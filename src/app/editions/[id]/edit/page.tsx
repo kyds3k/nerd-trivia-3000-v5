@@ -54,6 +54,8 @@ export default function NewEditionPage() {
   const [round1AnswerGifs, setRound1AnswerGifs] = useState(Array(5).fill(""));
   const [round2AnswerGifs, setRound2AnswerGifs] = useState(Array(5).fill(""));
   const [round3AnswerGifs, setRound3AnswerGifs] = useState(Array(5).fill(""));
+  const [banthaAnswer, setBanthaAnswer] = useState("");
+  const [banthaAnswerGif, setBanthaAnswerGif] = useState("");
 
   const [numImpossibleAnswers, setNumImpossibleAnswers] = useState<number>(1);
   const [numImpossibleAnswers2, setNumImpossibleAnswers2] = useState<number>(1);
@@ -79,6 +81,8 @@ export default function NewEditionPage() {
   const [finalCat, setFinalCat] = useState("");
   const [finalCatGif, setFinalCatGif] = useState("");
   const [finalIntroGif, setFinalIntroGif] = useState("");
+  const [finalQuestion, setFinalQuestion] = useState("");
+  const [finalAnswer, setFinalAnswer] = useState("");
   const [finalAnswerGif, setFinalAnswerGif] = useState("");
   const [finalSong, setFinalSong] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +91,7 @@ export default function NewEditionPage() {
 
   const { data: session } = useSession();
 
-  console.log('logged in as admin:', session);
+//  console.log('logged in as admin:', session);
 
 
   const params = useParams();
@@ -182,6 +186,8 @@ export default function NewEditionPage() {
       setBlurb(getEdition.blurb);
       setHomeSong(getEdition.home_song);
       setIsLoaded(true);
+      setEndGif1(getEdition.end_gif_1);
+      setEndGif2(getEdition.end_gif_2);
 
 
       // console.log(getEdition);
@@ -201,8 +207,8 @@ export default function NewEditionPage() {
 
       const getQuestions = await pb.collection("questions").getFullList({ filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
 
-      console.log('this is not working:');
-      console.log(getQuestions);
+      // console.log('this is not working:');
+      // console.log(getQuestions);
 
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
@@ -216,6 +222,10 @@ export default function NewEditionPage() {
         const roundAnswers = getQuestions.filter((question) => question.round_number === index + 1);
         const answerTexts = roundAnswers.map((question) => question.answer);
         setter(answerTexts);
+        if (index == 0) {
+          setBanthaAnswer(roundAnswers[2].bantha_answer);
+          setBanthaAnswerGif(roundAnswers[2].bantha_answer_gif);
+        }
       });
 
       const setRoundSongs = [setRound1Songs, setRound2Songs, setRound3Songs];
@@ -224,13 +234,28 @@ export default function NewEditionPage() {
         const songTexts = roundSongs.map((question) => question.song);
         setter(songTexts);
       });
-      
+
       const setRoundAnswerGifs = [setRound1AnswerGifs, setRound2AnswerGifs, setRound3AnswerGifs];
       setRoundAnswerGifs.forEach((setter, index) => {
         const roundAnswerGifs = getQuestions.filter((question) => question.round_number === index + 1);
         const answerGifTexts = roundAnswerGifs.map((question) => question.answer_gif);
         setter(answerGifTexts);
       });
+
+      const wagerRound = await pb.collection("wager_rounds").getFirstListItem(`edition_id = "${editionEditId}"`);
+      setWagerGif(wagerRound.wager_intro_gif);
+      setFinalCat(wagerRound.final_cat);
+      setFinalCatGif(wagerRound.final_cat_gif);
+      setWagerPlacingGif(wagerRound.wager_placing_gif);
+      setWagerSong(wagerRound.wager_song);
+
+      const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${editionEditId}"`);
+      setFinalIntroGif(finalRound.final_intro_gif);
+      setFinalQuestion(finalRound.question_text);
+      setFinalAnswer(finalRound.answer);
+      setFinalAnswerGif(finalRound.final_answer_gif);
+      setFinalSong(finalRound.final_song);
+      
 
 
       setError("GREAT SUCCESS!");
@@ -250,7 +275,6 @@ export default function NewEditionPage() {
     // grab the data-html from the object whose data-identifier is "edition_blurb" and setBlurb to that
     const blurbEditor = document.querySelector("[data-identifier='edition_blurb']");
     if (blurbEditor) {
-      console.log('we got a blurbeditor');
       setBlurb(blurbEditor.getAttribute("data-html") ?? "");
     }
 
@@ -591,7 +615,27 @@ export default function NewEditionPage() {
                     updatedGifs[index] = e.target.value;
                     setRound1AnswerGifs(updatedGifs); // Update the specific gif in the array
                   }}
-                />                
+                />
+                {index == 2 && (
+                  <div>
+                    <h3 className="mb-2">Bantha Answer</h3>
+                    <Tiptap
+                      state={banthaAnswer}
+                      setState={setBanthaAnswer}
+                      identifier={`bantha_answer`}
+                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                    />
+                    <h3 className="mb-2">Bantha Answer GIF</h3>
+                    <Input
+                      data-identifier={`bantha_answer_gif`}
+                      type="text"
+                      data-type="gif"
+                      className="w-1/2 mb-6"
+                      value={banthaAnswerGif} // Bind the value dynamically
+                      onValueChange={setBanthaAnswerGif}
+                    />
+                  </div>
+                )}
                 <Divider className="my-4" />
                 <hr className="block my-10 bg-gray-500"></hr>
               </div>
@@ -636,7 +680,7 @@ export default function NewEditionPage() {
                 value="1"
                 onSelectionChange={(keys) => {
                   const selectedValue = Array.from(keys)[0];
-                  console.log("selectedValue from select", selectedValue);
+                  //                  console.log("selectedValue from select", selectedValue);
                   if (typeof selectedValue === "string") {
                     setNumImpossibleSongs(parseInt(selectedValue));
                   } else if (typeof selectedValue === "number") {
@@ -679,7 +723,7 @@ export default function NewEditionPage() {
                 className="w-80 mb-8"
                 onSelectionChange={(keys) => {
                   const selectedValue = Array.from(keys)[0];
-                  console.log("selectedValue from select", selectedValue);
+                  //("selectedValue from select", selectedValue);
                   if (typeof selectedValue === "string") {
                     setNumImpossibleAnswers(parseInt(selectedValue));
                   } else if (typeof selectedValue === "number") {
@@ -783,7 +827,7 @@ export default function NewEditionPage() {
                     updatedGifs[index] = e.target.value;
                     setRound2AnswerGifs(updatedGifs); // Update the specific gif in the array
                   }}
-                />                
+                />
                 <Divider className="my-4" />
                 <hr className="block my-10 bg-gray-500"></hr>
               </div>
@@ -826,7 +870,7 @@ export default function NewEditionPage() {
                 value="1"
                 onSelectionChange={(keys) => {
                   const selectedValue = Array.from(keys)[0];
-                  console.log("selectedValue from select", selectedValue);
+                  //   console.log("selectedValue from select", selectedValue);
                   if (typeof selectedValue === "string") {
                     setNumImpossibleSongs2(parseInt(selectedValue));
                   } else if (typeof selectedValue === "number") {
@@ -869,7 +913,7 @@ export default function NewEditionPage() {
                 className="w-80 mb-8"
                 onSelectionChange={(keys) => {
                   const selectedValue = Array.from(keys)[0];
-                  console.log("selectedValue from select", selectedValue);
+                  //console.log("selectedValue from select", selectedValue);
                   if (typeof selectedValue === "string") {
                     setNumImpossibleAnswers2(parseInt(selectedValue));
                   } else if (typeof selectedValue === "number") {
@@ -968,7 +1012,7 @@ export default function NewEditionPage() {
                     updatedGifs[index] = e.target.value;
                     setRound3AnswerGifs(updatedGifs); // Update the specific gif in the array
                   }}
-                />                
+                />
                 <Divider className="my-4" />
                 <hr className="block my-10 bg-gray-500"></hr>
               </div>
@@ -988,7 +1032,8 @@ export default function NewEditionPage() {
                 id="wager_gif"
                 type="text"
                 data-type="gif"
-                onBlur={(e) => setWagerGif(e.target.getAttribute("value") ?? "")}
+                value={wagerGif}
+                onValueChange={setWagerGif}
               />
             </div>
 
@@ -1000,7 +1045,8 @@ export default function NewEditionPage() {
                 id="final_category"
                 type="text"
                 data-type="text"
-                onBlur={(e) => setFinalCat(e.target.getAttribute("value") ?? "")}
+                value={finalCat}
+                onValueChange={setFinalCat}
               />
             </div>
 
@@ -1012,6 +1058,7 @@ export default function NewEditionPage() {
                 id="final_cat_gif"
                 type="text"
                 data-type="gif"
+                value={finalCatGif}
                 onBlur={(e) => setFinalCatGif(e.target.getAttribute("value") ?? "")}
               />
             </div>
@@ -1024,7 +1071,8 @@ export default function NewEditionPage() {
                 id="wager_placing_gif"
                 type="text"
                 data-type="gif"
-                onBlur={(e) => setWagerPlacingGif(e.target.getAttribute("value") ?? "")}
+                value={wagerPlacingGif}
+                onValueChange={setWagerPlacingGif}
               />
             </div>
 
@@ -1036,7 +1084,8 @@ export default function NewEditionPage() {
                 id="wager_song"
                 type="text"
                 data-type="song"
-                onBlur={(e) => setWagerSong(e.target.getAttribute("value") ?? "")}
+                value={wagerSong}
+                onValueChange={setWagerSong}
               />
             </div>
 
@@ -1056,28 +1105,41 @@ export default function NewEditionPage() {
                 id="final_intro_gif"
                 type="text"
                 data-type="gif"
-                onBlur={(e) => setFinalIntroGif(e.target.getAttribute("value") ?? "")}
-              />
+                value={finalIntroGif}
+                onValueChange={setFinalIntroGif}
+                />
             </div>
 
             <div className="mb-8">
               <h4 className="mb-2">Question</h4>
-              <Editor dataIdentifier="final_question" dataType="question" classNames="py-10 w-3/4" />
+              <Tiptap state={finalQuestion} setState={setFinalQuestion} identifier="final_question" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />              
             </div>
 
             <div className="mb-8">
               <h4 className="mb-2">Answer</h4>
-              <Editor dataIdentifier="final_answer" dataType="answer" classNames="py-10 w-3/4" />
+              <Tiptap state={finalAnswer} setState={setFinalAnswer} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />              
             </div>
 
             <div className="mb-8">
               <h4 className="mb-2">Answer GIF:</h4>
-              <Input data-identifier="final_answer_gif" data-type="gif" className="w-1/2" onBlur={(e) => setFinalAnswerGif(e.target.getAttribute("value") ?? "")} />
+              <Input 
+                data-identifier="final_answer_gif"
+                data-type="gif"
+                className="w-1/2"
+                value={finalAnswerGif}
+                onValueChange={setFinalAnswerGif}
+              />
             </div>
 
             <div className="mb-8">
               <h4 className="mb-2">Song:</h4>
-              <Input data-identifier="final_song" data-type="song" className="w-1/2" onBlur={(e) => setFinalSong(e.target.getAttribute("value") ?? "")} />
+              <Input 
+                data-identifier="final_song" 
+                data-type="song" 
+                className="w-1/2" 
+                value={finalSong}
+                onValueChange={setFinalSong}
+              />
             </div>
 
             <div className="mb-8 w-1/4">
