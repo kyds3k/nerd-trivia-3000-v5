@@ -351,7 +351,7 @@ export default function NewEditionPage() {
                 required
               />
             </div>
-            <div className="mb-4 w-1/6">
+            <div className="mb-4 w-1/4">
               <label className="mb-2 block" htmlFor="edition_date">
                 Date:
               </label>
@@ -361,7 +361,7 @@ export default function NewEditionPage() {
                 data-identifier="edition_date"
                 value={date}
                 onChange={(value) => setDate(value)}
-                className="max-w-[284px]"
+                className="max-w-[360px]"
               />
             </div>
             <div className="mb-4 w-1/4">
