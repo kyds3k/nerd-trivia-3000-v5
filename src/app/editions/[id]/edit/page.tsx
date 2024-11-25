@@ -16,21 +16,23 @@ import {
 import { useRouter } from "next/navigation";
 import pb from "@/lib/pocketbase";
 import { parseDate, CalendarDate } from "@internationalized/date";
-import {useDateFormatter} from "@react-aria/i18n";
+import { useDateFormatter } from "@react-aria/i18n";
 import { useParams } from "next/navigation";
 import { useCallback } from 'react';
 import debounce from 'lodash/debounce';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
+import { set } from "lodash";
 
 
 export default function NewEditionPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadMessage, setLoadMessage] = useState("Loading edition . . .");
   const [authData, setAuthData] = useState(null);
   const [title, setTitle] = useState("");
   const [date, setDate] = React.useState<any>(null);
-  let formatter = useDateFormatter({dateStyle: "full"});
+  let formatter = useDateFormatter({ dateStyle: "full" });
   const [blurb, setBlurb] = useState("");
   const [homeSong, setHomeSong] = useState("");
   const [editionGif, setEditionGif] = useState("");
@@ -205,9 +207,10 @@ export default function NewEditionPage() {
       setDate(parsedDate); // Set the parsed date      
 
       const setRoundGifs = [setR1Gif, setR2Gif, setR3Gif];
-      
+
       const randomRequestKey = Math.random().toString(36).substring(7);
-      const getRounds = await pb.collection("rounds").getFullList({ requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}"`,
+      const getRounds = await pb.collection("rounds").getFullList({
+        requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}"`,
       });
 
       getRounds.forEach((round) => {
@@ -217,7 +220,7 @@ export default function NewEditionPage() {
       });
 
 
-      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey,filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
+      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey, filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
 
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
@@ -350,16 +353,17 @@ export default function NewEditionPage() {
     const updatedQuestions = await Promise.all(
       roundQuestions.map(async (questions, roundIndex) => {
         const round = roundIndex + 1; // Rounds are 1-based
-  
-        console.log(`Updating questions for round ${round}...`);
+
+        setLoadMessage(`Updating questions for round ${round}...`);
 
         // Fetch the existing questions for the round
         const randomRequestKey = Math.random().toString(36).substring(7);
         const fetchedRoundQuestions = await pb
           .collection("questions")
-          .getFullList({ requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
+          .getFullList({
+            requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
           });
-  
+
         // Validate: Ensure the number of fetched questions matches the number of input questions
         if (fetchedRoundQuestions.length !== questions.length) {
           console.error(
@@ -367,12 +371,12 @@ export default function NewEditionPage() {
           );
           throw new Error("Question count mismatch.");
         }
-  
+
         // Update each question in the round
         const updatedRoundQuestions = await Promise.all(
           questions.map(async (questionText, questionIndex) => {
             const questionId = fetchedRoundQuestions[questionIndex].id;
-  
+
             // Update the question with its corresponding data
             const updatedQuestion = await pb.collection("questions").update(questionId, {
               question_text: questionText,
@@ -380,7 +384,7 @@ export default function NewEditionPage() {
               answer: roundAnswers[roundIndex][questionIndex],
               answer_gif: roundAnswerGifs[roundIndex][questionIndex],
             });
-  
+
             // if round is 3, update the bantha answer and gif. they are both fields in question 3 as "bantha_answer" and "bantha_answer_gif"
             if (round === 1 && questionIndex === 2) {
               const banthaQuestionId = fetchedRoundQuestions[questionIndex].id;
@@ -388,58 +392,107 @@ export default function NewEditionPage() {
                 bantha_answer: banthaAnswer,
                 bantha_answer_gif: banthaAnswerGif,
               });
-              console.log(`Bantha Question updated:`);
+              setLoadMessage(`Bantha question updated . . .`);
             }
-            console.log(`Round ${round} Question ${questionIndex + 1} updated:`);
-  
+
+            setLoadMessage(`Round ${round} Question ${questionIndex + 1} updated . . .`);
             return updatedQuestion;
           })
         );
-        
-  
+
+
         return updatedRoundQuestions;
       })
     );
-  
+
     return updatedQuestions;
-  };  
+  };
+
+  const updateImpossibleRounds = async (
+    editionEditId: string,
+    imp1Songs: { [key: number]: string },
+    imp1Answers: string[],
+    imp1AnswerGifs: { [key: number]: string },
+    imp2Songs: { [key: number]: string },
+    imp2Answers: string[],
+    imp2AnswerGifs: { [key: number]: string }
+  ): Promise<any[][]> => {
+    const updatedRounds = await Promise.all([
+      updateImpossibleRound(editionEditId, 1, imp1Songs, imp1Answers, imp1AnswerGifs),
+      updateImpossibleRound(editionEditId, 2, imp2Songs, imp2Answers, imp2AnswerGifs),
+    ]);
+    return updatedRounds;
+  }
+
+  const updateImpossibleRound = async (
+    editionEditId: string,
+    roundNumber: 1 | 2,
+    songs: { [key: number]: string },
+    answers: string[],
+    answerGifs: { [key: number]: string }
+  ): Promise<any[]> => {
+    const round = roundNumber;
+    const roundData = roundNumber === 1 ? {
+      intro_gif: imp1IntroGif,
+      theme: imp1Theme,
+      theme_gif: imp1Gif,
+      question_text: imp1Question,
+      point_value: imp1Ppa,
+      spotify_ids: songs,
+      answers: answers,
+      answer_gifs: answerGifs,
+    } : {
+      intro_gif: imp2IntroGif,
+      theme: imp2Theme,
+      theme_gif: imp2Gif,
+      question_text: imp2Question,
+      point_value: imp2Ppa,
+      spotify_ids: songs,
+      answers: answers,
+      answer_gifs: answerGifs,
+    };
+
+    const randomRequestKey = Math.random().toString(36).substring(7);
+    const fetchedRound = await pb.collection("impossible_rounds").getFirstListItem(`edition_id = "${editionEditId}" && impossible_number = "${round}"`);
+    const updatedRound = await pb.collection("impossible_rounds").update(fetchedRound.id, roundData);
+    setLoadMessage(`Impossible Round ${round} updated . . .`);
+    return [updatedRound];
+  };
+
+
 
   const handleUpdateEdition = async () => {
+    // scroll the page to the top smoothly
+    window.scrollTo({ top: 0, behavior: 'smooth' });   
     setLoading(true);
+    setLoadMessage("Updating edition . . .");
     console.log('edition id: ', editionEditId);
-
 
     try {
       // // Wait for authentication to complete
       await refreshAuthState();
-  
-      // // Step 1: Update the Edition
-      // const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
 
-      // const updatedEdition = await pb.collection("editions").update(`${editionEditId}`, {
-      //   title: title,
-      //   date: formattedDate, // Ensure `date` is formatted correctly
-      //   edition_gif: editionGif,
-      //   blurb: blurb,
-      //   home_song: homeSong,
-      //   end_gif_1: endGif1,
-      //   end_gif_2: endGif2,
-      // });
-  
-      // console.log("Edition updated:", updatedEdition);
-  
+      // Step 1: Update the Edition
+      const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
+
+      const updatedEdition = await pb.collection("editions").update(`${editionEditId}`, {
+        title: title,
+        date: formattedDate, // Ensure `date` is formatted correctly
+        edition_gif: editionGif,
+        blurb: blurb,
+        home_song: homeSong,
+        end_gif_1: endGif1,
+        end_gif_2: endGif2,
+      });
+
+      console.log("Edition updated:", updatedEdition);
+
       // Step 2: Update the Questions
       const roundQuestions = [round1Questions, round2Questions, round3Questions];
       const roundSongs = [round1Songs, round2Songs, round3Songs];
       const roundAnswers = [round1Answers, round2Answers, round3Answers];
       const roundAnswerGifs = [round1AnswerGifs, round2AnswerGifs, round3AnswerGifs];
       const roundGifs = [r1Gif, r2Gif, r3Gif];
-
-      console.log('roundQuestions: ', roundQuestions);
-      console.log('roundSongs: ', roundSongs);
-      console.log('roundAnswers: ', roundAnswers);
-      console.log('roundAnswerGifs: ', roundAnswerGifs);
-      console.log('roundGifs: ', roundGifs);
 
       const updatedQuestions = await updateQuestions(
         editionEditId, // Now guaranteed to be a string
@@ -449,6 +502,44 @@ export default function NewEditionPage() {
         roundAnswerGifs
       );
 
+      // Step 3: Update the Impossible Rounds
+      const updatedRounds = await updateImpossibleRounds(
+        editionEditId,
+        imp1Songs,
+        imp1Answers,
+        imp1AnswerGifs,
+        imp2Songs,
+        imp2Answers,
+        imp2AnswerGifs
+      );
+
+      // Step 4: Update the Wager Round
+      // Grab the wager_round item whose edition_id equals editionEditId, grab its id, and put it into a const WagerRoundId
+      setLoadMessage("Updating wager round . . .");
+
+      const wagerRoundId = await pb.collection("wager_rounds").getFirstListItem(`edition_id="${editionEditId}"`)
+
+      
+      const updatedWagerRound = await pb.collection("wager_rounds").update(`${wagerRoundId.id}`, {
+        wager_intro_gif: wagerGif,
+        final_cat: finalCat,
+        final_cat_gif: finalCatGif,
+        wager_placing_gif: wagerPlacingGif,
+        wager_song: wagerSong,
+      });
+
+      //Step 5: Update the Final Round
+      setLoadMessage("Updating final round!");      
+      const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id="${editionEditId}"`)
+      console.log('finalRound: ', finalRound.id);
+
+      const updatedFinalRound = await pb.collection("final_rounds").update(`${finalRound.id}`, {
+        final_intro_gif: finalIntroGif,
+        question_text: finalQuestion,
+        answer: finalAnswer,
+        final_answer_gif: finalAnswerGif,
+        final_song: finalSong,
+      });
 
       setError("Edition updated successfully!");
     } catch (err) {
@@ -458,7 +549,8 @@ export default function NewEditionPage() {
       setLoading(false);
     }
   };
-  
+
+
 
   const refreshAuthState = async () => {
     if (!pb.authStore.isValid) {
@@ -511,11 +603,16 @@ export default function NewEditionPage() {
         <ShallNotPass />
       ) : (
         <div className="p-10">
+          <div className="absolute top-10 right-10">
+            <Button
+              onClick={() => router.push("/dashboard")}>
+                Return to Dashboard
+            </Button>
+          </div>
           <h1 className="mb-6 text-2xl">Edit Edition</h1>
-
           {loading ? (
             <div>
-              <p className="mb-3">Loading edition . . .</p>
+              <p className="mb-3">{loadMessage}</p>
               <Progress
                 size="md"
                 isIndeterminate
@@ -1161,7 +1258,7 @@ export default function NewEditionPage() {
             <Tab key="wager" title="Wager">
               <h3 className="mb-8 text-2xl">Wager</h3>
               <div className="ml-5">
-                <div className="mb-8 w-1/4">
+                <div className="mb-8 w-1/2">
                   <label className="mb-2 block" htmlFor="wager_gif">
                     Wager Intro GIF:
                   </label>
@@ -1174,7 +1271,7 @@ export default function NewEditionPage() {
                   />
                 </div>
 
-                <div className="mb-8 w-1/4">
+                <div className="mb-8 w-1/2">
                   <label className="mb-2 block" htmlFor="final_category">
                     Final Category:
                   </label>
@@ -1187,7 +1284,7 @@ export default function NewEditionPage() {
                   />
                 </div>
 
-                <div className="mb-8 w-1/4">
+                <div className="mb-8 w-1/2">
                   <label className="mb-2 block" htmlFor="final_cat_gif">
                     Final Category GIF:
                   </label>
@@ -1200,7 +1297,7 @@ export default function NewEditionPage() {
                   />
                 </div>
 
-                <div className="mb-8 w-1/4">
+                <div className="mb-8 w-1/2">
                   <label className="mb-2 block" htmlFor="wager_placing_gif">
                     Wager Placing GIF:
                   </label>
@@ -1213,7 +1310,7 @@ export default function NewEditionPage() {
                   />
                 </div>
 
-                <div className="mb-8 w-1/4">
+                <div className="mb-8 w-1/2">
                   <label className="mb-2 block" htmlFor="wager_song">
                     Wager Placing Song:
                   </label>
