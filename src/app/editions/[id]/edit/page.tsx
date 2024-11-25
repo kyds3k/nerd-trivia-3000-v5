@@ -22,7 +22,6 @@ import { useCallback } from 'react';
 import debounce from 'lodash/debounce';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
-import { set } from "lodash";
 
 
 export default function NewEditionPage() {
@@ -220,7 +219,7 @@ export default function NewEditionPage() {
       });
 
 
-      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey, filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
+      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey,filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
 
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
