@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
+	sassOptions: {
+    silenceDeprecations: ['legacy-js-api'],
+  },
 	experimental: {
 		optimizePackageImports: ["@nextui-org/react"],
 		parallelServerCompiles: true,

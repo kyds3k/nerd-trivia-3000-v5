@@ -16,7 +16,7 @@ const config: Config = {
         'editor-bg': "#232327",
       },
       fontFamily: {
-        sans: ['var(--font-dos)'],
+        sans: ['var(--font-play)'],
       },
     },
   },

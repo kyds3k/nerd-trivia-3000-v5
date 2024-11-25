@@ -3,7 +3,9 @@ import { Image } from '@nextui-org/react';
 import Link from 'next/link';
 import { Button } from '@nextui-org/react';
 
-const ShallNotPass = () => {
+
+
+export default function ShallNotPass() {
   return (
     <div className="flex flex-col justify-center items-center w-screen h-screen">
       <Image 
@@ -18,4 +20,3 @@ const ShallNotPass = () => {
   );
 };
 
-export default ShallNotPass;
