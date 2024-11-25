@@ -13,18 +13,15 @@ import {
   DatePicker,
   Progress
 } from "@nextui-org/react";
-import { Image } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import pb from "@/lib/pocketbase";
-import { parseDate, CalendarDate, ZonedDateTime, toZoned, DateValue, CalendarDateTime } from "@internationalized/date";
+import { parseDate, CalendarDate } from "@internationalized/date";
 import {useDateFormatter} from "@react-aria/i18n";
 import { useParams } from "next/navigation";
 import { useCallback } from 'react';
 import debounce from 'lodash/debounce';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
-import { set } from "lodash";
-import { parse } from "path";
 
 
 export default function NewEditionPage() {
@@ -97,7 +94,12 @@ export default function NewEditionPage() {
 
 
   const params = useParams();
-  const editionEditId = params.id;
+  const editionEditId = typeof params?.id === "string" ? params.id : undefined;
+
+  if (!editionEditId) {
+    console.error("Edition ID is missing or invalid!");
+    return; // Prevent further execution if the ID is missing
+  }
 
   /* function grabInfo to find the data-identifier of everything on the page and output to console */
   const grabInfo = () => {
@@ -168,8 +170,6 @@ export default function NewEditionPage() {
     });
   };
 
-
-
   const handleImp1Songs = (index: number, value: string) => {
     setImp1Songs((prevSongs) => ({
       ...prevSongs,
@@ -184,11 +184,6 @@ export default function NewEditionPage() {
     }));
   };
 
-  const debouncedSetTitle = useCallback(
-    debounce((value) => setTitle(value), 300),
-    []
-  );
-
 
   const importEdition = async () => {
     console.log(pb.authStore.isValid);
@@ -196,9 +191,6 @@ export default function NewEditionPage() {
     console.log(pb.authStore.model?.id);
 
     try {
-      //Step 1: Get the Edition
-
-      // grab the edition ID from the url
 
       const getEdition = await pb.collection("editions").getFirstListItem(`id = "${editionEditId}"`);
       setTitle(getEdition.title);
@@ -211,18 +203,13 @@ export default function NewEditionPage() {
       const dbDate = getEdition.date;
       const parsedDate = parseDate(dbDate.split(" ")[0]) as CalendarDate; // Parse the date
       setDate(parsedDate); // Set the parsed date      
-      console.log(dbDate);
-      //setDate(dbDate);     
 
-
-      // console.log(getEdition);
       const setRoundGifs = [setR1Gif, setR2Gif, setR3Gif];
-
-      const getRounds = await pb.collection("rounds").getFullList({
-        filter: `edition_id = "${editionEditId}"`,
+      
+      const randomRequestKey = Math.random().toString(36).substring(7);
+      const getRounds = await pb.collection("rounds").getFullList({ requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}"`,
       });
 
-      // Loop through the rounds and set the corresponding state
       getRounds.forEach((round) => {
         if (round.round >= 1 && round.round <= 3) {
           setRoundGifs[round.round - 1](round.round_gif);
@@ -230,10 +217,7 @@ export default function NewEditionPage() {
       });
 
 
-      const getQuestions = await pb.collection("questions").getFullList({ filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
-
-      // console.log('this is not working:');
-      // console.log(getQuestions);
+      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey,filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
 
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
@@ -273,7 +257,6 @@ export default function NewEditionPage() {
       });
 
       getImpossibleRounds.forEach((round) => {
-        console.log(round);
 
         if (round.impossible_number === 1) {
           setImp1IntroGif(round.intro_gif);
@@ -302,8 +285,6 @@ export default function NewEditionPage() {
             answerGifObj[index] = gif;
           });
           setImp1AnswerGifs(answerGifObj);
-
-
         } else if (round.impossible_number === 2) {
           setImp2IntroGif(round.intro_gif);
           setImp2Theme(round.theme);
@@ -358,42 +339,126 @@ export default function NewEditionPage() {
     }
   };
 
+  const updateQuestions = async (
+    editionEditId: string,
+    roundQuestions: string[][],
+    roundSongs: string[][],
+    roundAnswers: string[][],
+    roundAnswerGifs: string[][]
+  ): Promise<any[][]> => {
+    // Loop through rounds (outer array of questions)
+    const updatedQuestions = await Promise.all(
+      roundQuestions.map(async (questions, roundIndex) => {
+        const round = roundIndex + 1; // Rounds are 1-based
+  
+        console.log(`Updating questions for round ${round}...`);
+
+        // Fetch the existing questions for the round
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        const fetchedRoundQuestions = await pb
+          .collection("questions")
+          .getFullList({ requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
+          });
+  
+        // Validate: Ensure the number of fetched questions matches the number of input questions
+        if (fetchedRoundQuestions.length !== questions.length) {
+          console.error(
+            `Mismatch: Fetched ${fetchedRoundQuestions.length} questions but received ${questions.length} for round ${round}.`
+          );
+          throw new Error("Question count mismatch.");
+        }
+  
+        // Update each question in the round
+        const updatedRoundQuestions = await Promise.all(
+          questions.map(async (questionText, questionIndex) => {
+            const questionId = fetchedRoundQuestions[questionIndex].id;
+  
+            // Update the question with its corresponding data
+            const updatedQuestion = await pb.collection("questions").update(questionId, {
+              question_text: questionText,
+              song: roundSongs[roundIndex][questionIndex],
+              answer: roundAnswers[roundIndex][questionIndex],
+              answer_gif: roundAnswerGifs[roundIndex][questionIndex],
+            });
+  
+            // if round is 3, update the bantha answer and gif. they are both fields in question 3 as "bantha_answer" and "bantha_answer_gif"
+            if (round === 1 && questionIndex === 2) {
+              const banthaQuestionId = fetchedRoundQuestions[questionIndex].id;
+              const updatedBanthaQuestion = await pb.collection("questions").update(banthaQuestionId, {
+                bantha_answer: banthaAnswer,
+                bantha_answer_gif: banthaAnswerGif,
+              });
+              console.log(`Bantha Question updated:`);
+            }
+            console.log(`Round ${round} Question ${questionIndex + 1} updated:`);
+  
+            return updatedQuestion;
+          })
+        );
+        
+  
+        return updatedRoundQuestions;
+      })
+    );
+  
+    return updatedQuestions;
+  };  
 
   const handleUpdateEdition = async () => {
-    console.log(pb.authStore.isValid);
-    console.log(pb.authStore.token);
-    console.log(pb.authStore.model?.id);
+    setLoading(true);
+    console.log('edition id: ', editionEditId);
 
-    const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
-    // grab the data-html from the object whose data-identifier is "edition_blurb" and setBlurb to that
-    const blurbEditor = document.querySelector("[data-identifier='edition_blurb']");
-    if (blurbEditor) {
-      setBlurb(blurbEditor.getAttribute("data-html") ?? "");
-    }
 
     try {
-      //Step 1: Create the Edition
-      const newEdition = await pb.collection("editions").update(`${editionEditId}`, {
-        //console.log({
-        title,
-        date: formattedDate,
-        blurb: blurb,
-        home_song: homeSong,
-        edition_gif: editionGif,
-        end_gif_1: endGif1,
-        end_gif_2: endGif2
-      });
+      // // Wait for authentication to complete
+      await refreshAuthState();
+  
+      // // Step 1: Update the Edition
+      // const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
+
+      // const updatedEdition = await pb.collection("editions").update(`${editionEditId}`, {
+      //   title: title,
+      //   date: formattedDate, // Ensure `date` is formatted correctly
+      //   edition_gif: editionGif,
+      //   blurb: blurb,
+      //   home_song: homeSong,
+      //   end_gif_1: endGif1,
+      //   end_gif_2: endGif2,
+      // });
+  
+      // console.log("Edition updated:", updatedEdition);
+  
+      // Step 2: Update the Questions
+      const roundQuestions = [round1Questions, round2Questions, round3Questions];
+      const roundSongs = [round1Songs, round2Songs, round3Songs];
+      const roundAnswers = [round1Answers, round2Answers, round3Answers];
+      const roundAnswerGifs = [round1AnswerGifs, round2AnswerGifs, round3AnswerGifs];
+      const roundGifs = [r1Gif, r2Gif, r3Gif];
+
+      console.log('roundQuestions: ', roundQuestions);
+      console.log('roundSongs: ', roundSongs);
+      console.log('roundAnswers: ', roundAnswers);
+      console.log('roundAnswerGifs: ', roundAnswerGifs);
+      console.log('roundGifs: ', roundGifs);
+
+      const updatedQuestions = await updateQuestions(
+        editionEditId, // Now guaranteed to be a string
+        roundQuestions,
+        roundSongs,
+        roundAnswers,
+        roundAnswerGifs
+      );
 
 
-      // Redirect to the dashboard after successful creation
-      setLoading(false);
       setError("Edition updated successfully!");
     } catch (err) {
+      console.error("Failed to update edition:", err);
+      setError("Failed to update the edition. Please try again later.");
+    } finally {
       setLoading(false);
-      console.error("Failed to create edition:", err);
-      setError("Failed to create the edition. Please try again later.");
     }
   };
+  
 
   const refreshAuthState = async () => {
     if (!pb.authStore.isValid) {
@@ -443,7 +508,7 @@ export default function NewEditionPage() {
   return (
     <div>
       {!session ? (
-        <div>Session not found</div>
+        <ShallNotPass />
       ) : (
         <div className="p-10">
           <h1 className="mb-6 text-2xl">Edit Edition</h1>
