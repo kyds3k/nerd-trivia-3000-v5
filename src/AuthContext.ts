@@ -1,5 +1,5 @@
 // src/context/AuthContext.ts
-import React, { createContext, useEffect, useState, ReactNode } from "react";
+import React, { createContext, useEffect, useState, ReactNode, FC } from "react";
 import pb from "@/lib/pocketbase";
 
 // Define the shape of the context value
@@ -8,15 +8,14 @@ interface AuthContextType {
   refreshAuthState: () => Promise<void>;
 }
 
-// Create the context with an initial undefined value
+// Provide an initial empty context as undefined, which will be defined later in AuthProvider
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define the AuthProvider props type
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }): ReactNode => {
+export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(pb.authStore.isValid);
 
   const refreshAuthState = async () => {

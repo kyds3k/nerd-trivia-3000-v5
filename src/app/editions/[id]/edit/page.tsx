@@ -24,7 +24,7 @@ import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
 
 
-export default function NewEditionPage() {
+export default function EditEditionPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [loadMessage, setLoadMessage] = useState("Loading edition . . .");
@@ -93,6 +93,7 @@ export default function NewEditionPage() {
 
   //  console.log('logged in as admin:', session);
 
+  pb.autoCancellation(false);
 
   const params = useParams();
   const editionEditId = typeof params?.id === "string" ? params.id : undefined;
@@ -207,10 +208,7 @@ export default function NewEditionPage() {
 
       const setRoundGifs = [setR1Gif, setR2Gif, setR3Gif];
 
-      const randomRequestKey = Math.random().toString(36).substring(7);
-      const getRounds = await pb.collection("rounds").getFullList({
-        requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}"`,
-      });
+      const getRounds = await pb.collection("rounds").getFullList({ filter: `edition_id = "${editionEditId}"` });
 
       getRounds.forEach((round) => {
         if (round.round >= 1 && round.round <= 3) {
@@ -219,7 +217,7 @@ export default function NewEditionPage() {
       });
 
 
-      const getQuestions = await pb.collection("questions").getFullList({ requestKey: randomRequestKey,filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
+      const getQuestions = await pb.collection("questions").getFullList({ filter: 'edition_id = "' + editionEditId + '"', sort: 'round_number, question_number' });
 
       const setRoundQuestions = [setRound1Questions, setRound2Questions, setRound3Questions];
       setRoundQuestions.forEach((setter, index) => {
@@ -233,7 +231,7 @@ export default function NewEditionPage() {
         const roundAnswers = getQuestions.filter((question) => question.round_number === index + 1);
         const answerTexts = roundAnswers.map((question) => question.answer);
         setter(answerTexts);
-        if (index == 0) {
+        if (index == 0 && roundAnswers[2].bantha_answer != undefined) {
           setBanthaAnswer(roundAnswers[2].bantha_answer);
           setBanthaAnswerGif(roundAnswers[2].bantha_answer_gif);
         }
@@ -356,20 +354,19 @@ export default function NewEditionPage() {
         setLoadMessage(`Updating questions for round ${round}...`);
 
         // Fetch the existing questions for the round
-        const randomRequestKey = Math.random().toString(36).substring(7);
         const fetchedRoundQuestions = await pb
           .collection("questions")
           .getFullList({
-            requestKey: randomRequestKey, filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
+            filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
           });
 
         // Validate: Ensure the number of fetched questions matches the number of input questions
-        if (fetchedRoundQuestions.length !== questions.length) {
-          console.error(
-            `Mismatch: Fetched ${fetchedRoundQuestions.length} questions but received ${questions.length} for round ${round}.`
-          );
-          throw new Error("Question count mismatch.");
-        }
+        // if (fetchedRoundQuestions.length !== questions.length) {
+        //   console.error(
+        //     `Mismatch: Fetched ${fetchedRoundQuestions.length} questions but received ${questions.length} for round ${round}.`
+        //   );
+        //   throw new Error("Question count mismatch.");
+        // }
 
         // Update each question in the round
         const updatedRoundQuestions = await Promise.all(
@@ -451,7 +448,6 @@ export default function NewEditionPage() {
       answer_gifs: answerGifs,
     };
 
-    const randomRequestKey = Math.random().toString(36).substring(7);
     const fetchedRound = await pb.collection("impossible_rounds").getFirstListItem(`edition_id = "${editionEditId}" && impossible_number = "${round}"`);
     const updatedRound = await pb.collection("impossible_rounds").update(fetchedRound.id, roundData);
     setLoadMessage(`Impossible Round ${round} updated . . .`);
@@ -462,7 +458,7 @@ export default function NewEditionPage() {
 
   const handleUpdateEdition = async () => {
     // scroll the page to the top smoothly
-    window.scrollTo({ top: 0, behavior: 'smooth' });   
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setLoading(true);
     setLoadMessage("Updating edition . . .");
     console.log('edition id: ', editionEditId);
@@ -518,7 +514,7 @@ export default function NewEditionPage() {
 
       const wagerRoundId = await pb.collection("wager_rounds").getFirstListItem(`edition_id="${editionEditId}"`)
 
-      
+
       const updatedWagerRound = await pb.collection("wager_rounds").update(`${wagerRoundId.id}`, {
         wager_intro_gif: wagerGif,
         final_cat: finalCat,
@@ -528,7 +524,7 @@ export default function NewEditionPage() {
       });
 
       //Step 5: Update the Final Round
-      setLoadMessage("Updating final round!");      
+      setLoadMessage("Updating final round!");
       const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id="${editionEditId}"`)
       console.log('finalRound: ', finalRound.id);
 
@@ -605,7 +601,7 @@ export default function NewEditionPage() {
           <div className="absolute top-10 right-10">
             <Button
               onClick={() => router.push("/dashboard")}>
-                Return to Dashboard
+              Return to Dashboard
             </Button>
           </div>
           <h1 className="mb-6 text-2xl">Edit Edition</h1>
@@ -762,7 +758,7 @@ export default function NewEditionPage() {
                         <Tiptap
                           state={banthaAnswer}
                           setState={setBanthaAnswer}
-                          identifier={`bantha_answer`}
+                          identifier="bantha_answer"
                           classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                         />
                         <h3 className="mb-2">Bantha Answer GIF</h3>
@@ -863,8 +859,11 @@ export default function NewEditionPage() {
                             data-type="song"
                             required
                             value={imp1Songs[index] ?? ""}
-                            onBlur={(e) => handleImp1Songs(index, e.target.getAttribute("value") ?? "")}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              handleImp1Songs(index, e.target.value ?? "")
+                            }
                           />
+                          1
                         </div>
                       </div>
                     ))}
@@ -1096,13 +1095,16 @@ export default function NewEditionPage() {
                         <div className="mb-4">
                           <h4 className="mb-2">Song {index + 1}</h4>
                           <Input
-                            data-identifier={`i2_song${index + 1}`}
+                            data-identifier={`i1_song${index + 1}`}
                             type="text"
                             data-type="song"
                             required
                             value={imp2Songs[index] ?? ""}
-                            onBlur={(e) => handleImp2Songs(index, e.target.getAttribute("value") ?? "")}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                              handleImp2Songs(index, e.target.value ?? "")
+                            }
                           />
+
                         </div>
                       </div>
                     ))}

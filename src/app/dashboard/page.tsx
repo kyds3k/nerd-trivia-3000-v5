@@ -58,11 +58,63 @@ export default function DashboardPage() {
 
   const handleDelete = async (id: string) => {
     try {
-      await pb.collection("editions").delete(id);
-      setEditions(editions.filter((edition) => edition.id !== id));
+      await refreshAuthState();
+      const wagerTarget = await pb.collection("wager_rounds").getFullList({ filter: `edition_id = "${id}"`});
+      const deleteWager = await pb.collection("wager_rounds").delete(wagerTarget[0].id);
+      console.log("削除!", deleteWager);
+
+      const roundTargets = await pb.collection("rounds").getFullList({ filter: `edition_id = "${id}"`});
+
+      roundTargets.forEach(async (round) => {
+        const roundNumber = round.round;
+        await pb.collection("rounds").delete(round.id);
+        console.log(`Round ${roundNumber} - 削除!`);
+      });
+
+      const roundQuestions = await pb.collection("questions").getFullList({ filter: `edition_id = "${id}"`});
+      roundQuestions.forEach(async (question) => {
+        await pb.collection("questions").delete(question.id);
+        console.log(`Round ${question.round_number} Question ${question.question_number} - 削除!`);
+      });
+
+      const impossibleRounds = await pb.collection("impossible_rounds").getFullList({ filter: `edition_id = "${id}"`});
+      impossibleRounds.forEach(async (impossible) => {
+        await pb.collection("impossible_rounds").delete(impossible.id);
+        console.log(`Impossible ${impossible.impossible_number} Impossible - 削除!`);
+      });
+
+      const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${id}"`);
+      await pb.collection("final_rounds").delete(finalRound.id);
+      console.log(`Final Round - 削除!`);
+
+      const edition = await pb.collection("editions").delete(id);
+      console.log("Edition deleted:", edition);
+
+      // update the editions.map in the return
+      const updatedEditions = editions.filter((edition) => edition.id !== id);
+      setEditions(updatedEditions);
+      
     } catch (err) {
       console.error("Failed to delete edition:", err);
-      setError("Failed to delete the edition. Please try again later.");
+      // setError("Failed to delete the edition. Please try again later.");
+    }
+  };
+
+  const refreshAuthState = async () => {
+    if (!pb.authStore.isValid) {
+      try {
+        const adminEmail = process.env.NEXT_PUBLIC_POCKETBASE_ADMIN_EMAIL ?? '';
+        const adminPass = process.env.NEXT_PUBLIC_POCKETBASE_ADMIN_PW ?? '';
+
+        if (!adminEmail || !adminPass) {
+          throw new Error("Admin email or password is not set in environment variables");
+        }
+
+        await pb.admins.authWithPassword(adminEmail, adminPass);
+        console.log("Authenticated successfully:", pb.authStore.isValid);
+      } catch (error) {
+        console.error("Failed to refresh auth state:", error);
+      }
     }
   };
 
@@ -85,11 +137,12 @@ export default function DashboardPage() {
           ) : (
             editions.map((edition) => (
               <li key={edition.id} className="mb-8">
-                <strong>{edition.title}</strong> - {edition.date}
+                <strong>{edition.title}</strong> -{" "}
+                {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
                 <div className="my-4">
                   <Button as={Link} href={`/editions/${edition.id}/edit`}>Edit</Button>
-                  <Button data-test="test" className="mx-4" onClick={() => handleDelete(edition.id)}>Delete</Button>
-                  <Button as={Link} href={`/editions/${edition.id}/moderate`}>Moderate</Button>
+                  <Button className="mx-4" onClick={() => handleDelete(edition.id)}>Delete</Button>
+                  <Button as={Link} href={`/editions/${edition.id}/present`}>Present</Button>
                 </div>
               </li>
             ))
