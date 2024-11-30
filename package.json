@@ -28,13 +28,15 @@
 		"dompurify": "^3.2.1",
 		"framer-motion": "12.0.0-alpha.1",
 		"lodash": "^4.17.21",
-		"next": "15.0.4-canary.4",
+		"next": "15.0.4-canary.30",
 		"next-auth": "^5.0.0-beta.25",
 		"pocketbase": "^0.21.5",
 		"react": "19.0.0-rc-02c0e824-20241028",
 		"react-dom": "19.0.0-rc-02c0e824-20241028",
+		"react-hotkeys-hook": "^4.6.1",
 		"sanitize-html": "^2.13.1",
-		"sass": "^1.81.0"
+		"sass": "^1.81.0",
+		"spotify-web-playback": "^1.4.0"
 	},
 	"devDependencies": {
 		"@tailwindcss/typography": "^0.5.15",

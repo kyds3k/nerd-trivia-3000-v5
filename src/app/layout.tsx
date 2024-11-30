@@ -15,22 +15,21 @@ const geistMono = localFont({
 	weight: "100 900",
 });
 const dos = localFont({
-  src: "./fonts/Good Old Dos.woff",
-  variable: "--font-dos",
-  weight: "100 300 500 700 900",
+	src: "./fonts/Good Old Dos.woff",
+	variable: "--font-dos",
+	weight: "100 300 500 700 900",
 });
-const play = localFont
-({
+const play = localFont({
 	src: "./fonts/Play-Regular.ttf",
 	variable: "--font-play",
 	weight: "400",
 });
-const playBold = localFont
-({
+const playBold = localFont({
 	src: "./fonts/Play-Bold.ttf",
 	variable: "--font-play-bold",
 	weight: "700",
 });
+
 export const metadata: Metadata = {
 	title: "Nerd Trivia 3000",
 	description: "Trivia for nerds, by a nerd.",
@@ -43,8 +42,26 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en" className="dark">
+			<head>
+				{/* Define onSpotifyWebPlaybackSDKReady globally */}
+				<script
+					dangerouslySetInnerHTML={{
+						__html: `
+            window.onSpotifyWebPlaybackSDKReady = function() {
+              console.log("Spotify Web Playback SDK is ready.");
+            };
+          `,
+					}}
+				></script>
+				{/* Add Spotify Web Playback SDK script */}
+				<script
+					id="spotify-sdk"
+					src="https://sdk.scdn.co/spotify-player.js"
+					async
+				></script>
+			</head>
 			<body
-				className={`${play.variable} font-sans antialiased`} 
+				className={`${play.variable} font-sans antialiased`}
 			>
 				<Providers>{children}</Providers>
 			</body>
