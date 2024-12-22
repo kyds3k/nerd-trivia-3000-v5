@@ -310,7 +310,7 @@ export default function DashboardPage() {
                   <Button as={Link} href={`/edition/${edition.id}/present`}>Present</Button>
                   <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
                   <Button as={Link} href={`edition/${edition.id}/edit`}>Edit</Button>
-                  <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete</Button>
+                  <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
                 </div>
               </li>
             ))
