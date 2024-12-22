@@ -4,7 +4,7 @@ import React, { use } from 'react';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
-import pb from "@/lib/pocketbase";
+import PocketBase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
@@ -31,8 +31,8 @@ interface Impossible {
 }
 
 export default function Impossible() {
+  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
-  
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : undefined;

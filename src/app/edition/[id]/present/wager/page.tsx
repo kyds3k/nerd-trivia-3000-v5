@@ -4,7 +4,7 @@ import React from 'react';
 
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
-import pb from "@/lib/pocketbase";
+import PocketBase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
@@ -26,7 +26,7 @@ interface Wager {
 
 export default function Wager() {
   const router = useRouter();
-  
+  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [song, setSong] = useState<string | null>(null);

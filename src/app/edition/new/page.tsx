@@ -14,7 +14,7 @@ import {
   Progress
 } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
-import pb from "@/lib/pocketbase";
+import Pocketbase from "pocketbase";
 import { parseDate, CalendarDate } from "@internationalized/date";
 import { useDateFormatter } from "@react-aria/i18n";
 import { useParams } from "next/navigation";
@@ -25,7 +25,7 @@ import ShallNotPass from "@/components/ShallNotPass";
 
 
 export default function NewEditionPage() {
-
+  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadMessage, setLoadMessage] = useState("Creating edition . . .");
   const [authData, setAuthData] = useState(null);
