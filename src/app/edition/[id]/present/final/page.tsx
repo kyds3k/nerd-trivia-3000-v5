@@ -3,7 +3,7 @@
 import React, { use } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
@@ -26,7 +26,7 @@ interface Question {
 }
 
 export default function Question() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;

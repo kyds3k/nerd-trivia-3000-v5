@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
-import PocketBase from 'pocketbase';
+import Pocketbase from 'pocketbase';
 import { Image } from "@nextui-org/react";
 import NextImage from "next/image";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -23,7 +23,7 @@ export default function Round() {
   const editionId = params?.id as string;
   const roundId = parseInt(params?.roundId as string);
   const teamId = params?.teamId as string;  
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
 
   const [roundGif, setRoundGif] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);

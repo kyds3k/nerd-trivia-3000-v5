@@ -4,7 +4,7 @@ import React from 'react';
 
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Spinner } from '@nextui-org/react';
@@ -16,7 +16,7 @@ interface Round {
 }
 
 export default function Round() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;

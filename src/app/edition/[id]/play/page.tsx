@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
 import { Image, Form, Input, Button, Divider, user } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
@@ -18,7 +18,7 @@ interface Edition {
 }
 
 export default function EditionPage() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;

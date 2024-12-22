@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 
 export async function POST() {
 

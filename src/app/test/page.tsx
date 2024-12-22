@@ -2,11 +2,11 @@
 
 import React from "react";
 import { useEffect, useState } from "react";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 
 
 export default function App() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const refreshSpotifyAuth = async () => {
     pb.autoCancellation(false);
     const authData = await pb.collection("users").authWithOAuth2({provider: 'google'});

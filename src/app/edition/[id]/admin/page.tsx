@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { Button, Image, Link, Tabs, Tab, Form, Select, Switch, cn } from '@nextui-org/react';
 import { useParams } from "next/navigation";
-import PocketBase from 'pocketbase';
+import Pocketbase from 'pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";
 
 interface Message {
@@ -13,7 +13,7 @@ interface Message {
 }
 
 export default function Admin() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [editionTitle, setEditionTitle] = useState<string>("");

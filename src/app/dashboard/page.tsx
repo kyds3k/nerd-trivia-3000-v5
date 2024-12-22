@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { Edition } from "../../types/pocketbase";
 import { Button } from "@nextui-org/button";
 import { Progress } from "@nextui-org/react";
@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 
 
 export default function DashboardPage() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const [editions, setEditions] = useState<Edition[]>([]);
   const [error, setError] = useState<string | null>(null);

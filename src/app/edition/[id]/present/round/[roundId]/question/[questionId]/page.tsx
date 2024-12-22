@@ -4,7 +4,7 @@ import React, { use } from 'react';
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";

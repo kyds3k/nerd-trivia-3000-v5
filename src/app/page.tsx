@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Button, Image, Link } from "@nextui-org/react";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
 
 
 export default function HomePage() {
-  const pb = new PocketBase('https://nerd-trivia-3k.pockethost.io');
+  const pb = new Pocketbase('https://nerd-trivia-3k.pockethost.io');
   console.log('pb:', pb);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);

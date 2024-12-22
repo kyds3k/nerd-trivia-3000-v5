@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { useParams } from "next/navigation";
-import PocketBase from "pocketbase";
+import Pocketbase from "pocketbase";
 import { Spinner, Button, Form, Input, Textarea, Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import Typed from "typed.js";
@@ -17,7 +17,7 @@ import { send } from "process";
 
 export default function Question() {
   const params = useParams();
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : '';
