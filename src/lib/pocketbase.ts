@@ -1,10 +1,7 @@
 import PocketBase from "pocketbase";
 
-const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+const pb = new PocketBase(process.env.NEXT_PUBLIC_PB_URL);
 
-if (typeof window !== "undefined") {
-  console.log("PocketBase URL:", process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  pb.authStore.loadFromCookie(document.cookie);
-}
+if (process.env.NODE_ENV === "development") pb.autoCancellation(false);
 
 export default pb;

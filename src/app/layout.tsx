@@ -3,6 +3,10 @@ import localFont from "next/font/local";
 import "./globals.css";
 import "../styles/globals.scss";
 import { Providers } from "./providers";
+import React, { useEffect } from 'react';
+import { ToastContainer, Flip, Bounce } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 
 const geistSans = localFont({
 	src: "./fonts/GeistVF.woff",
@@ -30,16 +34,26 @@ const playBold = localFont({
 	weight: "700",
 });
 
+const reboot = localFont({
+	src: "./fonts/reboot-crush.ttf",
+	variable: "--font-reboot",
+	weight: "400",
+});
+
 export const metadata: Metadata = {
 	title: "Nerd Trivia 3000",
 	description: "Trivia for nerds, by a nerd.",
 };
+
+
 
 export default function RootLayout({
 	children,
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+
+
 	return (
 		<html lang="en" className="dark">
 			<head>
@@ -61,9 +75,12 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body
-				className={`${play.variable} font-sans antialiased`}
+				className={`${play.variable} ${reboot.variable} font-sans antialiased bg-black`}
 			>
-				<Providers>{children}</Providers>
+				<Providers>
+					{children}
+					<ToastContainer limit={3} />
+				</Providers>
 			</body>
 		</html>
 	);

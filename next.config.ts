@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
 	experimental: {
 		optimizePackageImports: ["@nextui-org/react"],
 		parallelServerCompiles: true,
-		ppr: true,
+		ppr: false,
 		webpackBuildWorker: true,
 	},
 	typescript: {

@@ -9,6 +9,7 @@ import { p } from "framer-motion/client";
 interface SpotifyPlayerProps {
   token: string | null; // The token can be null if it's not set yet
   song: string | null; // Spotify track URI (e.g., "spotify:track:TRACK_ID")
+  songs: string[] | null;
 }
 
 declare global {
@@ -23,36 +24,42 @@ declare global {
   }
 }
 
-const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song }) => {
+const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => {
   const playerRef = useRef<Spotify.Player | null>(null);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-
+  
   useHotkeys("ctrl+p", () => playSong());
   useHotkeys("ctrl+t", () => togglePlayback());
-  useHotkeys("ctrl+x", () => clearQueue());
 
 
-  const clearQueue = async () => {
-    // Assuming you have a 'player' object from the Spotify Web SDK
 
-    if (playerRef.current) {
-      playerRef.current.removeFromQueue(0, -1)
-      .then(() => {
-        console.log("Queue cleared successfully");
-      })
-      .catch(error => {
-        console.error("Error clearing queue:", error);
-      });
+  async function ensureActivePlayer() {
+    const response = await fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        device_ids: [deviceId], // Replace with your player's device ID
+        play: false, // This will activate the device without playing
+      }),
+    });
+  
+    if (response.ok) {
+      console.log("Player activated successfully");
+    } else {
+      console.error("Failed to activate player:", await response.json());
     }
   }
-  
+
   const setDevice = async () => {
     if (!deviceId) {
       console.log("Device ID is null. Cannot set device.");
       return;
     }
-  
+
     console.log("Setting device with Device ID:", deviceId);
     try {
       console.log("HERE I GO!!");
@@ -62,9 +69,12 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song }) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ device_ids: [deviceId] }),
+        body: JSON.stringify({
+          device_ids: [deviceId], // Replace with your player's device ID
+          play: false, // This will activate the device without playing
+        }),
       });
-  
+
       if (response.ok) {
         console.log("Device set successfully.");
       } else {
@@ -74,7 +84,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song }) => {
       console.error("Error setting device:", error);
     }
   };
-     
+
 
 
   const togglePlayback = async () => {
@@ -89,52 +99,59 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song }) => {
       console.error("Player is not ready or initialized.");
     }
   };
+ 
 
   // Function to check playback position every second
-const checkPlaybackPosition = () => {
-  let seconds = 0;
-  const interval = setInterval(async () => {
-    if (playerRef.current) {
-      seconds+=1000;
-      const state = await playerRef.current.getCurrentState();
+  const checkPlaybackPosition = () => {
+    if (!playerRef.current) return;
+  
+    const startTime = Date.now();
+  
+    const checkState = async () => {
+      const state = await playerRef.current?.getCurrentState();
       if (state) {
         const { duration } = state;
+        const elapsedTime = Date.now() - startTime;
         const adjustedDuration = duration - 1000;
-        if (seconds >= adjustedDuration) {
-          playerRef.current.pause();
-          clearInterval(interval); // Stop polling after pausing
+  
+        if (elapsedTime >= adjustedDuration) {
+          playerRef.current?.pause();
+          return; // Stop the loop after pausing
         }
+  
+        requestAnimationFrame(checkState); // Continue checking
       }
-    }
-  }, 1000); // Check every 1 second
-};
+    };
+  
+    checkState();
+  };
+  
 
   const playSong = async () => {
-    if (playerRef.current && isPlayerReady && song) {
+    if (playerRef.current && isPlayerReady && song || songs) {
       console.log("Song is: ", song);
       try {
+        await ensureActivePlayer();        
         const response = await fetch(
-          `https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(song)}`,
+          `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
           {
-            method: "POST",
+            method: "PUT",
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({ uris: song ? [song] : songs }),
           }
         );
 
         if (response.ok) {
-          console.log("Song added to queue successfully.");
-          setTimeout(() => {
-            if (playerRef.current) {
-              playerRef.current.nextTrack();
-              setIsPlayerReady(true);
-              console.log("Player:");
-              console.log(playerRef.current);
-              checkPlaybackPosition();
-            }
-          }, 1500);
+          console.log("playing song");
+          // console.log("Song added to queue successfully.");
+          // playerRef.current.nextTrack();
+          // setIsPlayerReady(true);
+          // console.log("Player:");
+          // console.log(playerRef.current);
+          // checkPlaybackPosition();
         } else {
           const errorData = await response.json();
           console.error("Failed to add song to queue:", errorData);
@@ -179,7 +196,7 @@ const checkPlaybackPosition = () => {
         setDeviceId(device_id); // Update state
         setIsPlayerReady(true);
       });
-      
+
 
       player.addListener("not_ready", ({ device_id }) => {
         console.log("Device ID has gone offline:", device_id);
@@ -203,7 +220,7 @@ const checkPlaybackPosition = () => {
 
   useEffect(() => {
     console.log("Device ID updated:", deviceId);
-    setDevice();
+    ensureActivePlayer();
   }, [deviceId]);
 
   return (

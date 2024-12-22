@@ -1,5 +1,6 @@
 import { nextui } from "@nextui-org/react";
 import type { Config } from "tailwindcss";
+import twGlow from "twglow";
 
 const config: Config = {
   content: [
@@ -16,12 +17,15 @@ const config: Config = {
         'editor-bg': "#232327",
       },
       fontFamily: {
-        sans: ['var(--font-play)'],
+        sans: ["var(--font-play)"],
+        "reboot": "var(--font-reboot)",
       },
+      
     },
   },
   darkMode: "class",
   plugins: [
+    twGlow(),
     require('@tailwindcss/typography'),
     nextui({
     themes: {

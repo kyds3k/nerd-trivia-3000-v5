@@ -3,3 +3,5 @@ declare global {
     onSpotifyWebPlaybackSDKReady?: () => void;
   }
 }
+
+declare module 'twglow';
