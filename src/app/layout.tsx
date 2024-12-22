@@ -9,33 +9,33 @@ import 'react-toastify/dist/ReactToastify.css';
 
 
 const geistSans = localFont({
-	src: "./fonts/GeistVF.woff",
+	src: "fonts/GeistVF.woff",
 	variable: "--font-geist-sans",
 	weight: "100 900",
 });
 const geistMono = localFont({
-	src: "./fonts/GeistMonoVF.woff",
+	src: "fonts/GeistMonoVF.woff",
 	variable: "--font-geist-mono",
 	weight: "100 900",
 });
 const dos = localFont({
-	src: "./fonts/Good Old Dos.woff",
+	src: "fonts/Good-Old-DOS.woff",
 	variable: "--font-dos",
 	weight: "100 300 500 700 900",
 });
 const play = localFont({
-	src: "./fonts/Play-Regular.ttf",
+	src: "fonts/Play-Regular.ttf",
 	variable: "--font-play",
 	weight: "400",
 });
 const playBold = localFont({
-	src: "./fonts/Play-Bold.ttf",
+	src: "fonts/Play-Bold.ttf",
 	variable: "--font-play-bold",
 	weight: "700",
 });
 
 const reboot = localFont({
-	src: "./fonts/reboot-crush.ttf",
+	src: "fonts/reboot-crush.ttf",
 	variable: "--font-reboot",
 	weight: "400",
 });

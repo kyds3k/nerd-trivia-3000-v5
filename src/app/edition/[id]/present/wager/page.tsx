@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import { useSession } from "next-auth/react";
+
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import pb from "@/lib/pocketbase";
@@ -26,7 +26,7 @@ interface Wager {
 
 export default function Wager() {
   const router = useRouter();
-  const { data: session } = useSession();
+  
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [song, setSong] = useState<string | null>(null);
@@ -168,7 +168,6 @@ export default function Wager() {
   }
 
   useEffect(() => {
-    if (session) {
       refreshSpotifyAuth();
 
       const convertSpotifyUrlToUri = (url: string): string | null => {
@@ -202,10 +201,7 @@ export default function Wager() {
       if (editionId) {
         fetchWager();
       }
-    } else {
-      console.log("No session found. Please log in.");
-    }
-  }, [session]);
+   }, []);
 
   useEffect(() => {
     if (song) {

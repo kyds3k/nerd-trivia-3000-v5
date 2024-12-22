@@ -1,13 +1,11 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PocketBase from "pocketbase";
 import { Edition } from "../../types/pocketbase";
 import { Button } from "@nextui-org/button";
 import { Progress } from "@nextui-org/react";
-import { auth } from "../../../auth";
 import { useRouter } from "next/navigation";
 
 

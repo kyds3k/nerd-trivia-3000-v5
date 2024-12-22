@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import { Button, Image, Link } from "@nextui-org/react";
 import PocketBase from "pocketbase";
 import { useRouter } from "next/navigation";
-// import Pusher
-// import pusher from "lib/pusher";
 
 
 export default function HomePage() {
-  const pb = new PocketBase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  // const { data: session } = useSession();
+  const pb = new PocketBase('https://nerd-trivia-3k.pockethost.io');
+  console.log('pb:', pb);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [googleUser, setGoogleUser] = useState<string>("");

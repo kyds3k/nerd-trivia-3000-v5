@@ -1,69 +1,72 @@
 {
-	"name": "nerd-trivia-3000-v5",
-	"version": "0.1.0",
-	"private": true,
-	"scripts": {
-		"dev": "next dev",
-		"build": "next build",
-		"start": "node server.js",
-		"lint": "next lint"
-	},
-	"pnpm": {
-		"overrides": {
-			"@types/react": "19.0.1"
-		}
-	},
-	"dependencies": {
-		"@blocknote/core": "^0.19.2",
-		"@blocknote/mantine": "^0.19.2",
-		"@blocknote/react": "^0.19.2",
-		"@internationalized/date": "^3.6.0",
-		"@nextui-org/form": "^2.1.6",
-		"@nextui-org/react": "2.6.8",
-		"@nextui-org/spinner": "^2.0.34",
-		"@tiptap/core": "^2.10.3",
-		"@tiptap/extension-bubble-menu": "^2.10.3",
-		"@tiptap/extension-bullet-list": "^2.10.3",
-		"@tiptap/extension-color": "^2.10.3",
-		"@tiptap/extension-document": "^2.10.3",
-		"@tiptap/extension-list-item": "^2.10.3",
-		"@tiptap/extension-strike": "^2.10.3",
-		"@tiptap/extension-text-style": "^2.10.3",
-		"@tiptap/pm": "^2.10.3",
-		"@tiptap/react": "^2.10.3",
-		"@tiptap/starter-kit": "^2.10.3",
-		"ably": "^2.6.0",
-		"dompurify": "^3.2.2",
-		"embla-carousel-fade": "^8.5.1",
-		"embla-carousel-react": "^8.5.1",
-		"framer-motion": "11.14.3",
-		"lodash": "^4.17.21",
-		"next": "15.1.0",
-		"next-auth": "5.0.0-beta.25",
-		"pocketbase": "^0.22.1",
-		"pusher": "^5.2.0",
-		"pusher-js": "8.4.0-rc2",
-		"react": "19.0.0-rc-02c0e824-20241028",
-		"react-dom": "19.0.0-rc-02c0e824-20241028",
-		"react-hotkeys-hook": "^4.6.1",
-		"react-toastify": "^10.0.6",
-		"react-use": "^17.6.0",
-		"sanitize-html": "^2.13.1",
-		"sass": "^1.81.0",
-		"spotify-web-playback": "^1.4.0",
-		"typed.js": "^2.1.0"
-	},
-	"devDependencies": {
-		"@tailwindcss/typography": "^0.5.15",
-		"@types/node": "^20.17.9",
-		"@types/react": "^18.3.12",
-		"@types/react-dom": "^18.3.1",
-		"embla-carousel": "^8.5.1",
-		"eslint": "^9.16.0",
-		"eslint-config-next": "15.0.2",
-		"postcss": "^8.4.49",
-		"tailwindcss": "^3.4.15",
-		"twglow": "^0.0.10",
-		"typescript": "^5.7.2"
-	}
+  "name": "nerd-trivia-3000-v5",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.0.1"
+    }
+  },
+  "dependencies": {
+    "@internationalized/date": "^3.6.0",
+    "@nextui-org/form": "^2.1.6",
+    "@nextui-org/react": "2.6.8",
+    "@nextui-org/spinner": "^2.2.4",
+    "@tiptap/core": "^2.10.4",
+    "@tiptap/extension-bubble-menu": "^2.10.4",
+    "@tiptap/extension-bullet-list": "^2.10.4",
+    "@tiptap/extension-color": "^2.10.4",
+    "@tiptap/extension-document": "^2.10.4",
+    "@tiptap/extension-list-item": "^2.10.4",
+    "@tiptap/extension-strike": "^2.10.4",
+    "@tiptap/extension-text-style": "^2.10.4",
+    "@tiptap/pm": "^2.10.4",
+    "@tiptap/react": "^2.10.4",
+    "@tiptap/starter-kit": "^2.10.4",
+    "ably": "^2.6.0",
+    "dompurify": "^3.2.3",
+    "embla-carousel-fade": "^8.5.1",
+    "embla-carousel-react": "^8.5.1",
+    "framer-motion": "11.14.3",
+    "lodash": "^4.17.21",
+    "next": "15.1.0",
+    "next-auth": "5.0.0-beta.25",
+    "pocketbase": "^0.24.0",
+    "pusher": "^5.2.0",
+    "pusher-js": "8.4.0-rc2",
+    "react": "19.0.0-rc-02c0e824-20241028",
+    "react-dom": "19.0.0-rc-02c0e824-20241028",
+    "react-hotkeys-hook": "^4.6.1",
+    "react-toastify": "^11.0.2",
+    "react-use": "^17.6.0",
+    "sanitize-html": "^2.14.0",
+    "sass": "^1.83.0",
+    "spotify-web-playback": "^1.4.0",
+    "typed.js": "^2.1.0"
+  },
+  "devDependencies": {
+    "@flydotio/dockerfile": "^0.5.9",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/node": "^22.10.2",
+    "@types/react": "19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "embla-carousel": "^8.5.1",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.0.2",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "twglow": "^0.0.10",
+    "typescript": "^5.7.2"
+  },
+  "dockerfile": {
+    "args": {
+      "build": {}
+    }
+  }
 }

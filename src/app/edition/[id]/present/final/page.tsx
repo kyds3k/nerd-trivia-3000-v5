@@ -1,7 +1,6 @@
 "use client"
 
 import React, { use } from 'react';
-import { useSession } from "next-auth/react";
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
 import pb from "@/lib/pocketbase";
@@ -28,7 +27,6 @@ interface Question {
 
 export default function Question() {
   const router = useRouter();
-  const { data: session } = useSession();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [questionText, setQuestionText] = useState<string>("");
@@ -189,7 +187,6 @@ export default function Question() {
   }
 
   useEffect(() => {
-    if (session) {
       refreshSpotifyAuth();
       
 
@@ -239,10 +236,7 @@ export default function Question() {
       if (editionId) {
         fetchQuestion();
       }
-    } else {
-      console.log("No session found. Please log in.");
-    }
-  }, [session]);
+  }, []);
 
   useEffect(() => {
     if (song) {

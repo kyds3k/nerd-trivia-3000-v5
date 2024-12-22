@@ -1,6 +1,4 @@
 "use client";
-
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import pb from "@/lib/pocketbase";
@@ -8,7 +6,6 @@ import { Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { useHotkeys } from "react-hotkeys-hook";
-import { set } from "lodash";
 
 interface Edition {
   title: string;
@@ -20,7 +17,6 @@ interface Edition {
 }
 
 export default function EditionPage() {
-  const { data: session } = useSession();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [date, setDate] = useState<string | null>(null);
@@ -112,8 +108,7 @@ export default function EditionPage() {
   });
 
   useEffect(() => {
-    if (session) {
-      console.log('Session:', session);
+
       refreshSpotifyAuth();
 
       const convertSpotifyUrlToUri = (url: string): string | null => {
@@ -156,10 +151,7 @@ export default function EditionPage() {
       if (editionId) {
         fetchEdition();
       }
-    } else {
-      console.error("Session not found");
-    }
-  }, [session]);
+  }, []);
 
 
   return (

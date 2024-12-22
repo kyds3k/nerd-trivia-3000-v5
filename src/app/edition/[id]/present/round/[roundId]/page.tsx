@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react';
-import { useSession } from "next-auth/react";
+
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import pb from "@/lib/pocketbase";
@@ -17,7 +17,7 @@ interface Round {
 
 export default function Round() {
   const router = useRouter();
-  const { data: session } = useSession();
+  
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const roundId = Array.isArray(params?.roundId) 
@@ -46,7 +46,7 @@ export default function Round() {
   });
 
   useEffect(() => {
-    if (session) {
+    
       const fetchRound = async () => {
         pb.autoCancellation(false);
         try {
@@ -64,8 +64,8 @@ export default function Round() {
       if (editionId) {
         fetchRound();
       }
-    }
-  }, [session]);
+    
+  }, []);
   
 
   return (

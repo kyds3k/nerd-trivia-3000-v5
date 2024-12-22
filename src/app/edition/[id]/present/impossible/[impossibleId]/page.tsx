@@ -1,7 +1,7 @@
 "use client"
 
 import React, { use } from 'react';
-import { useSession } from "next-auth/react";
+
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
 import pb from "@/lib/pocketbase";
@@ -32,7 +32,7 @@ interface Impossible {
 
 export default function Impossible() {
   const router = useRouter();
-  const { data: session } = useSession();
+  
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : undefined;
@@ -230,7 +230,6 @@ export default function Impossible() {
 
 
   useEffect(() => {
-    if (session) {
       refreshSpotifyAuth();
 
       const convertSpotifyUrlToUri = (url: string): string | null => {
@@ -282,10 +281,8 @@ export default function Impossible() {
       if (editionId) {
         fetchQuestion();
       }
-    } else {
-      console.log("No session found. Please log in.");
-    }
-  }, [session]);
+
+  }, []);
 
   useEffect(() => {
     if (songs) {

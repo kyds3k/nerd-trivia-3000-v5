@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import {
   Tabs,
   Tab,
@@ -89,9 +88,6 @@ export default function EditEditionPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
 
-  const { data: session } = useSession();
-
-  //  console.log('logged in as admin:', session);
 
   pb.autoCancellation(false);
 
@@ -594,9 +590,7 @@ export default function EditEditionPage() {
 
   return (
     <div>
-      {!session ? (
-        <ShallNotPass />
-      ) : (
+
         <div className="p-10">
           <div className="absolute top-10 right-10">
             <Button
@@ -1409,7 +1403,7 @@ export default function EditEditionPage() {
             Update Edition
           </Button>
         </div>
-      )}
+
     </div>
   );
 
