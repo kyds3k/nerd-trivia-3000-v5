@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import "../styles/globals.scss";
 import { Providers } from "./providers";
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ToastContainer, Flip, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
