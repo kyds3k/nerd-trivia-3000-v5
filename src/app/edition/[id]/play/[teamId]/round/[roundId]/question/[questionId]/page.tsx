@@ -87,7 +87,7 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
-      data.id = teamId;
+      data.answer_type = "regular";  
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
       data.round_number = roundId;
@@ -277,13 +277,17 @@ export default function Question() {
                     </Switch>
                   </div>
                 )}
-                <Button
-                  onPress={testToast}
-                  size="sm"
-                  className="mt-4 w-fit"
-                >Test Toast</Button>
-
-
+                <Input
+                  isRequired
+                  errorMessage="Please enter artist name"
+                  label="Music Artist"
+                  labelPlacement="outside"
+                  name="music_answer"
+                  placeholder="Enter the artist's name"
+                  type="text"
+                  size="lg"
+                  className="inline-block"
+                />
                 <Button className="w-fit" type="submit" color="primary">
                   Submit
                 </Button>
