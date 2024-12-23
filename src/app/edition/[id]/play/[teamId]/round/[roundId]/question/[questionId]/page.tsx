@@ -37,12 +37,24 @@ export default function Question() {
 
 
   // Use the hook and pass the callback for question_toggle
-  usePrimeDirectives("directives", editionId, teamId, (active) => {
-    console.log("Question active status:", active);
-    setQuestionActive(active); // Update the state based on the directive
-    if (!active)
-      setShowForm(false); // Hide the form if the question is not active
-  });
+  // Assuming active might be a string, convert it to a boolean
+  usePrimeDirectives(
+    "directives",
+    editionId,
+    teamId,
+    (message, team) => {
+      console.log("Received message:", message, "for team:", team);
+      // Handle notification messages
+    },
+    (active) => {
+      console.log("Question active status:", active);
+      setQuestionActive(active); // Ensure the type matches
+      if (!active) {
+        setShowForm(false); // Hide the form if the question is not active
+      }
+    }
+  );
+
 
   usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
     console.log("Notification received:", message);
@@ -259,11 +271,11 @@ export default function Question() {
                       size="lg"
                       className="overflow-hidden"
                       onChange={(e) => setBanthaUsed(e.target.checked)}
-                      >
-                      <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />                      
+                    >
+                      <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
                       Use Banthashit Card?
                     </Switch>
-                  </div>                  
+                  </div>
                 )}
                 <Button
                   onPress={testToast}

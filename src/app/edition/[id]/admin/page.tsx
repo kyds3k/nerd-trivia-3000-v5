@@ -237,14 +237,14 @@ export default function Admin() {
 
   const sendDirective = async (type: string | null, round: string | null, question: string | null, active: boolean | null) => {
     console.log("sendDirective called with:", { type, round, question, active }); 
-  
+
     try {
-      const response = await fetch('/api/direct', {
+      const response = await fetch('/api/direct/', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ type, round, question, active })
+        body: JSON.stringify({ type, round, question, active }),
       });
   
       if (!response.ok) {
