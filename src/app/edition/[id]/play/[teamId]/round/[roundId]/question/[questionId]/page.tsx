@@ -57,7 +57,7 @@ export default function Question() {
 
 
   usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
-    console.log("Notification received:", message);
+    console.log(`Notification received from team ${team}: ${message}`);
     if (team == teamId) return;
     toast.info(message, {
       position: "top-right",
@@ -87,7 +87,7 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
-      data.answer_type = "regular";  
+      data.answer_type = "regular";
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
       data.round_number = roundId;
@@ -148,12 +148,26 @@ export default function Question() {
     const fetchQuestion = async () => {
       pb.autoCancellation(false);
       try {
+        // Check if the answer is already submitted
+        const answerList = await pb.collection("answers").getList(1, 1, {
+          filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
+        });
+    
+        if (answerList.items.length > 0) {
+          setAnswerSubmitted(true);
+          setShowForm(false);
+          return;
+        }
+    
+        // Fetch the question
         const question = await pb
           .collection("questions")
           .getFirstListItem(
-            `edition_id = "${editionId}" && round_number = ${roundId} && question_number = ${questionId}`, { fields: "id, is_active, question_text" }
+            `edition_id = "${editionId}" && round_number = ${roundId} && question_number = ${questionId}`,
+            { fields: "id, is_active, question_text" }
           );
         console.log(question);
+    
         const sanitizedQuestion = DOMPurify.sanitize(question.question_text);
         setQuestionText(sanitizedQuestion);
         setQuestionActive(question.is_active);
@@ -161,6 +175,9 @@ export default function Question() {
         console.error("Failed to get question:", error);
       }
     };
+    ``
+    
+    
 
     const fetchTeam = async () => {
       console.log("teamId", teamId);
@@ -176,8 +193,8 @@ export default function Question() {
     }
 
     getLoadingQuote();
-    fetchQuestion();
     fetchTeam();
+    fetchQuestion();
   });
 
   const el = useRef<HTMLSpanElement | null>(null);
@@ -199,21 +216,6 @@ export default function Question() {
       return () => typed.destroy(); // Cleanup Typed.js instance on unmount or rerun
     }
   }, [questionText, questionActive]);
-
-  const testToast = () => {
-    toast.info("X-Men Gold Team just signed up!", {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "dark",
-      transition: Flip,
-    });
-  }
-
 
   return (
     <div className="p-4 md:p-10">

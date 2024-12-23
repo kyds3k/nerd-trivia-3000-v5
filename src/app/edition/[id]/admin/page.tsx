@@ -13,13 +13,31 @@ interface Message {
 }
 
 export default function Admin() {
+  type SwitchStatesType = {
+    switchR1Q1: boolean;
+    switchR1Q2: boolean;
+    switchR1Q3: boolean;
+    switchR1Q4: boolean;
+    switchR1Q5: boolean;
+    switchR2Q1: boolean;
+    switchR2Q2: boolean;
+    switchR2Q3: boolean;
+    switchR2Q4: boolean;
+    switchR2Q5: boolean;
+    switchR3Q1: boolean;
+    switchR3Q2: boolean;
+    switchR3Q3: boolean;
+    switchR3Q4: boolean;
+    switchR3Q5: boolean;
+  };
+
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [editionTitle, setEditionTitle] = useState<string>("");
   // const questions is an array of objects
   const [questions, setQuestions] = useState<any[]>([]);
-  const [switchStates, setSwitchStates] = useState({
+  const [switchStates, setSwitchStates] = useState<SwitchStatesType>({
     switchR1Q1: false,
     switchR1Q2: false,
     switchR1Q3: false,
@@ -40,6 +58,8 @@ export default function Admin() {
   const [switchI2, setSwitchI2] = useState(false);
   const [switchWager, setSwitchWager] = useState(false);
   const [switchFinal, setSwitchFinal] = useState(false);
+  const [activeButton, setActiveButton] = useState<string | null>(null);
+
 
   // Handler for toggling a switch
   const handleToggle = (key, value) => {
@@ -113,7 +133,7 @@ export default function Admin() {
         }));
       }
 
-      toggleActive(value, 'impossible', Number(key[1]), null);      
+      toggleActive(value, 'impossible', Number(key[1]), null);
 
     }
 
@@ -154,6 +174,8 @@ export default function Admin() {
     if (key === 'final') {
       setSwitchFinal(value);
 
+      console.log('tog tog');
+
       toggleActive(value, 'final', null, null);
 
       if (value == true) {
@@ -193,50 +215,78 @@ export default function Admin() {
   const fetchQuestions = async () => {
     try {
       pb.autoCancellation(false);
-
+  
       const editionGrab = await pb.collection('editions').getOne(`${editionId}`);
       setEditionTitle(editionGrab.title);
-
+  
       const questionList = await pb.collection('questions').getFullList({
         filter: `edition_id="${editionId}"`,
       });
-
+  
       setQuestions(questionList); // Store the full question list
-
+  
       // Find the question with is_active === true
       const activeQuestion = questionList.find((question) => question.is_active);
-
+  
       if (activeQuestion) {
         const key = `switchR${activeQuestion.round_number}Q${activeQuestion.question_number}`;
         setSwitchStates((prev) => ({
           ...prev,
           [key]: true, // Set the active switch to true
         }));
-      } else {
-        // If no active question is found, search for the active impossible round
-        const impossibleList = await pb.collection('impossible_rounds').getFullList({
-          filter: `edition_id="${editionId}"`,
-        });
-
-        const activeImpossible = impossibleList.find((impossible) => impossible.is_active);
-
-        if (activeImpossible) {
-          const key = activeImpossible.impossible_number;
-          if (key === '1') {
-            setSwitchI1(true);
-          } else {
-            setSwitchI2(true);
-          }
+        return; // Exit early since an active question was found
+      }
+  
+      // If no active question is found, search for the active impossible round
+      const impossibleList = await pb.collection('impossible_rounds').getFullList({
+        filter: `edition_id="${editionId}"`,
+      });
+  
+      const activeImpossible = impossibleList.find((impossible) => impossible.is_active);
+  
+      if (activeImpossible) {
+        const key = activeImpossible.impossible_number;
+        if (key === '1') {
+          setSwitchI1(true);
+        } else {
+          setSwitchI2(true);
         }
+        return; // Exit early since an active impossible round was found
+      }
+  
+      // If no impossible round is active, check if a wager round is active
+      try {
+        const wagerRecord = await pb.collection('wager_rounds').getFirstListItem(
+          `edition_id="${editionId}"`
+        );
+        if (wagerRecord?.is_active) {
+          setSwitchWager(true);
+          return; // Exit early since a wager round is active
+        }
+      } catch (error) {
+        console.log('No active wager round found:', error);
+      }
+  
+      // If no wager round is active, check if a final round is active
+      try {
+        const finalRecord = await pb.collection('final_rounds').getFirstListItem(
+          `edition_id="${editionId}"`
+        );
+        if (finalRecord?.is_active) {
+          setSwitchFinal(true);
+        }
+      } catch (error) {
+        console.log('No active final round found:', error);
       }
     } catch (error) {
       console.error('Failed to fetch questions:', error);
     }
   };
+  
 
 
   const sendDirective = async (type: string | null, round: string | null, question: string | null, active: boolean | null) => {
-    console.log("sendDirective called with:", { type, round, question, active }); 
+    console.log("sendDirective called with:", { type, round, question, active });
 
     try {
       const response = await fetch('/api/direct/', {
@@ -246,18 +296,27 @@ export default function Admin() {
         },
         body: JSON.stringify({ type, round, question, active }),
       });
-  
+
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
-  
+
       const json = await response.json();
       console.log("Data sent successfully:", json);
+
     } catch (error) {
       console.error("Error sending data:", error);
     }
   };
-  
+
+  const handleButtonClick = (identifier: string, type: string, round: string | null, question: string | null, active: boolean | null) => {
+    // Update active button
+    setActiveButton(identifier);
+    console.log('setting active button:', identifier);
+    console.log('should be:', activeButton);
+    // Call sendDirective with appropriate parameters
+    sendDirective(type, round, question, active);
+  };
 
 
   const toggleActive = async (
@@ -306,7 +365,7 @@ export default function Admin() {
 
         await pb.collection('questions').update(recordId, { is_active: isActive });
 
-        sendDirective('question_toggle', round !== null ? round.toString() : null, question!== null ? question.toString() : null, isActive);
+        sendDirective('question_toggle', round !== null ? round.toString() : null, question !== null ? question.toString() : null, isActive);
 
       }
 
@@ -329,6 +388,33 @@ export default function Admin() {
         sendDirective('question_toggle', null, null, isActive);
 
       }
+
+      if (type === 'wager') {
+        const wagerRecord = await pb.collection('wager_rounds').getFirstListItem(
+          `edition_id="${editionId}"`,
+        );
+
+        if (!wagerRecord) {
+          throw new Error('Wager record not found.');
+        }
+        recordId = wagerRecord.id;
+        await pb.collection('wager_rounds').update(recordId, { is_active: isActive });
+        sendDirective('question_toggle', null, null, isActive);
+      }
+
+      if (type === 'final') {
+        const finalRecord = await pb.collection('final_rounds').getFirstListItem(
+          `edition_id="${editionId}"`,
+        );
+
+        if (!finalRecord) {
+          throw new Error('Final record not found.');
+        }
+        recordId = finalRecord.id;
+        await pb.collection('final_rounds').update(recordId, { is_active: isActive });
+        sendDirective('question_toggle', null, null, isActive);
+      }
+
     } catch (error) {
       console.error(`Failed to update ${type}:`, error);
     }
@@ -344,12 +430,12 @@ export default function Admin() {
   useEffect(() => {
     const pusher = getPusherClient(); // Call the function to get the Pusher instance
     const channel = pusher.subscribe("directives");
-  
+
     channel.bind("evt::direct", (data: Message) => {
       console.log("Received event:", data);
       // Handle the message here
     });
-  
+
     return () => {
       console.log("Unsubscribing from Pusher channel");
       channel.unbind("evt::direct"); // Unbind the specific event
@@ -371,18 +457,20 @@ export default function Admin() {
           <div className='p-4 md:p-4 mb-3'>
             <h3 className='text-2xl mb-2'>Rounds</h3>
             <div className="flex gap-4">
-              <Button
-                onPress={() => sendDirective('round_jump', '1', null, null)}
-                size='sm'
-              >Round 1</Button>
-              <Button
-                onPress={() => sendDirective('round_jump', '2', null, null)}
-                size='sm'
-              >Round 2</Button>
-              <Button
-                onPress={() => sendDirective('round_jump', '3', null, null)}
-                size='sm'
-              >Round 3</Button>
+              {/* Round Buttons */}
+              {['1', '2', '3'].map(round => {
+                const identifier = `round_${round}`;
+                return (
+                  <Button
+                    key={identifier}
+                    onPress={() => handleButtonClick(identifier, 'round_jump', round, null, null)}
+                    size="sm"
+                    color={activeButton === identifier ? "success" : undefined} // Add color dynamically
+                  >
+                    Round {round}
+                  </Button>
+                );
+              })}
             </div>
           </div>
           <div className="p-4">
@@ -409,10 +497,12 @@ export default function Admin() {
                           return (
                             <div key={key} className="flex flex-col gap-2">
                               <Button
-                                onPress={() =>
-                                  sendDirective('question_jump', String(number), String(questionNumber), null)
-                                }
+                                // onPress={() =>
+                                //   sendDirective('question_jump', String(number), String(questionNumber), null)
+                                // }
+                                onPress={() => handleButtonClick(`question_jump_${String(number)}${String(questionNumber)}`, 'question_jump', String(number), String(questionNumber), null)}
                                 size="sm"
+                                color={activeButton === `question_jump_${String(number)}${String(questionNumber)}` ? "success" : undefined}
                               >
                                 Question {questionNumber}
                               </Button>
@@ -431,7 +521,9 @@ export default function Admin() {
                       <div className="flex flex-col gap-2">
                         <Button
                           className="w-fit"
-                          onPress={() => sendDirective('impossible_jump', String(number), null, null)}
+                          // onPress={() => sendDirective('impossible_jump', String(number), null, null)}
+                          onPress={() => handleButtonClick(`impossible_jump_${String(number)}`, 'impossible_jump', String(number), null, null)}
+                          color={activeButton === `impossible_jump_${String(number)}` ? "success" : undefined}
                           size="sm"
                         >
                           Impossible {number}
@@ -454,14 +546,15 @@ export default function Admin() {
                 <div className="flex flex-col gap-2">
                   <Button
                     className="w-fit"
-                    onPress={() => sendDirective('wager_jump', null, null, null)}
+                    onPress={() => handleButtonClick('wager', 'wager_jump', null, null, null)}
                     size="sm"
+                    color={activeButton === 'wager' ? "success" : undefined}
                   >
                     Wager
                   </Button>
                   <Switch
                     isSelected={switchWager}
-                    onValueChange={setSwitchWager}
+                    onValueChange={(value) => handleToggle('wager', value)}
                   >
                     Active
                   </Switch>
@@ -472,14 +565,15 @@ export default function Admin() {
                 <div className="flex flex-col gap-2">
                   <Button
                     className="w-fit"
-                    onPress={() => sendDirective('final_jump', null, null, null)}
+                    onPress={() => handleButtonClick('final', 'final_jump', null, null, null)}
                     size="sm"
+                    color={activeButton === 'final' ? "success" : undefined}
                   >
                     Final
                   </Button>
                   <Switch
                     isSelected={switchFinal}
-                    onValueChange={setSwitchFinal}
+                    onValueChange={(value) => handleToggle('final', value)}
                   >
                     Active
                   </Switch>
