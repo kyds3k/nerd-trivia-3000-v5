@@ -1,7 +1,30 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+	sassOptions: {
+    silenceDeprecations: ['legacy-js-api'],
+  },
+	experimental: {
+		optimizePackageImports: ["@nextui-org/react"],
+		parallelServerCompiles: true,
+		ppr: false,
+		webpackBuildWorker: true,
+	},
+	typescript: {
+		ignoreBuildErrors: true,
+	},
+	images: {
+		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "media.tenor.com",
+				port: ""
+			}
+		],
+	}
 };
 
 export default nextConfig;
