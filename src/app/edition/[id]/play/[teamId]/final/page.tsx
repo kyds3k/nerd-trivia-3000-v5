@@ -20,8 +20,6 @@ export default function Question() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
-  const questionId = typeof params?.questionId === "string" ? params.questionId : undefined;
-  const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
@@ -87,12 +85,11 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
-      data.answer_type = "regular";
+      data.edition_id = editionId;
+      data.answer_type = "final";
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
-      data.round_number = roundId;
-      data.question_number = questionId;
-      data.bantha_used = banthaUsed;
+      data.bantha_used = false;
       data.team_name_lower = teamName?.toLowerCase();
       pb.autoCancellation(false);
 
