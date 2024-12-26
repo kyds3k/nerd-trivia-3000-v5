@@ -87,9 +87,11 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
+      data.edition_id = editionId;
       data.answer_type = "regular";
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
+      data.team_id = teamId;
       data.round_number = roundId;
       data.question_number = questionId;
       data.bantha_used = banthaUsed;
