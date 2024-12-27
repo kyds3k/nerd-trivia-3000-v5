@@ -47,13 +47,14 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
   return (
     <div>
       <Form onSubmit={handleSubmit}>
-        <div className="flex gap-4 w-1/2">
+        <div className="flex gap-4 w-screen">
           {/* First Select */}
           <Select
             label="Round"
             placeholder="Choose a round"
             onChange={handleFirstSelectChange}
             value={firstSelectValue}
+            className="w-1/4"
           >
             <SelectItem key="1" value="1">
               Round 1
@@ -82,6 +83,7 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
             isDisabled={!firstSelectValue}
             onChange={handleSecondSelectChange}
             value={secondSelectValue}
+            className="w-1/4"
           >
             {secondSelectOptions.map((option) => (
               <SelectItem key={option} value={option}>

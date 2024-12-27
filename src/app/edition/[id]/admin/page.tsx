@@ -457,7 +457,7 @@ export default function Admin() {
         destroyInactiveTabPanel={false}
         size='lg'
         variant='bordered'
-        classNames={{ tabList: "sticky top-14" }}
+        classNames={{ tabList: "sticky top-14 mb-10" }}
       >
         <Tab key='navigation' title='Navigation'>
           <div className='p-4 md:p-4 mb-3'>
@@ -590,7 +590,7 @@ export default function Admin() {
           </div>
         </Tab>
         <Tab key='scoring' title='Scoring'>
-          <div className='p-4 md:p-10'>
+          <div>
             <Scoring />
           </div>
           <div className="score-table">
