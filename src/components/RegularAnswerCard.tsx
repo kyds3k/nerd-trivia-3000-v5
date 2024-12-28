@@ -41,6 +41,8 @@ export default function RegularAnswerCard({
             bantha_answer_correct: banthaAnswerCorrect,
             misc_bonus: miscBonus,
             excelsior: excelsior,
+            team_identifier: answer.team_identifier,
+            team_id: answer.team_id,
           };
           console.log('data from card:', data);
           onSubmit(data);

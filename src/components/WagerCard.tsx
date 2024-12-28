@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState} from "react";
 import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
 import { Input, Form, Button, Divider, Switch } from "@nextui-org/react";
 
@@ -10,14 +10,20 @@ interface WagerProps {
 }
 
 export default function WagerCard({ wager, onSubmit }: WagerProps) {
+  const [musicCorrect, setMusicCorrect] = useState(wager.music_correct || false);
+
   return (
     <Card className="bg-gray-600 w-1/3 max-w-80" key={wager.id}>
       <Form
         id={wager.id}
         onSubmit={(e) => {
           e.preventDefault();
-          const data = Object.fromEntries(new FormData(e.currentTarget));
+          const data = {
+            id: wager.id,
+            music_correct: musicCorrect
+          }
           onSubmit(data);
+          console.log('data from card:', data);
         }}
       >
         <Input type="hidden" name="id" value={wager.id} />
@@ -33,23 +39,18 @@ export default function WagerCard({ wager, onSubmit }: WagerProps) {
             <pre>{wager.wager}</pre>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-md">Correct:</span>
+            <p className="text-md">
+              <strong>Wager Music Answer:</strong>
+            </p>
+            <p>{wager.music_answer}</p>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-md">Wager Music Correct:</span>
             <Switch
               name="music_correct"
-              isSelected={wager.music_correct}
-              onValueChange={(isSelected) => {
-                const newValue = isSelected ? "true" : "false";
-                document
-                  .getElementById(`music_correct_${wager.id}`)
-                  ?.setAttribute("value", newValue);
-              }}
-              aria-label="Music Correct"
-            />
-            <Input
-              type="hidden"
-              id={`music_correct_${wager.id}`}
-              name="music_correct"
-              value={wager.music_correct ? "true" : "false"}
+              isSelected={musicCorrect}
+              onValueChange={(isSelected) => setMusicCorrect(isSelected)}
+              aria-label="Wager Music Correct"
             />
           </div>
         </CardBody>
@@ -59,6 +60,6 @@ export default function WagerCard({ wager, onSubmit }: WagerProps) {
           </Button>
         </CardFooter>
       </Form>
-    </Card>
+    </Card >
   );
 }
