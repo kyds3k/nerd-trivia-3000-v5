@@ -6,6 +6,7 @@ import { Button, Image, Link, Tabs, Tab, Form, Select, Switch, cn } from '@nextu
 import { useParams } from "next/navigation";
 import Pocketbase from 'pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";
+import Scoring from '@/components/Scoring';
 
 interface Message {
   message: string;
@@ -59,6 +60,11 @@ export default function Admin() {
   const [switchWager, setSwitchWager] = useState(false);
   const [switchFinal, setSwitchFinal] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
+  const handleSelectSubmit = (round: string, question: string) => {
+    console.log("Selected Round:", round);
+    console.log("Selected Question:", question);
+    // Perform actions with the selected round and question
+  };
 
 
   // Handler for toggling a switch
@@ -448,10 +454,10 @@ export default function Admin() {
       <h1 className='text-4xl mb-4'>Admin - {editionTitle}</h1>
       <Tabs
         aria-label='Admin Tabs'
-        destroyInactiveTabPanel={true}
+        destroyInactiveTabPanel={false}
         size='lg'
         variant='bordered'
-        classNames={{ tabList: "sticky top-14" }}
+        classNames={{ tabList: "sticky top-14 mb-10" }}
       >
         <Tab key='navigation' title='Navigation'>
           <div className='p-4 md:p-4 mb-3'>
@@ -584,9 +590,11 @@ export default function Admin() {
           </div>
         </Tab>
         <Tab key='scoring' title='Scoring'>
-          <div className='p-4 md:p-10'>
-            <h2 className='text-2xl'>Scoring</h2>
-            <p>Update scores and stats.</p>
+          <div>
+            <Scoring />
+          </div>
+          <div className="score-table">
+
           </div>
         </Tab>
         <Tab key='miscellany' title='Miscellany'>

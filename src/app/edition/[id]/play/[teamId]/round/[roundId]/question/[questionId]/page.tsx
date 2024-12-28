@@ -87,9 +87,11 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
+      data.edition_id = editionId;
       data.answer_type = "regular";
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
+      data.team_id = teamId;
       data.round_number = roundId;
       data.question_number = questionId;
       data.bantha_used = banthaUsed;
@@ -152,13 +154,13 @@ export default function Question() {
         const answerList = await pb.collection("answers").getList(1, 1, {
           filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
         });
-    
+
         if (answerList.items.length > 0) {
           setAnswerSubmitted(true);
           setShowForm(false);
           return;
         }
-    
+
         // Fetch the question
         const question = await pb
           .collection("questions")
@@ -167,7 +169,7 @@ export default function Question() {
             { fields: "id, is_active, question_text" }
           );
         console.log(question);
-    
+
         const sanitizedQuestion = DOMPurify.sanitize(question.question_text);
         setQuestionText(sanitizedQuestion);
         setQuestionActive(question.is_active);
@@ -176,8 +178,8 @@ export default function Question() {
       }
     };
     ``
-    
-    
+
+
 
     const fetchTeam = async () => {
       console.log("teamId", teamId);
@@ -219,9 +221,14 @@ export default function Question() {
 
   return (
     <div className="p-4 md:p-10">
-      <h1 className="text-lg mb-5">
-        Round {roundId} Question {questionId}
-      </h1>
+      <div className="flex justify-between mb-5">
+        <h1 className="text-lg mb-5">
+          Round {roundId} Question {questionId}
+        </h1>
+        <h2 className="text-lg">
+          <strong>Team:</strong> {teamName}
+        </h2>
+      </div>
       {questionActive ? (
         <span ref={el} className="text-2xl"></span>
       ) : (
