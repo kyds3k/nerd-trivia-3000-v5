@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@nextui-org/button";
 import { useHotkeys } from "react-hotkeys-hook";
-import { set } from "lodash";
-import { p } from "framer-motion/client";
 
 interface SpotifyPlayerProps {
   token: string | null; // The token can be null if it's not set yet
@@ -29,6 +27,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   
+  console.log('hello I am here in SpotifyPlayer');
+
   useHotkeys("ctrl+p", () => playSong());
   useHotkeys("ctrl+t", () => togglePlayback());
 
@@ -227,14 +227,14 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
     <div className="hidden">
       <Button
         className="mx-4"
-        onClick={playSong} // Use the playSong function to play a specific track
+        onPress={playSong} // Use the playSong function to play a specific track
         disabled={!isPlayerReady || !song}
       >
         Play Song
       </Button>
       <Button
         className="mx-4"
-        onClick={togglePlayback} // Toggle playback
+        onPress={togglePlayback} // Toggle playback
         disabled={!isPlayerReady}
       >
         Toggle Playback

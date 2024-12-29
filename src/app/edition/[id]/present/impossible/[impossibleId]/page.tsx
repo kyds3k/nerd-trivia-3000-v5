@@ -15,6 +15,7 @@ import DynamicText from "@/components/DynamicText"; // Correct for default expor
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import { set } from 'lodash';
+import local from 'next/font/local';
 
 interface Impossible {
   edition_id: string;
@@ -51,12 +52,8 @@ export default function Impossible() {
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
 
   useHotkeys("ctrl+ArrowRight", () => {
-    // if Impossible 1, go to round 2 page, if Impossible 2 go to round 3 page. there is no impossible 3
-    if (impossibleId === "1") {
-      router.push(`/edition/${editionId}/present/round/2`);
-    } else {
-      router.push(`/edition/${editionId}/present/round/3`); 
-    }
+    localStorage.setItem("impossibleSource", `${impossibleId}`);
+    router.push(`/edition/${editionId}/present/scoreboard`);
   });
 
 

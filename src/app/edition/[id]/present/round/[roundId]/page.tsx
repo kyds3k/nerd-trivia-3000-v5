@@ -36,7 +36,7 @@ export default function Round() {
   useHotkeys("ctrl+ArrowLeft", () => {
     if (typeof roundId === "number" && roundId > 1) {
       // Navigate to the previous round
-      router.push(`/edition/${editionId}/impossible/${roundId - 1}`);
+      router.push(`/edition/${editionId}/present/scoreboard`);
     } else if (roundId === 1) {
       // Navigate to the 'present' page
       router.push(`/edition/${editionId}/present`);
