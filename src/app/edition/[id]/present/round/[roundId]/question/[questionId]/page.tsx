@@ -32,7 +32,7 @@ interface Question {
 
 export default function Question() {
   const router = useRouter();
-  
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);  
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const questionId = typeof params?.questionId === "string" ? params.questionId : undefined;
