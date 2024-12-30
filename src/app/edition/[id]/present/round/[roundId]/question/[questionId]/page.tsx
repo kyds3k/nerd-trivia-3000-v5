@@ -1,8 +1,8 @@
 "use client"
 
 import React, { use } from 'react';
-
 import { useEffect, useState, useRef } from 'react';
+import { useEffectOnce } from 'react-use';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
@@ -14,6 +14,8 @@ import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
+import Typed from "typed.js";
+import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 
 interface Question {
   edition_id: string;
@@ -32,7 +34,7 @@ interface Question {
 
 export default function Question() {
   const router = useRouter();
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);  
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const questionId = typeof params?.questionId === "string" ? params.questionId : undefined;
@@ -50,6 +52,25 @@ export default function Question() {
   const [bonusAnswers, setBonusAnswers] = useState<string[] | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [questionActive, setQuestionActive] = useState<boolean>(false);
+  const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
+
+  // Use the hook and pass the callback for question_toggle
+  // Assuming active might be a string, convert it to a boolean
+  usePrimeDirectives(
+    "directives",
+    editionId,
+    null,
+    (message, team) => {
+      console.log("Received message:", message, "for team:", team);
+      // Handle notification messages
+    },
+    (active) => {
+      console.log("Question active status:", active);
+      setQuestionActive(active); // Ensure the type matches
+    }
+  );
+
 
   useHotkeys("ctrl+ArrowRight", () => {
     const questionIdStr = questionId!; // Assert that questionId is not undefined
@@ -77,6 +98,17 @@ export default function Question() {
     }
   });
 
+  const getLoadingQuote = async () => {
+    try {
+      pb.autoCancellation(false);
+      const loadingQuotes = await pb.collection("loading_quotes").getFullList();
+      const listCount = loadingQuotes.length;
+      const randomIndex = Math.floor(Math.random() * listCount);
+      setLoadingQuote(loadingQuotes[randomIndex].quote);
+    } catch (error) {
+      console.error("Failed to get loading quote:", error);
+    }
+  };
 
   const questionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -134,6 +166,7 @@ export default function Question() {
       console.log('expiry:', expiry);
       console.log('now:', now);
       if (expiry < now) {
+        console.log('expiret! gotta refresh!')
         try {
           const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
@@ -161,6 +194,14 @@ export default function Question() {
           }
         } catch (error) {
           console.error("Failed to refresh Spotify token:", error);
+          // if error contains "revoked", clear the token and do the oAuth flow again
+          if (console.error.toString().includes("revoked")) {
+            console.log("Token was revoked, clearing local storage");
+            localStorage.removeItem("spotifyAuthToken");
+            localStorage.removeItem("spotifyAuthTokenExpiry");
+            localStorage.removeItem("spotifyAuthRefreshToken");
+            refreshSpotifyAuth();
+          }
         }
       } else {
         console.log("Token is still valid");
@@ -219,66 +260,67 @@ export default function Question() {
 
   useEffect(() => {
 
-      refreshSpotifyAuth();
+    refreshSpotifyAuth();
 
-      const convertSpotifyUrlToUri = (url: string): string | null => {
-        const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-        return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-      };
+    const convertSpotifyUrlToUri = (url: string): string | null => {
+      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
+      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
+    };
 
 
-      const fetchQuestion = async () => {
-        try {
-          const randomRequestKey = Math.random().toString(36).substring(7);
-          pb.autoCancellation(false);
-          const response = await pb
-            .collection("questions")
-            .getFirstListItem<Question>(`edition_id = "${editionId}" && question_number = "${questionId}" && round_number = "${roundId}"`);
+    const fetchQuestion = async () => {
+      try {
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        pb.autoCancellation(false);
+        const response = await pb
+          .collection("questions")
+          .getFirstListItem<Question>(`edition_id = "${editionId}" && question_number = "${questionId}" && round_number = "${roundId}"`);
 
-          console.log("Question fetched:", response);
+        console.log("Question fetched:", response);
 
-          setAnswerGif(response.answer_gif);
-          setIsBanthaShitQuestion(response.is_banthashit_question);
-          setBanthaAnswerGif(response.bantha_answer_gif);
-          setSong(response.song);
-          setBonusAnswers(response.bonus_answers);
-          setIsActive(response.is_active);
+        setAnswerGif(response.answer_gif);
+        setIsBanthaShitQuestion(response.is_banthashit_question);
+        setBanthaAnswerGif(response.bantha_answer_gif);
+        setSong(response.song);
+        setBonusAnswers(response.bonus_answers);
+        setIsActive(response.is_active);
 
-          // Sanitize and set HTML content
-          if (response.question_text) {
-            const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
-            setQuestionText(sanitizedQuestion);
-          }
-
-          if (response.answer) {
-            const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
-            setAnswer(sanitizedAnswer);
-          }
-
-          if (response.bantha_answer) {
-            const sanitizedBanthaAnswer = DOMPurify.sanitize(response.bantha_answer); // Clean the HTML
-            setBanthaAnswer(sanitizedBanthaAnswer);
-          }
-
-          setBanthaAnswerGif(response.bantha_answer_gif);
-
-          setSong(convertSpotifyUrlToUri(response.song));
-
-          if (response.bonus_answers) {
-            const sanitizedBonusAnswers = response.bonus_answers.map((answer) => DOMPurify.sanitize(answer));
-            setBonusAnswers(sanitizedBonusAnswers);
-          }
-
-          setIsActive(response.is_active);
-
-        } catch (error) {
-          console.error("Failed to fetch edition:", error);
+        // Sanitize and set HTML content
+        if (response.question_text) {
+          const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
+          setQuestionText(sanitizedQuestion);
+          setQuestionActive(response.is_active);
         }
-      };
 
-      if (editionId) {
-        fetchQuestion();
+        if (response.answer) {
+          const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
+          setAnswer(sanitizedAnswer);
+        }
+
+        if (response.bantha_answer) {
+          const sanitizedBanthaAnswer = DOMPurify.sanitize(response.bantha_answer); // Clean the HTML
+          setBanthaAnswer(sanitizedBanthaAnswer);
+        }
+
+        setBanthaAnswerGif(response.bantha_answer_gif);
+
+        setSong(convertSpotifyUrlToUri(response.song));
+
+        if (response.bonus_answers) {
+          const sanitizedBonusAnswers = response.bonus_answers.map((answer) => DOMPurify.sanitize(answer));
+          setBonusAnswers(sanitizedBonusAnswers);
+        }
+
+        setIsActive(response.is_active);
+
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
       }
+    };
+
+    if (editionId) {
+      fetchQuestion();
+    }
 
   }, []);
 
@@ -288,22 +330,49 @@ export default function Question() {
     }
   }, [song]);
 
+  useEffectOnce(() => {
+    getLoadingQuote();
+  }, []);
+
+  const el = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (el.current && questionActive && questionText) {
+      const typed = new Typed(el.current, {
+        strings: [questionText],
+        typeSpeed: 20,
+        backSpeed: 30,
+        showCursor: false,
+        loop: false,
+      });
+
+      return () => typed.destroy(); // Cleanup Typed.js instance on unmount or rerun
+    }
+  }, [questionText, questionActive]);
+
   return (
     <div>
-      <h1 className="py-4 pl-4 text-2xl">Round {roundId} Question {questionId}</h1>
-      {spotifyToken && (
-        <div>
-          <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
-        </div>
-      )}
+      <div className="flex justify-between p-4">
+        <h1 className="text-2xl">Round {roundId} Question {questionId}</h1>
+        {spotifyToken && (
+          <div>
+            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+          </div>
+        )}
+      </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            <DynamicText
+            {questionActive ? (
+              // <span ref={el} className="text-2xl"></span>
+              <DynamicText
               html={questionText}
               maxFontSize={80}
               className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
-            />
+            />              
+            ) : (
+              <p className="text-2xl flex">{loadingQuote}</p>
+            )}
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">

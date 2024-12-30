@@ -15,7 +15,7 @@ const activeChannels: Record<string, boolean> = {};
 export function usePrimeDirectives(
   channelName: string,
   editionId?: string,
-  teamId?: string,
+  teamId?: string | null,
   onMessage?: (message: string, team: string) => void, // Handle notification messages
   onQuestionToggle?: (active: boolean) => void // Handle question toggling
 ) {
@@ -24,7 +24,6 @@ export function usePrimeDirectives(
 
   useEffect(() => {
     if (activeChannels[channelName]) {
-      console.log(`Already subscribed to channel: ${channelName}`);
       return;
     }
 

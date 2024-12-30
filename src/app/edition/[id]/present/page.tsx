@@ -6,6 +6,7 @@ import { Image } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTimer } from "react-timer-hook";
 
 interface Edition {
   title: string;
@@ -29,6 +30,9 @@ export default function EditionPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
 
+  interface SpotTimerProps {
+    expiryTimestamp: Date;
+  }  
 
   const refreshSpotifyAuth = async () => {
     // Check if a valid token exists in localStorage
@@ -108,6 +112,10 @@ export default function EditionPage() {
     window.location.href = `/edition/${editionId}/present/round/1`;
   });
 
+
+  const time = new Date();
+  time.setSeconds(time.getSeconds() + 600);
+
   useEffect(() => {
 
       refreshSpotifyAuth();
@@ -169,7 +177,7 @@ export default function EditionPage() {
       )}
       {blurb && (
         <div
-          className="text-3xl"
+          className="text-3xl mb-8"
           dangerouslySetInnerHTML={{ __html: blurb }}
         />
       )}

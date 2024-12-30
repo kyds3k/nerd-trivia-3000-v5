@@ -2,6 +2,7 @@
 
 import React, { use } from 'react';
 import { useEffect, useState, useRef } from 'react';
+import { useEffectOnce } from 'react-use';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
@@ -13,6 +14,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
+import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 
 interface Question {
   edition_id: string;
@@ -41,12 +43,41 @@ export default function Question() {
   const [endGif2, setEndGif2] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [questionActive, setQuestionActive] = useState<boolean | null>(null);
+  const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
+
+  // Use the hook and pass the callback for question_toggle
+  // Assuming active might be a string, convert it to a boolean
+  usePrimeDirectives(
+    "directives",
+    editionId,
+    null,
+    (message, team) => {
+      console.log("Received message:", message, "for team:", team);
+      // Handle notification messages
+    },
+    (active) => {
+      console.log("Question active status:", active);
+      setQuestionActive(active); // Ensure the type matches
+    }
+  );
 
 
   useHotkeys("ctrl+ArrowLeft", () => {
     router.push(`/edition/${editionId}/present/wager/`);
   });
 
+  const getLoadingQuote = async () => {
+    try {
+      pb.autoCancellation(false);
+      const loadingQuotes = await pb.collection("loading_quotes").getFullList();
+      const listCount = loadingQuotes.length;
+      const randomIndex = Math.floor(Math.random() * listCount);
+      setLoadingQuote(loadingQuotes[randomIndex].quote);
+    } catch (error) {
+      console.error("Failed to get loading quote:", error);
+    }
+  };  
 
   const questionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -104,6 +135,7 @@ export default function Question() {
       console.log('expiry:', expiry);
       console.log('now:', now);
       if (expiry < now) {
+        console.log('expiret! gotta refresh!')
         try {
           const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
@@ -131,6 +163,14 @@ export default function Question() {
           }
         } catch (error) {
           console.error("Failed to refresh Spotify token:", error);
+          // if error contains "revoked", clear the token and do the oAuth flow again
+          if (console.error.toString().includes("revoked")) {
+            console.log("Token was revoked, clearing local storage");
+            localStorage.removeItem("spotifyAuthToken");
+            localStorage.removeItem("spotifyAuthTokenExpiry");
+            localStorage.removeItem("spotifyAuthRefreshToken");
+            refreshSpotifyAuth();
+          }
         }
       } else {
         console.log("Token is still valid");
@@ -188,56 +228,60 @@ export default function Question() {
   }
 
   useEffect(() => {
-      refreshSpotifyAuth();
-      
-
-      const convertSpotifyUrlToUri = (url: string): string | null => {
-        const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-        return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-      };
+    refreshSpotifyAuth();
 
 
-      const fetchQuestion = async () => {
-        try {
-          pb.autoCancellation(false);
-          const response = await pb
-            .collection("final_rounds")
-            .getFirstListItem<Question>(`edition_id = "${editionId}"`);
-
-          console.log("Question fetched:", response);
+    const convertSpotifyUrlToUri = (url: string): string | null => {
+      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
+      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
+    };
 
 
+    const fetchQuestion = async () => {
+      try {
+        pb.autoCancellation(false);
+        const response = await pb
+          .collection("final_rounds")
+          .getFirstListItem<Question>(`edition_id = "${editionId}"`);
 
-          setAnswerGif(response.final_answer_gif);
-          setIsActive(response.is_active);
+        console.log("Question fetched:", response);
 
-          // Sanitize and set HTML content
-          if (response.question_text) {
-            const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
-            setQuestionText(sanitizedQuestion);
-          }
 
-          if (response.answer) {
-            const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
-            setAnswer(sanitizedAnswer);
-          }
 
-          setSong(convertSpotifyUrlToUri(response.final_song));
+        setAnswerGif(response.final_answer_gif);
+        setIsActive(response.is_active);
 
-          setEndGif1(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_1}`);
-          setEndGif2(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_2}`);
-
-          setIsActive(response.is_active);
-
-        } catch (error) {
-          console.error("Failed to fetch edition:", error);
+        // Sanitize and set HTML content
+        if (response.question_text) {
+          const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
+          setQuestionText(sanitizedQuestion);
         }
-      };
 
-      if (editionId) {
-        fetchQuestion();
+        if (response.answer) {
+          const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
+          setAnswer(sanitizedAnswer);
+        }
+
+        setSong(convertSpotifyUrlToUri(response.final_song));
+
+        setEndGif1(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_1}`);
+        setEndGif2(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_2}`);
+
+        setIsActive(response.is_active);
+
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
       }
+    };
+
+    if (editionId) {
+      fetchQuestion();
+    }
   }, []);
+
+  useEffectOnce(() => {
+    getLoadingQuote();
+  });
 
   useEffect(() => {
     if (song) {
@@ -247,20 +291,27 @@ export default function Question() {
 
   return (
     <div>
-      <h1 className="py-4 pl-4 text-2xl">FINAL QUESTION</h1>
-      {spotifyToken && (
-        <div>
-          <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
-        </div>
-      )}
+      <div className="flex justify-between p-4">
+        <h1 className="py-4 pl-4 text-2xl">FINAL QUESTION</h1>
+        {spotifyToken && (
+          <div>
+            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+          </div>
+        )}
+      </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            <DynamicText
-              html={questionText}
-              maxFontSize={80}
-              className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
-            />
+            {questionActive ? (
+              // <span ref={el} className="text-2xl"></span>
+              <DynamicText
+                html={questionText}
+                maxFontSize={80}
+                className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
+              />
+            ) : (
+              <p className="text-2xl flex">{loadingQuote}</p>
+            )}
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
@@ -298,7 +349,7 @@ export default function Question() {
                 </>
               )}
             </div>
-          </div>                  
+          </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="flex items-center justify-center w-full">
               {endGif2 ? (
@@ -309,7 +360,7 @@ export default function Question() {
                 </>
               )}
             </div>
-          </div>                            
+          </div>
         </div>
       </div>
     </div>
