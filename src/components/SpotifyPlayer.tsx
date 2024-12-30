@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@nextui-org/button";
 import { useHotkeys } from "react-hotkeys-hook";
+import SpotTimer from "@/components/SpotTimer";
 
 interface SpotifyPlayerProps {
-  token: string | null; // The token can be null if it's not set yet
-  song: string | null; // Spotify track URI (e.g., "spotify:track:TRACK_ID")
+  token: string | null;
+  song: string | null;
   songs: string[] | null;
 }
 
@@ -17,7 +18,9 @@ declare global {
       play: (items?: string | string[], offset?: number) => Promise<void>;
       nextTrack: () => Promise<void>;
       setUri: (uri: { uri: string }) => Promise<void>;
-      removeFromQueue: (position: number, count: number) => Promise<void>
+      removeFromQueue: (position: number, count: number) => Promise<void>;
+      getCurrentState: () => Promise<{ duration: number } | null>;
+      pause: () => Promise<void>;
     }
   }
 }
@@ -26,112 +29,110 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   const playerRef = useRef<Spotify.Player | null>(null);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
-  
-  console.log('hello I am here in SpotifyPlayer');
+  const [timerExpiry, setTimerExpiry] = useState<Date>(new Date()); // Timer state for SpotTimer
+  const [timerStarted, setTimerStarted] = useState<boolean>(false);
 
   useHotkeys("ctrl+p", () => playSong());
   useHotkeys("ctrl+t", () => togglePlayback());
 
-
-
-  async function ensureActivePlayer() {
-    const response = await fetch("https://api.spotify.com/v1/me/player", {
-      method: "PUT",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        device_ids: [deviceId], // Replace with your player's device ID
-        play: false, // This will activate the device without playing
-      }),
-    });
-  
-    if (response.ok) {
-      console.log("Player activated successfully");
-    } else {
-      console.error("Failed to activate player:", await response.json());
-    }
-  }
-
-  const setDevice = async () => {
+  const ensureActivePlayer = async () => {
     if (!deviceId) {
-      console.log("Device ID is null. Cannot set device.");
+      console.log("Device ID is not available.");
       return;
     }
 
-    console.log("Setting device with Device ID:", deviceId);
     try {
-      console.log("HERE I GO!!");
-      const response = await fetch(`https://api.spotify.com/v1/me/player`, {
+      const response = await fetch("https://api.spotify.com/v1/me/player", {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          device_ids: [deviceId], // Replace with your player's device ID
-          play: false, // This will activate the device without playing
+          device_ids: [deviceId], // Activate the device
+          play: false, // Set to false to activate without playback
         }),
       });
 
       if (response.ok) {
-        console.log("Device set successfully.");
+        console.log("Player activated successfully.");
       } else {
-        console.error("Failed to set device:", await response.json());
+        console.error("Failed to activate player:", await response.json());
       }
     } catch (error) {
-      console.error("Error setting device:", error);
+      console.error("Error activating player:", error);
     }
   };
 
+  const getTrackDuration = async (spotifyUri: string | null) => {
+    try {
+      const trackId = spotifyUri?.split(":")[2];
+      const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-
-  const togglePlayback = async () => {
-    if (playerRef.current && isPlayerReady) {
-      try {
-        await playerRef.current.togglePlay();
-        console.log("Toggled playback for sure.");
-      } catch (error) {
-        console.error("Failed to toggle playback:", error);
+      if (!response.ok) {
+        throw new Error(`Spotify API error: ${response.status} - ${response.statusText}`);
       }
-    } else {
-      console.error("Player is not ready or initialized.");
+
+      const data = await response.json();
+      return data.duration_ms; // Return duration in milliseconds
+    } catch (error) {
+      console.error("Error fetching track duration:", error);
+      return null;
     }
   };
- 
 
-  // Function to check playback position every second
-  const checkPlaybackPosition = () => {
-    if (!playerRef.current) return;
-  
-    const startTime = Date.now();
-  
-    const checkState = async () => {
-      const state = await playerRef.current?.getCurrentState();
-      if (state) {
-        const { duration } = state;
-        const elapsedTime = Date.now() - startTime;
-        const adjustedDuration = duration - 1000;
-  
-        if (elapsedTime >= adjustedDuration) {
-          playerRef.current?.pause();
-          return; // Stop the loop after pausing
-        }
-  
-        requestAnimationFrame(checkState); // Continue checking
+  const getCombinedTrackDuration = async (spotifyUris: string[] | null): Promise<number> => {
+    try {
+      if (!spotifyUris || spotifyUris.length === 0) {
+        throw new Error("No Spotify URIs provided.");
       }
-    };
   
-    checkState();
+      const totalDuration = await Promise.all(
+        spotifyUris.map(async (uri) => {
+          // const trackId is everything after "track/" in the URI
+          const trackId = uri.match(/track\/([^?]*)/)?.[1] || null;
+          try {
+            const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+  
+            console.log('response: ', response);
+
+            if (!response.ok) {
+              throw new Error(`Spotify API error: ${response.status} - ${response.statusText}`);
+            }
+  
+            const data = await response.json();
+            return data.duration_ms; // Return duration in milliseconds
+          } catch (error) {
+            console.error(`Error fetching duration for URI ${uri}:`, error);
+            return 0; // Return 0 for errors on specific tracks
+          }
+        })
+      );
+  
+      // Combine all durations into a single total
+      const combinedDuration = totalDuration.reduce((acc, duration) => acc + duration, 0);
+      return combinedDuration;
+    } catch (error) {
+      console.error("Error fetching combined track duration:", error);
+      return 0;
+    }
   };
+  
   
 
   const playSong = async () => {
-    if (playerRef.current && isPlayerReady && song || songs) {
-      console.log("Song is: ", song);
+    if (playerRef.current && isPlayerReady && (song || songs)) {
       try {
-        await ensureActivePlayer();        
+        await ensureActivePlayer();
+
         const response = await fetch(
           `https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`,
           {
@@ -145,58 +146,57 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
         );
 
         if (response.ok) {
-          console.log("playing song");
-          // console.log("Song added to queue successfully.");
-          // playerRef.current.nextTrack();
-          // setIsPlayerReady(true);
-          // console.log("Player:");
-          // console.log(playerRef.current);
-          // checkPlaybackPosition();
+          const songDuration = song ? await getTrackDuration(song) : await getCombinedTrackDuration(songs);
+          if (songDuration) {
+            const newExpiry = new Date();
+            newExpiry.setMilliseconds(newExpiry.getMilliseconds() + songDuration);
+            setTimerExpiry(newExpiry); // Update the timer expiry
+            setTimerStarted(true); // Start the timer
+          }
+          console.log("Playing song...");
         } else {
           const errorData = await response.json();
-          console.error("Failed to add song to queue:", errorData);
+          console.error("Failed to play song:", errorData);
         }
       } catch (error) {
-        console.error("Failed to add song to queue:", error);
+        console.error("Error playing song:", error);
       }
     } else {
       console.error("Player is not ready, or no song URI is provided.");
     }
   };
 
+  const togglePlayback = async () => {
+    if (playerRef.current && isPlayerReady) {
+      try {
+        await playerRef.current.togglePlay();
+        console.log("Toggled playback.");
+      } catch (error) {
+        console.error("Error toggling playback:", error);
+      }
+    } else {
+      console.error("Player is not ready or initialized.");
+    }
+  };
 
   useEffect(() => {
-    console.log("Token passed to SpotifyPlayer:", token);
-
     const initializeSpotifySDK = () => {
       if (!(window as any).Spotify) {
         console.error("Spotify SDK not loaded yet.");
         return;
       }
 
-      const theToken =
-        "BQC1afCQ6M4tykmMMKHrQstvM5PQ4F4Jxq9hi2nyGZxZ4fpL3VHAuWPMWDdeXFEIG1KUFkd4piXFj_ncmnCTDOm-Ez06pJZWic-NvpYGfI2v9POJMJzmprGMwQEvymrWSSz0Em0p_QRVaHiNi3fvVHjCp49Z4e13BXOBemEbng6fTr4_KX3pDtbpsjsuG_2Q6QgAfAOMzqw";
-      const effectiveToken = token || theToken;
-
-      if (!effectiveToken) {
-        console.error("Spotify token is not available. Player cannot initialize.");
-        return;
-      }
-
-      console.log("Initializing Spotify Player with token:", effectiveToken);
-
       const player = new Spotify.Player({
         name: "Nerd Trivia 3000 Player",
-        getOAuthToken: (cb) => cb(effectiveToken),
+        getOAuthToken: (cb) => cb(token || ""),
         volume: 1,
       });
 
       player.addListener("ready", ({ device_id }) => {
         console.log("Player is ready with Device ID:", device_id);
-        setDeviceId(device_id); // Update state
+        setDeviceId(device_id);
         setIsPlayerReady(true);
       });
-
 
       player.addListener("not_ready", ({ device_id }) => {
         console.log("Device ID has gone offline:", device_id);
@@ -204,7 +204,6 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
       });
 
       player.connect();
-
       playerRef.current = player;
     };
 
@@ -224,21 +223,25 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   }, [deviceId]);
 
   return (
-    <div className="hidden">
-      <Button
-        className="mx-4"
-        onPress={playSong} // Use the playSong function to play a specific track
-        disabled={!isPlayerReady || !song}
-      >
-        Play Song
-      </Button>
-      <Button
-        className="mx-4"
-        onPress={togglePlayback} // Toggle playback
-        disabled={!isPlayerReady}
-      >
-        Toggle Playback
-      </Button>
+    <div className="text-xl">
+      {/* Pass the updated expiry timestamp to SpotTimer */}
+      <SpotTimer expiryTimestamp={timerExpiry} timerStarted={timerStarted} />
+      <div className="hidden">
+        <Button
+          className="mx-4"
+          onPress={playSong}
+          disabled={!isPlayerReady || !song}
+        >
+          Play Song
+        </Button>
+        <Button
+          className="mx-4"
+          onPress={togglePlayback}
+          disabled={!isPlayerReady}
+        >
+          Toggle Playback
+        </Button>
+      </div>
     </div>
   );
 };

@@ -39,6 +39,7 @@ export default function Wager() {
   const [finalCat, setFinalCat] = useState<string | null>(null);
   const [finalCatGif, setFinalCatGif] = useState<string | null>(null);
   const [wagerPlacingGif, setWagerPlacingGif] = useState<string | null>(null);
+  const [timerStarted, setTimerStarted] = useState<boolean>(false);
 
   useHotkeys("ctrl+ArrowRight", () => {
     router.push(`/edition/${editionId}/present/final`);
@@ -84,6 +85,7 @@ export default function Wager() {
       console.log('expiry:', expiry);
       console.log('now:', now);
       if (expiry < now) {
+        console.log('expiret! gotta refresh!')
         try {
           const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
@@ -111,6 +113,14 @@ export default function Wager() {
           }
         } catch (error) {
           console.error("Failed to refresh Spotify token:", error);
+          // if error contains "revoked", clear the token and do the oAuth flow again
+          if (console.error.toString().includes("revoked")) {
+            console.log("Token was revoked, clearing local storage");
+            localStorage.removeItem("spotifyAuthToken");
+            localStorage.removeItem("spotifyAuthTokenExpiry");
+            localStorage.removeItem("spotifyAuthRefreshToken");
+            refreshSpotifyAuth();
+          }
         }
       } else {
         console.log("Token is still valid");
@@ -211,12 +221,14 @@ export default function Wager() {
 
   return (
     <div>
-      <h1 className="py-4 pl-4 text-2xl">Wager Round</h1>
-      {spotifyToken && (
-        <div>
-          <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
-        </div>
-      )}
+      <div className="flex justify-between p-4">
+        <h1 className="py-4 pl-4 text-2xl">Wager Round</h1>
+        {spotifyToken && (
+          <div>
+            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+          </div>
+        )}
+      </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
@@ -224,7 +236,7 @@ export default function Wager() {
               {wagerIntroGif ? (
                 <div className="p-8 flex flex-col gap-4 items-center justify-center">
                   <h3 className="text-6xl flex justify-items-center">WAGER ROUND</h3>
-                  <Image src={wagerIntroGif} alt="Wager Intro GIF" width="800" />
+                  <Image src={wagerIntroGif} alt="Wager Intro GIF" width="700" />
                 </div>
               ) : (
                 <Spinner size="lg" />

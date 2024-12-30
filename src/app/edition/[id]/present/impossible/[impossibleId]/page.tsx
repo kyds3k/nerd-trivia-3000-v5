@@ -16,6 +16,7 @@ import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import { set } from 'lodash';
 import local from 'next/font/local';
+import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 
 interface Impossible {
   edition_id: string;
@@ -123,6 +124,7 @@ export default function Impossible() {
       console.log('expiry:', expiry);
       console.log('now:', now);
       if (expiry < now) {
+        console.log('expiret! gotta refresh!')
         try {
           const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
@@ -150,6 +152,14 @@ export default function Impossible() {
           }
         } catch (error) {
           console.error("Failed to refresh Spotify token:", error);
+          // if error contains "revoked", clear the token and do the oAuth flow again
+          if (console.error.toString().includes("revoked")) {
+            console.log("Token was revoked, clearing local storage");
+            localStorage.removeItem("spotifyAuthToken");
+            localStorage.removeItem("spotifyAuthTokenExpiry");
+            localStorage.removeItem("spotifyAuthRefreshToken");
+            refreshSpotifyAuth();
+          }
         }
       } else {
         console.log("Token is still valid");
@@ -293,12 +303,14 @@ export default function Impossible() {
 
   return (
     <div>
+      <div className="flex justify-between p-4">
       <h1 className="py-4 pl-4 text-2xl">Impossible Question {impossibleId} </h1>
-      {spotifyToken && (
-        <div>
-          <SpotifyPlayer token={spotifyToken} song={null} songs={songs} />
-        </div>
-      )}
+        {spotifyToken && (
+          <div>
+            <SpotifyPlayer token={spotifyToken} songs={songs} song={null} />
+          </div>
+        )}
+      </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
