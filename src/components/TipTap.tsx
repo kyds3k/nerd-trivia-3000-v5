@@ -47,6 +47,7 @@ const Tiptap = ({ state, setState, classes, identifier }: TiptapProps) => {
   const editor = useEditor({
     extensions: [StarterKit, Strike, TextStyle, Color, ListItem],
     content: state, // Initialize with the blurb content
+    immediatelyRender: false,
     editorProps: {
       attributes: {
         class: classes,
