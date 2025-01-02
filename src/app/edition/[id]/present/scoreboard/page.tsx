@@ -1,12 +1,11 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase, { RecordModel } from "pocketbase";
-import { Image, Table, TableHeader, TableBody, TableColumn, TableRow, TableCell, getKeyValue } from "@nextui-org/react";
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useRouter } from "next/navigation";
-import { set } from "lodash";
 
 interface Edition {
   title: string;
@@ -23,29 +22,56 @@ export default function Scoreboard() {
   const router = useRouter();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [scores, setScores] = useState<RecordModel[]>([]);
+  const [origin, setOrigin] = useState<string | null>(null);
 
+  // Fetch scores from PocketBase
   const getScores = async () => {
     console.log("editionId", editionId);
     pb.autoCancellation(false);
-    const scoreList = await pb.collection('teams').getFullList({ filter: `current_edition = "${editionId}"`, sort: '-points_for_game', fields: 'team_name, points_for_game' });
+    const scoreList = await pb.collection("teams").getFullList({
+      filter: `current_edition = "${editionId}"`,
+      sort: "-points_for_game",
+      fields: "team_name, points_for_game",
+    });
     console.log(scoreList);
     setScores(scoreList);
-  }
+  };
 
-  const origin = localStorage.getItem("impossibleSource");
+  // Fetch localStorage data on the client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(localStorage.getItem("scoreBoardOrigin"));
+    }
+  }, []);
 
-  useHotkeys("ctrl+ArrowRight", () => {
-    if (origin === "1")
-      router.push(`/edition/${editionId}/present/round/2`);
-    else
-      router.push(`/edition/${editionId}/present/round/3`);
-  });
+  // Handle hotkeys
+  useHotkeys(
+    "ctrl+ArrowRight",
+    () => {
+      if (origin === "1") {
+        router.push(`/edition/${editionId}/present/round/2`);
+      } else if (origin === "round3") {
+        router.push(`/edition/${editionId}/present/wager`);
+      } else if (origin === "final") {
+        router.push(`/edition/${editionId}/present/closing`);
+      } else if (origin === "2")
+        router.push(`/edition/${editionId}/present/round/3/question/1`);
+    },
+    [origin]
+  );
 
+  useHotkeys(
+    "ctrl+ArrowLeft",
+    () => {
+      if (origin === "1" || origin === "2")
+        router.push(`/edition/${editionId}/present/impossible/${origin}`);
+      else 
+        router.push(`/edition/${editionId}/present/round/3/question/5`);
+    },
+    [origin]
+  );
 
-  useHotkeys("ctrl+ArrowLeft", () => {
-   router.push(`/edition/${editionId}/present/impossible/${origin}`);    
-  });
-
+  // Fetch scores when the component mounts
   useEffect(() => {
     getScores();
   }, []);
@@ -76,5 +102,5 @@ export default function Scoreboard() {
         </Table>
       </div>
     </div>
-  )
+  );
 }

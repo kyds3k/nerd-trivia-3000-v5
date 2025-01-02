@@ -2,11 +2,13 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image } from "@nextui-org/react";
+import { Image, Progress } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTimer } from "react-timer-hook";
+import { set } from "lodash";
+import ShallNotPass from "@/components/ShallNotPass";
 
 interface Edition {
   title: string;
@@ -28,8 +30,9 @@ export default function EditionPage() {
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [pageSong, setPageSong] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-
-
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  
   interface SpotTimerProps {
     expiryTimestamp: Date;
   }  
@@ -117,52 +120,98 @@ export default function EditionPage() {
   time.setSeconds(time.getSeconds() + 600);
 
   useEffect(() => {
-
-      refreshSpotifyAuth();
-
-      const convertSpotifyUrlToUri = (url: string): string | null => {
-        const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-        return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-      };
-
-
-      const fetchEdition = async () => {
-        try {
-          const randomRequestKey = Math.random().toString(36).substring(7);
-          const response = await pb
-            .collection("editions")
-            .getOne<Edition>(`${editionId}`, { requestKey: randomRequestKey });
-
-          if (response.date) {
-            const formattedDate = new Intl.DateTimeFormat("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            }).format(new Date(response.date));
-
-            setDate(formattedDate);
-          }
-
-          setEditionTitle(response.title);
-          setEditionGif(response.edition_gif);
-          setPageSong(convertSpotifyUrlToUri(response.home_song));
-
-          // Sanitize and set HTML content
-          if (response.blurb) {
-            const sanitizedHtml = DOMPurify.sanitize(response.blurb); // Clean the HTML
-            setBlurb(sanitizedHtml);
-          }
-        } catch (error) {
-          console.error("Failed to fetch edition:", error);
-        }
-      };
-
-      if (editionId) {
-        fetchEdition();
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        setLoading(false);
+        setGoogleAuth(false);
+        return;
       }
-  }, []);
+  
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+  
+      if (!authData) {
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.is_admin) {
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setGoogleAuth(true);
+      refreshSpotifyAuth();
+  
+      if (editionId) {
+        await fetchEdition(editionId);
+      }
+    };
+  
+    const convertSpotifyUrlToUri = (url: string): string | null => {
+      const match = url.match(/track\/([a-zA-Z0-9]+)/);
+      return match ? `spotify:track:${match[1]}` : null;
+    };
+  
+    const fetchEdition = async (id: string) => {
+      try {
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        const response = await pb
+          .collection("editions")
+          .getOne<Edition>(id, { requestKey: randomRequestKey });
+  
+        if (response.date) {
+          const formattedDate = new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(response.date));
+          setDate(formattedDate);
+        }
+  
+        setEditionTitle(response.title);
+        setEditionGif(response.edition_gif);
+        setPageSong(convertSpotifyUrlToUri(response.home_song));
+  
+        if (response.blurb) {
+          const sanitizedHtml = DOMPurify.sanitize(response.blurb);
+          setBlurb(sanitizedHtml);
+        }
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
+      }
+    };
+  
+    // initializeApp();
+    if (editionId) {
+      fetchEdition(editionId);
+      refreshSpotifyAuth();
+      setLoading(false);
+    }
+  }, [editionId]);
+  
 
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 justify-center items-center h-screen w-screen">
+        <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
+        <h3 className="text-2xl">Loading...</h3>
+      </div>
+      );
+  }
 
+  // if (!googleAuth) {
+  //   return <ShallNotPass />
+  // }
+
+  
   return (
     <div className="p-10 flex flex-col items-center justify-center">
       <h3 className="text-4xl mb-4">Nerd Trivia: {date}</h3>

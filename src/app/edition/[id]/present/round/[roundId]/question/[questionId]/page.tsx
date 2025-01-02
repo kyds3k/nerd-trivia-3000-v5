@@ -5,7 +5,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useEffectOnce } from 'react-use';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image } from "@nextui-org/react";
+// import { Image } from "@nextui-org/react";
+import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
@@ -16,6 +17,7 @@ import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import Typed from "typed.js";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
+import ShallNotPass from '@/components/ShallNotPass';
 
 interface Question {
   edition_id: string;
@@ -54,6 +56,10 @@ export default function Question() {
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
 
   // Use the hook and pass the callback for question_toggle
   // Assuming active might be a string, convert it to a boolean
@@ -77,7 +83,8 @@ export default function Question() {
     if (questionIdStr === "5" && (roundId === "1" || roundId === "2")) {
       router.push(`/edition/${editionId}/present/impossible/${roundId}`);
     } else if (questionIdStr === "5" && roundId === "3") {
-      router.push(`/edition/${editionId}/present/wager`);
+      localStorage.setItem("scoreBoardOrigin", "round3");
+      router.push(`/edition/${editionId}/present/scoreboard`);
     } else {
       // Navigate to the next question in that round
       router.push(
@@ -191,6 +198,13 @@ export default function Question() {
             console.log("Refreshed Spotify token successfully:", data.access_token);
           } else {
             console.error("Failed to refresh Spotify token:", await response.json());
+
+            console.log("Token was revoked, clearing local storage");
+            localStorage.removeItem("spotifyAuthToken");
+            localStorage.removeItem("spotifyAuthTokenExpiry");
+            localStorage.removeItem("spotifyAuthRefreshToken");
+            refreshSpotifyAuth();
+
           }
         } catch (error) {
           console.error("Failed to refresh Spotify token:", error);
@@ -258,81 +272,119 @@ export default function Question() {
     }
   }
 
+  const convertSpotifyUrlToUri = (url: string): string | null => {
+    const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
+    return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
+  };
+
+
+  const fetchQuestion = async () => {
+    try {
+      pb.autoCancellation(false);
+      const response = await pb
+        .collection("questions")
+        .getFirstListItem<Question>(`edition_id = "${editionId}" && question_number = "${questionId}" && round_number = "${roundId}"`);
+
+      console.log("Question fetched:", response);
+
+      setAnswerGif(response.answer_gif);
+      setIsBanthaShitQuestion(response.is_banthashit_question);
+      setBanthaAnswerGif(response.bantha_answer_gif);
+      setSong(response.song);
+      setBonusAnswers(response.bonus_answers);
+      setIsActive(response.is_active);
+
+      // Sanitize and set HTML content
+      if (response.question_text) {
+        const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
+        setQuestionText(sanitizedQuestion);
+        setQuestionActive(response.is_active);
+      }
+
+      if (response.answer) {
+        const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
+        setAnswer(sanitizedAnswer);
+      }
+
+      if (response.bantha_answer) {
+        const sanitizedBanthaAnswer = DOMPurify.sanitize(response.bantha_answer); // Clean the HTML
+        setBanthaAnswer(sanitizedBanthaAnswer);
+      }
+
+      setBanthaAnswerGif(response.bantha_answer_gif);
+
+      setSong(convertSpotifyUrlToUri(response.song));
+
+      if (response.bonus_answers) {
+        const sanitizedBonusAnswers = response.bonus_answers.map((answer) => DOMPurify.sanitize(answer));
+        setBonusAnswers(sanitizedBonusAnswers);
+      }
+
+      setIsActive(response.is_active);
+
+    } catch (error) {
+      console.error("Failed to fetch edition:", error);
+    }
+  };
+
   useEffect(() => {
 
-    refreshSpotifyAuth();
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.error("Not authenticated with Pocketbase.");
+        setLoading(false);
+        setGoogleAuth(false);
+        return;
+      }
 
-    const convertSpotifyUrlToUri = (url: string): string | null => {
-      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-    };
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+
+      if (!authData) {
+        console.error("No auth data found.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.is_admin) {
+        console.log("Not an admin.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setGoogleAuth(true);
+
+      refreshSpotifyAuth();
 
 
-    const fetchQuestion = async () => {
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        pb.autoCancellation(false);
-        const response = await pb
-          .collection("questions")
-          .getFirstListItem<Question>(`edition_id = "${editionId}" && question_number = "${questionId}" && round_number = "${roundId}"`);
 
-        console.log("Question fetched:", response);
-
-        setAnswerGif(response.answer_gif);
-        setIsBanthaShitQuestion(response.is_banthashit_question);
-        setBanthaAnswerGif(response.bantha_answer_gif);
-        setSong(response.song);
-        setBonusAnswers(response.bonus_answers);
-        setIsActive(response.is_active);
-
-        // Sanitize and set HTML content
-        if (response.question_text) {
-          const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
-          setQuestionText(sanitizedQuestion);
-          setQuestionActive(response.is_active);
-        }
-
-        if (response.answer) {
-          const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
-          setAnswer(sanitizedAnswer);
-        }
-
-        if (response.bantha_answer) {
-          const sanitizedBanthaAnswer = DOMPurify.sanitize(response.bantha_answer); // Clean the HTML
-          setBanthaAnswer(sanitizedBanthaAnswer);
-        }
-
-        setBanthaAnswerGif(response.bantha_answer_gif);
-
-        setSong(convertSpotifyUrlToUri(response.song));
-
-        if (response.bonus_answers) {
-          const sanitizedBonusAnswers = response.bonus_answers.map((answer) => DOMPurify.sanitize(answer));
-          setBonusAnswers(sanitizedBonusAnswers);
-        }
-
-        setIsActive(response.is_active);
-
-      } catch (error) {
-        console.error("Failed to fetch edition:", error);
+      if (editionId) {
+        //initializeApp();
       }
     };
 
-    if (editionId) {
-      fetchQuestion();
-    }
+    setIsAdmin(true);
+    fetchQuestion();
+    refreshSpotifyAuth();
 
   }, []);
 
   useEffect(() => {
-    if (song) {
+    if (song && isAdmin) {
       getSongInfo(song);
     }
-  }, [song]);
+  }, [song, isAdmin]);
 
   useEffectOnce(() => {
     getLoadingQuote();
-  }, []);
+  });
 
   const el = useRef<HTMLSpanElement | null>(null);
 
@@ -350,10 +402,18 @@ export default function Question() {
     }
   }, [questionText, questionActive]);
 
+  // if (!isAdmin) {
+  //   return <ShallNotPass />;
+  // }
+
   return (
     <div>
       <div className="flex justify-between p-4">
-        <h1 className="text-2xl">Round {roundId} Question {questionId}</h1>
+        <h1 className="text-2xl">
+          Round {roundId} Question {questionId} -
+          <span className={`${roundId === "3" ? "font-reboot text-glow-blue-600" : ""} px-2 inline-block`}>{Number(questionId) * (roundId === "3" ? 200 : 100)}</span> points
+        </h1>
+
         {spotifyToken && (
           <div>
             <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
@@ -366,26 +426,36 @@ export default function Question() {
             {questionActive ? (
               // <span ref={el} className="text-2xl"></span>
               <DynamicText
-              html={questionText}
-              maxFontSize={80}
-              className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
-            />              
+                html={questionText}
+                maxFontSize={80}
+                className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
+              />
             ) : (
               <p className="text-2xl flex">{loadingQuote}</p>
             )}
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
-              <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
+              <h3
+                className="text-6xl flex justify-items-center"
+                dangerouslySetInnerHTML={{ __html: answer }}
+              ></h3>
             </div>
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center w-full grow relative">
               {answerGif ? (
-                <Image src={answerGif} alt="Answer GIF" width="800" />
+                <Image
+                  src={answerGif}
+                  alt="Answer GIF"
+                  fill={true}
+                  unoptimized={true}
+                  className="object-contain"
+                />
               ) : (
                 <p>Loading GIF...</p>
               )}
             </div>
           </div>
+
           {isBanthaShitQuestion && (
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
               <div className="p-8 flex items-center justify-center">
@@ -393,7 +463,7 @@ export default function Question() {
               </div>
               <div className="flex items-center justify-center w-full">
                 {banthaAnswerGif ? (
-                  <Image src={banthaAnswerGif} alt="Bantha Answer GIF" width="800" />
+                  <Image className="h-full w-auto object-contain" src={banthaAnswerGif} alt="Bantha Answer GIF" unoptimized={true} fill={true} />
                 ) : (
                   <p>Loading GIF...</p>
                 )}
@@ -403,7 +473,7 @@ export default function Question() {
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
-                <Image src={songAlbumArt} alt="Song Album Art" width="600" />
+                <Image src={songAlbumArt} alt="Song Album Art" width="600" height="600" />
                 <h3 className="text-3xl">"{songTitle}" by {songArtist}</h3>
               </>
             ) : (

@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 
 export default function HomePage() {
   const pb = new Pocketbase('https://nerd-trivia-3k.pockethost.io');
-  console.log('pb:', pb);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [googleUser, setGoogleUser] = useState<string>("");
@@ -26,9 +25,8 @@ export default function HomePage() {
 
   const loginGoogle = async () => {
     try {
-      const randomRequestKey = Math.random().toString(36).substring(7);
+      pb.autoCancellation(false);
       const authData = await pb.collection("users").authWithOAuth2({
-        requestKey: randomRequestKey,
         provider: "google"
       });
 
@@ -36,10 +34,10 @@ export default function HomePage() {
 
       if (authData.meta) {
         console.log("Authenticated with Google successfully:", authData.meta.name);
+        localStorage.setItem("google_data", JSON.stringify(authData));
         setGoogleUser(authData.meta.name);
         setGoogleAvatar(authData.meta.avatarURL);
-        localStorage.setItem("google_data", JSON.stringify(authData));
-
+        setGoogleAuth(true);
 
         if (authData.record.is_admin === true)
           router.push("/dashboard");
@@ -55,6 +53,10 @@ export default function HomePage() {
       if (response !== null) {
         setGoogleAuth(false);
         localStorage.removeItem("google_data");
+        localStorage.removeItem("spotifyAuthToken");
+        localStorage.removeItem("spotifyAuthTokenExpiry");
+        localStorage.removeItem("spotifyAuthRefreshToken");
+        localStorage.removeItem("pocketbase_auth");
       }
       console.log("Logout response:", response);
     }
@@ -131,14 +133,16 @@ export default function HomePage() {
       } else {
         console.log("No pocketbase_auth data found in localStorage.");
       }
+    } else {
+      console.log('Time . . . to log in.')
     }
 
     // Dependencies (add necessary dependencies here, or an empty array if no dependencies)
-  }, []);
+  }, [googleAuth]);
 
   return (
-    <div className="p-4 md:p-10 w-screen">
-      <h1 className="text-2xl pb-6">Welcome to Nerd Trivia 3000!</h1>
+    <div className="p-4 md:p-10 w-screen flex flex-col justify-center items-center">
+      <h1 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-10">Nerd Trivia 3000</h1>
       {googleAuth ? (
         <>
           <div className="user flex items-center gap-4 mb-4">
@@ -156,7 +160,7 @@ export default function HomePage() {
         </>
       ) : (
         <>
-          <Button onPress={() => loginGoogle()}>Login with Google</Button>
+          <Button className="w-fit my-auto" size="lg" onPress={() => loginGoogle()}>Login with Google</Button>
         </>
       )}
     </div>

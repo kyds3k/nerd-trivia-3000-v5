@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
-import { Image, Form, Input, Button, Divider, user } from "@nextui-org/react";
+import { Image, Form, Input, Button, Alert } from "@nextui-org/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import { set } from "lodash";
+import { sendMessage } from "@/app/utils/toolbox";
+import { send } from "process";
 
 interface Edition {
   title: string;
@@ -32,7 +34,14 @@ export default function EditionPage() {
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
   const [action, setAction] = useState<string | null>(null);
   const teamId = Math.floor(10000 + Math.random() * 90000) + "-" + ["str", "dex", "con", "dex", "int", "wis", "cha"][Math.floor(Math.random() * 10)];
-
+  
+  const [submitResults, setSubmitResults] = useState<boolean>(false);
+  const [teamCreated, setTeamCreated] = useState<boolean>(false);
+  const [teamExists, setTeamExists] = useState<boolean>(false);
+  
+  const [searchResults, setSearchResults] = useState<boolean>(false);
+  const [teamSearched, setTeamSearched] = useState<boolean>(false);
+  const [teamFound, setTeamFound] = useState<boolean>(false);
 
   interface GoogleData {
     meta: {
@@ -83,19 +92,56 @@ export default function EditionPage() {
 
       // add "team_name_lower" field to data
       data.team_name_lower = data.team_name.toLowerCase();
-      
-      const exists = await pb.collection("teams").getList(1,100, {filter: `team_name_lower = "${data.team_name_lower}"`});
+      data.current_edition = editionId;
+
+      const exists = await pb.collection("teams").getList(1, 100, { filter: `team_name_lower = "${data.team_name_lower}"` });
       console.log("Team exists:", exists);
       if (exists.totalItems > 0) {
-        alert("Team name already exists. Please choose another.");
+        setSubmitResults(true);
+        setTeamExists(true);
         return;
       } else {
         const team = await pb.collection("teams").create(data);
         console.log("Team created:", team);
-        router.push(`/edition/${editionId}/play/${team.id}`);
+        setSubmitResults(true);
+        setTeamCreated(true);
+        sendMessage("team", `A new team! ${data.team_name} has joined the fray!`, team.id);
+        setTimeout(() => {
+          router.push(`/edition/${editionId}/play/${team.id}`);
+        }, 4000);
       }
     } catch (error) {
-      console.error("Failed to create team:", error);
+      console.log("Failed to create team:", error);
+    }
+  }
+
+  const captainTeam = async (data: any) => {
+    setTeamSearched(true);
+    try {
+      pb.autoCancellation(false)
+      let team = await pb.collection('teams').getFirstListItem(`team_identifier = "${data.team_identifier}"`);
+      if (team) {
+        setSearchResults(true);
+        setTeamFound(true);
+        sendMessage("team", `Team ${team.team_name} is back for more!`, team.id);
+        // update current_edition field in team
+        try {
+          team.current_edition = editionId;
+          team = await pb.collection('teams').update(team.id, team);
+          console.log("Team updated:", team);
+          setTimeout(() => {
+            router.push(`/edition/${editionId}/play/${team.id}`);
+          }, 3000);          
+        } catch (error) {
+          console.log("Failed to update team:", error);
+        }
+      }
+
+
+    } catch (error) {
+      setSearchResults(true);
+      setTeamFound(false);
+      console.log("Team not found: ", error);
     }
   }
 
@@ -160,9 +206,11 @@ export default function EditionPage() {
 
 
   return (
-    <div className="p-4 md:p-10 flex flex-col items-center md:justify-center">
-      <h3 className="text-xl md:text-4xl text-center mb-4">Nerd Trivia 3000<br></br> {date}</h3>
-      <h1 className="text-3xl md:text-5xl text-center md:text-left mb-5">{editionTitle}</h1>
+    <div className="p-4 md:p-10 flex flex-col items-center md:items-start md:justify-center w-screen overflow-x-hidden">
+      <h1 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h1>
+      <h2 className="text-2xl mb-2">{date}</h2>
+
+      <h3 className="text-3xl md:text-4xl text-center md:text-left mb-6">{editionTitle}</h3>
 
       <h4 className="text-2xl text-center md:text-left mb-4">Welcome, {googleUser}!</h4>
       <h5 className="text-xl text-center md:text-left mb-4">Register your team</h5>
@@ -200,19 +248,26 @@ export default function EditionPage() {
           </Button>
         </div>
       </Form>
+      {submitResults && (
+        <>
+          <Alert title="Sorry!" description="Team name already exists. Please choose another." color="warning" isVisible={!teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
+          <Alert title="Great Success!" description="You are a unique flower! Team created - redirecting you to the game..." color="success" isVisible={teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
+        </>
+      )}
 
-        <p className="text-xl text-center my-8 w-screen">- OR -</p>
-      
-        <h5 className="text-xl text-center md:text-left mb-4">Captain an existing team</h5>
 
-        <Form
+      <p className="text-xl text-center md:text-left my-8 w-screen">- OR -</p>
+
+      <h5 className="text-xl text-center md:text-left mb-4">Captain an existing team</h5>
+
+      <Form
         className="w-full max-w-xs flex flex-col gap-4"
         validationBehavior="native"
         onReset={() => setAction("reset")}
         onSubmit={(e) => {
           e.preventDefault();
           let data = Object.fromEntries(new FormData(e.currentTarget));
-          setAction(`submit ${JSON.stringify(data)}`);
+          captainTeam(data);
         }}
       >
 
@@ -234,7 +289,12 @@ export default function EditionPage() {
           </Button>
         </div>
       </Form>
-      
+      {searchResults && (
+        <>
+          <Alert title="Sorry!" description="Team not found! Please try again." color="warning" isVisible={!teamFound} classNames={{ "base": "mt-6 w-fit" }} />
+          <Alert title="Great Success!" description="Team found! Redirecting you to the game..." color="success" isVisible={teamFound} classNames={{ "base": "mt-6 w-fit" }} />
+        </>
+      )}
     </div>
   );
 }

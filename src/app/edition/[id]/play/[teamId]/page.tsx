@@ -37,7 +37,34 @@ export default function TeamPage() {
   const [teamWins, setTeamWins] = useState<number | null>(null);
   const [teamAllTimePoints, setTeamAllTimePoints] = useState<number | null>(null);
 
-  usePrimeDirectives("directives", editionId, teamId);
+  // Use the hook and pass the callback for question_toggle
+  // Assuming active might be a string, convert it to a boolean
+  usePrimeDirectives(
+    "directives",
+    editionId,
+    teamId,
+    (message, team) => {
+      console.log("Received message:", message, "for team:", team);
+      // Handle notification messages
+    }
+  );
+
+
+  usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
+    console.log(`Notification received from team ${team}: ${message}`);
+    if (team == teamId) return;
+    toast.info(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "dark",
+      transition: Flip,
+    });
+  });  
 
   interface GoogleData {
     meta: {
@@ -76,20 +103,6 @@ export default function TeamPage() {
     }
   }
 
-  const testToast = () => {
-    toast.info("X-Men Gold Team just signed up!", {
-      position: "top-right",
-      autoClose: 3000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: "dark",
-      transition: Flip,
-    });
-  }
-
   const getEdition = async () => {
     try {
       pb.autoCancellation(false)
@@ -111,28 +124,28 @@ export default function TeamPage() {
   }
 
   // Setup the real-time subscription for team events tags
-  function teamWatch() {
-    const subscription = pb.collection('teams').subscribe('*', (event) => {
-      // Listen for "create", "update", and "delete" events on the 'imagetags' collection
-      console.log('Event detected:', event.action);
-      switch (event.action) {
-        case 'create':
-          console.log('Create event:', event.record);
-          toast(`${event.record.team_name} has joined the game!`);
-          break;
-        case 'update':
-          console.log('Update event:', event.record);
-          break;
-        case 'delete':
-          console.log('Delete event:', event.record);
-          break;
-      }
-    });
+  // function teamWatch() {
+  //   const subscription = pb.collection('teams').subscribe('*', (event) => {
+  //     // Listen for "create", "update", and "delete" events on the 'imagetags' collection
+  //     console.log('Event detected:', event.action);
+  //     switch (event.action) {
+  //       case 'create':
+  //         console.log('Create event:', event.record);
+  //         toast(`${event.record.team_name} has joined the game!`);
+  //         break;
+  //       case 'update':
+  //         console.log('Update event:', event.record);
+  //         break;
+  //       case 'delete':
+  //         console.log('Delete event:', event.record);
+  //         break;
+  //     }
+  //   });
 
-    pb.realtime.subscribe('example', (e) => {
-      console.log(e)
-    })
-  }
+  //   pb.realtime.subscribe('example', (e) => {
+  //     console.log(e)
+  //   })
+  // }
 
 
   useEffect(() => {
@@ -186,7 +199,7 @@ export default function TeamPage() {
         fetchUser();
         getEdition();
         getTeam();
-        teamWatch();
+        //teamWatch();
 
       } else {
         console.log("No pocketbase_auth data found in localStorage.");
@@ -200,8 +213,8 @@ export default function TeamPage() {
   
   return (
     <div className="p-4 md:p-10 flex flex-col md:justify-center">
-      <h3 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400">Nerd Trivia 3000</h3>
-      <h4 className="text-xl text-center mb-4">{date}</h4>
+      <h3 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h3>
+      <h4 className="text-2xl text-center mb-4">{date}</h4>
       <h1 className="text-3xl md:text-5xl text-center md:text-left mb-5">{editionTitle}</h1>
 
       <h4 className="text-2xl md:text-left mb-8">Welcome, {teamName}!</h4>
@@ -213,12 +226,6 @@ export default function TeamPage() {
         size="sm"
         className="mt-4 w-fit"
       >Logout</Button>
-
-      <Button
-        onPress={testToast}
-        size="sm"
-        className="mt-4 w-fit"
-      >Test Toast</Button>
 
     </div>
   );

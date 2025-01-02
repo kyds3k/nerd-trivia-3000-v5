@@ -5,7 +5,7 @@ import React, { use } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image } from "@nextui-org/react";
+import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { set } from 'lodash';
 import local from 'next/font/local';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
+import ShallNotPass from "@/components/ShallNotPass";
 
 interface Impossible {
   edition_id: string;
@@ -51,9 +52,13 @@ export default function Impossible() {
   const [songAlbumArts, setSongAlbumArts] = useState<string[]>([]);
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
 
   useHotkeys("ctrl+ArrowRight", () => {
-    localStorage.setItem("impossibleSource", `${impossibleId}`);
+    localStorage.setItem("scoreBoardOrigin", `${impossibleId}`);
     router.push(`/edition/${editionId}/present/scoreboard`);
   });
 
@@ -237,57 +242,92 @@ export default function Impossible() {
 
 
   useEffect(() => {
-      refreshSpotifyAuth();
 
-      const convertSpotifyUrlToUri = (url: string): string | null => {
-        const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-        return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-      };
-
-
-      const fetchQuestion = async () => {
-        try {
-          const randomRequestKey = Math.random().toString(36).substring(7);
-          pb.autoCancellation(false);
-          const response = await pb
-            .collection("impossible_rounds")
-            .getFirstListItem<Impossible>(`edition_id = "${editionId}" && impossible_number = ${impossibleId}`);
-
-          console.log("Question fetched:", response);
-
-          setIntroGif(response.intro_gif);
-          setTheme(response.theme);
-          setThemeGif(response.theme_gif);
-
-          const sanitizedQuestionText = DOMPurify.sanitize(response.question_text); // Clean the HTML
-          setQuestionText(sanitizedQuestionText);
-
-          // loop through response.answers (a JSON object) and sanitize each answer and set it in the state
-          const sanitizedAnswers = response.answers.map((answer) => DOMPurify.sanitize(answer));
-          setAnswers(sanitizedAnswers);
-
-          setAnswerGifs(response.answer_gifs);
-
-          console.log('response.spotify_ids:', response.spotify_ids);
-
-          if (Array.isArray(response.spotify_ids)) {
-            setSongs(response.spotify_ids);
-          } else {
-            const ids = Object.values(response.spotify_ids).map((id) => id as string);
-            console.log('ids:', ids); // Ensure ids are correctly parsed
-            setSongs(ids);
-          }
-
-          setIsActive(response.is_active);
-
-        } catch (error) {
-          console.error("Failed to fetch edition:", error);
-        }
-      };
-
-      if (editionId) {
-        fetchQuestion();
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.log("Not authenticated with Pocketbase.");
+        setLoading(false);
+        setGoogleAuth(false);
+        return;
       }
+
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+
+      if (!authData) {
+        console.error("No auth data found.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.is_admin) {
+        console.log("Not an admin.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setGoogleAuth(true);
+      refreshSpotifyAuth();
+    };
+
+
+    const convertSpotifyUrlToUri = (url: string): string | null => {
+      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
+      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
+    };
+
+    const fetchQuestion = async () => {
+      try {
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        pb.autoCancellation(false);
+        const response = await pb
+          .collection("impossible_rounds")
+          .getFirstListItem<Impossible>(`edition_id = "${editionId}" && impossible_number = ${impossibleId}`);
+
+        console.log("Question fetched:", response);
+
+        setIntroGif(response.intro_gif);
+        setTheme(response.theme);
+        setThemeGif(response.theme_gif);
+
+        const sanitizedQuestionText = DOMPurify.sanitize(response.question_text); // Clean the HTML
+        setQuestionText(sanitizedQuestionText);
+
+        // loop through response.answers (a JSON object) and sanitize each answer and set it in the state
+        const sanitizedAnswers = response.answers.map((answer) => DOMPurify.sanitize(answer));
+        setAnswers(sanitizedAnswers);
+
+        setAnswerGifs(response.answer_gifs);
+
+        console.log('response.spotify_ids:', response.spotify_ids);
+
+        if (Array.isArray(response.spotify_ids)) {
+          setSongs(response.spotify_ids);
+        } else {
+          const ids = Object.values(response.spotify_ids).map((id) => id as string);
+          console.log('ids:', ids); // Ensure ids are correctly parsed
+          setSongs(ids);
+        }
+
+        setIsActive(response.is_active);
+
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
+      }
+    };
+
+    if (editionId) {
+      initializeApp();
+      fetchQuestion();
+      refreshSpotifyAuth();
+    }
 
   }, []);
 
@@ -297,14 +337,15 @@ export default function Impossible() {
     }
   }, [songs]);
 
-  useEffect(() => {
-    console.log('Updated songs:', songs);
-  }, [songs]);
+
+  // if (!isAdmin) {
+  //   return <ShallNotPass />;
+  // }
 
   return (
-    <div>
+    <div className="overflow-y-hidden h-dvh">
       <div className="flex justify-between p-4">
-      <h1 className="py-4 pl-4 text-2xl">Impossible Question {impossibleId} </h1>
+        <h1 className="py-4 pl-4 text-2xl">Impossible Question {impossibleId} </h1>
         {spotifyToken && (
           <div>
             <SpotifyPlayer token={spotifyToken} songs={songs} song={null} />
@@ -315,19 +356,23 @@ export default function Impossible() {
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <h3 className="text-6xl">IMPOSSIBLE QUESTION {impossibleId} </h3>
-            {introGif ? (
-              <Image src={introGif} alt="Intro GIF" width="800" />
-            ) : (
-              <Spinner size="lg" />
-            )}
+            <div className="flex items-center justify-center w-full grow relative">
+              {introGif ? (
+                <Image src={introGif} alt="Intro GIF" fill={true} unoptimized={true} className="h-full w-auto object-contain" />
+              ) : (
+                <Spinner size="lg" />
+              )}
+            </div>
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <h3 className="text-6xl">{theme}</h3>
-            {themeGif ? (
-              <Image src={themeGif} alt="Theme GIF" width="800" />
-            ) : (
-              <Spinner size="lg" />
-            )}
+            <div className="flex items-center justify-center w-full grow relative">
+              {themeGif ? (
+                <Image src={themeGif} alt="Theme GIF" fill={true} unoptimized={true} className="h-full w-auto object-contain" />
+              ) : (
+                <Spinner size="lg" />
+              )}
+            </div>
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
             <DynamicText
@@ -339,18 +384,20 @@ export default function Impossible() {
           {answers.map((answer, index) => (
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4" key={index}>
               <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
-              {answerGifs[index] ? (
-                <Image src={answerGifs[index]} alt="Answer GIF" width="800" />
-              ) : (
-                <p>Loading GIF...</p>
-              )}
+              <div className="flex items-center justify-center w-full grow relative">
+                {answerGifs[index] ? (
+                  <Image src={answerGifs[index]} className="h-full w-auto object-contain" alt="Answer GIF" fill={true} unoptimized={true} />
+                ) : (
+                  <p>Loading GIF...</p>
+                )}
+              </div>
             </div>
           ))}
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex items-center justify-center gap-10">
             {songAlbumArts.length > 0 ? (
               songAlbumArts.map((albumArt, index) => (
                 <div key={index} className="song-info flex flex-col gap-4 items-center">
-                  <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" />
+                  <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" height="600" />
                   <h3 className="text-3xl">"{songTitles[index]}" by {songArtists[index]}</h3>
                 </div>
               ))

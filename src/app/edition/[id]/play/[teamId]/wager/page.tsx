@@ -44,7 +44,7 @@ export default function Wager() {
 
   usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
     console.log(`Notification received from team ${team}: ${message}`);
-    if (team == teamId) return;
+    if (teamName && message.includes(teamName)) return;
     toast.info(message, {
       position: "top-right",
       autoClose: 3000,
@@ -182,16 +182,16 @@ export default function Wager() {
 
 
   return (
-    <div className="p-4 md:p-10">
+    <div className="p-4 md:p-10 w-screen">
       <h1 className="text-3xl mb-5">
         Wager Round
       </h1>
       <p>{teamName}, you have {maxWager} Altairan dollars to wager!!!</p>
       {wagerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-screen">
+          <div className="mt-6">
             <Form
-              className="mt-6 w-screen"
+              className="mt-6"
               validationBehavior="native"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -201,12 +201,12 @@ export default function Wager() {
               }}
               onReset={() => setAction("reset")}
             >
-              <div className="w-screen max-w-lg md:max-w-lg flex flex-col gap-6">
+              <div className="w-full flex flex-col gap-6">
                 <Slider
                   label="Wager"
                   name="wager"
                   size="md"
-                  className="inline-block"
+                  className="md:max-w-lg"
                   minValue={0}
                   maxValue={maxWager}
                   step={1}
@@ -221,7 +221,7 @@ export default function Wager() {
                   placeholder="Enter the artist's name"
                   type="text"
                   size="lg"
-                  className="inline-block"
+                  className="md:max-w-lg"
                 />
                 <Button className="w-fit" type="submit" color="primary">
                   Submit

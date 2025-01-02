@@ -5,7 +5,8 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image } from "@nextui-org/react";
+//import { Image } from "@nextui-org/react";
+import Image from 'next/image';
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
@@ -13,6 +14,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import { set } from 'lodash';
+import ShallNotPass from "@/components/ShallNotPass";
 
 interface Wager {
   edition_id: string;
@@ -40,6 +42,10 @@ export default function Wager() {
   const [finalCatGif, setFinalCatGif] = useState<string | null>(null);
   const [wagerPlacingGif, setWagerPlacingGif] = useState<string | null>(null);
   const [timerStarted, setTimerStarted] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
 
   useHotkeys("ctrl+ArrowRight", () => {
     router.push(`/edition/${editionId}/present/final`);
@@ -173,12 +179,46 @@ export default function Wager() {
       setSongTitle(data.name);
       setSongAlbumArt(data.album.images[0].url);
     } else {
-      console.error("Failed to fetch song info:", await response.json());
+      console.log("Failed to fetch song info:", await response.json());
     }
   }
 
   useEffect(() => {
+
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.log("Not authenticated with Pocketbase.");
+        setLoading(false);
+        setGoogleAuth(false);
+        return;
+      }
+  
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+  
+      if (!authData) {
+        console.error("No auth data found.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.is_admin) {
+        console.log("Not an admin.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setGoogleAuth(true);
       refreshSpotifyAuth();
+    };
+
 
       const convertSpotifyUrlToUri = (url: string): string | null => {
         const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
@@ -209,7 +249,9 @@ export default function Wager() {
       };
 
       if (editionId) {
+        initializeApp();
         fetchWager();
+        refreshSpotifyAuth();        
       }
    }, []);
 
@@ -219,8 +261,9 @@ export default function Wager() {
     }
   }, [song]);
 
+
   return (
-    <div>
+    <div className="h-svh overflow-y-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">Wager Round</h1>
         {spotifyToken && (
@@ -231,46 +274,72 @@ export default function Wager() {
       </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
-          <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            <div className="flex items-center justify-center">
+  
+          {/* First Slide */}
+          <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
+            <div className="p-8 flex items-center justify-center">
+              <h3 className="text-6xl flex justify-items-center">WAGER ROUND</h3>
+            </div>
+            <div className="flex items-center justify-center w-full grow relative">
               {wagerIntroGif ? (
-                <div className="p-8 flex flex-col gap-4 items-center justify-center">
-                  <h3 className="text-6xl flex justify-items-center">WAGER ROUND</h3>
-                  <Image src={wagerIntroGif} alt="Wager Intro GIF" width="700" />
-                </div>
+                <Image
+                  src={wagerIntroGif}
+                  alt="Wager intro GIF"
+                  fill={true}
+                  unoptimized={true}
+                  className="object-contain"
+                />
               ) : (
                 <Spinner size="lg" />
               )}
             </div>
           </div>
-          <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            <div className="flex items-center justify-center">
+  
+          {/* Second Slide */}
+          <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
+            <div className="p-8 flex items-center justify-center">
+              <h3 className="text-6xl flex justify-items-center">{finalCat}</h3>
+            </div>
+            <div className="flex items-center justify-center w-full grow relative">
               {finalCatGif ? (
-                <div className="p-8 flex flex-col gap-4 items-center justify-center">
-                  <h3 className="text-6xl flex justify-items-center">{finalCat}</h3>
-                  <Image src={finalCatGif} alt="Final Category GIF" width="800" />
-                </div>
+                <Image
+                  src={finalCatGif}
+                  alt="Final Category GIF"
+                  fill={true}
+                  unoptimized={true}
+                  className="object-contain"
+                />
               ) : (
                 <Spinner size="lg" />
               )}
             </div>
           </div>
-          <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            <div className="flex items-center justify-center">
+  
+          {/* Third Slide */}
+          <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
+            <div className="p-8 flex items-center justify-center">
+              <h3 className="text-6xl flex justify-items-center">PLACE YOUR WAGERS</h3>
+            </div>
+            <div className="flex items-center justify-center w-full grow relative">
               {wagerPlacingGif ? (
-                <div className="p-8 flex flex-col gap-4 items-center justify-center">
-                  <h3 className="text-6xl flex justify-items-center">PLACE YOUR WAGERS</h3>
-                  <Image src={wagerPlacingGif} alt="Place your wagers GIF" width="800" />
-                </div>
+                <Image
+                  src={wagerPlacingGif}
+                  alt="Place your wagers GIF"
+                  fill={true}
+                  unoptimized={true}
+                  className="object-contain"
+                />
               ) : (
                 <Spinner size="lg" />
               )}
             </div>
-          </div>          
+          </div>
+  
+          {/* Last Slide */}
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
-                <Image src={songAlbumArt} alt="Song Album Art" width="600" />
+                <Image src={songAlbumArt} alt="Song Album Art" height="600" width="600" />
                 <h3 className="text-3xl">"{songTitle}" by {songArtist}</h3>
               </>
             ) : (
@@ -283,4 +352,5 @@ export default function Wager() {
       </div>
     </div>
   );
+  
 }

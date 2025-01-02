@@ -79,9 +79,16 @@ export default function Scoring() {
 
       if (round === "impossible" || round === "final") {
         const answerType = round === "impossible" ? "impossible" : "final";
+        let filter = `edition_id = "${editionId}" && answer_type = "${answerType}"`;
+
+        if (answerType === "impossible") {
+          filter += ` && impossible_number = "${question}"`;
+        }
+
         answers = await pb
           .collection("answers")
-          .getFullList<Answer>({ filter: `edition_id = "${editionId}" && answer_type = "${answerType}"` });
+          .getFullList<Answer>({ filter });
+
       } else if (round === "wager") {
         wagers = await pb
           .collection("wagers")
@@ -125,13 +132,16 @@ export default function Scoring() {
     if (!answer) return console.error("Answer not found");
 
     const updatedAnswer = { ...answer, ...data };
+    updatedAnswer.edition_id = editionId;
+    updatedAnswer.team_id= data.team_id;
     updatedAnswer.answer_correct = data.answer_correct;
     updatedAnswer.music_correct = data.music_correct;
     updatedAnswer.music_2_correct = data.music_2_correct;
     updatedAnswer.misc_bonus = data.misc_bonus;
     updatedAnswer.bantha_used = data.bantha_used;
     updatedAnswer.excelsior = data.excelsior;
-
+    updatedAnswer.impossible_number = parseInt(questionNumber || "1");
+    updatedAnswer.impossible_correct_count = data.correct_answers;
     console.log("Updated answer:", updatedAnswer);
 
     try {
@@ -148,23 +158,23 @@ export default function Scoring() {
           if (updatedAnswer.misc_bonus) points += parseInt(updatedAnswer.misc_bonus, 10);
           if (updatedAnswer.excelsior) points += 25;
           break;
-        
-          case "final":
-            console.log("Team id:", updatedAnswer.team_id);
-            const team = await pb.collection("teams").getFirstListItem(`id = "${updatedAnswer.team_id}"`);
-            const finalWager = team.wager || 0; // Ensure finalWager has a default value
-            console.log("Final wager:", finalWager);
-            if (updatedAnswer.answer_correct) {
-              points = finalWager;
-            } else {
-              points = -finalWager;
-            }
-            if (updatedAnswer.music_correct) points += 100;
 
-            console.log("Final points:", points);
+        case "final":
+          console.log("Team id:", updatedAnswer.team_id);
+          const team = await pb.collection("teams").getFirstListItem(`id = "${updatedAnswer.team_id}"`);
+          const finalWager = team.wager || 0; // Ensure finalWager has a default value
+          console.log("Final wager:", finalWager);
+          if (updatedAnswer.answer_correct) {
+            points = finalWager;
+          } else {
+            points = -finalWager;
+          }
+          if (updatedAnswer.music_correct) points += 100;
 
-            break;
-          
+          console.log("Final points:", points);
+
+          break;
+
         default:
           if (updatedAnswer.answer_correct) points = 100 * scoreMultiplier;
           if (updatedAnswer.bantha_used) points /= 2;
@@ -175,12 +185,14 @@ export default function Scoring() {
           break;
       }
 
+      console.log("updated answer with points:", updatedAnswer);
+
       const team = await pb.collection("teams").getFirstListItem(`id = "${updatedAnswer.team_id}"`);
       const newTeamData = {
         points_for_game: team.points_for_game + points,
         all_time_points: team.all_time_points + points,
         banthashit_used: updatedAnswer.bantha_used ? team.banthashit_used + 1 : team.banthashit_used,
-        banthashit_card: updatedAnswer.bantha_used ? false : team.banthashit_card,
+        banthashit_card: updatedAnswer.bantha_answer_correct ? true : team.banthashit_card,
       };
 
       await pb.collection("teams").update(updatedAnswer.team_id, newTeamData);

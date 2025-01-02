@@ -9,6 +9,7 @@ import { Image } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
+import ShallNotPass from "@/components/ShallNotPass";
 
 interface Round {
   edition_id: string;
@@ -27,6 +28,9 @@ export default function Round() {
   : undefined;
   const [roundGif, setRoundGif] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
 
   useHotkeys("ctrl+ArrowRight", () => {
     // Navigate to the first question in that round
@@ -47,6 +51,40 @@ export default function Round() {
 
   useEffect(() => {
     
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.log("Not authenticated with Pocketbase.");
+        setLoading(false);
+        setGoogleAuth(false);
+        return;
+      }
+  
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+  
+      if (!authData) {
+        console.error("No auth data found.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.is_admin) {
+        console.log("Not an admin.");
+        setLoading(false);
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        return;
+      }
+  
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setGoogleAuth(true);
+    };
+  
+
       const fetchRound = async () => {
         pb.autoCancellation(false);
         try {
@@ -62,11 +100,17 @@ export default function Round() {
       };
   
       if (editionId) {
+        //initializeApp();
+        setIsAdmin(true);
         fetchRound();
       }
     
   }, []);
   
+
+  if (!isAdmin) {
+    return <ShallNotPass />;
+  }
 
   return (
     <div className="flex h-screen justify-center items-center">

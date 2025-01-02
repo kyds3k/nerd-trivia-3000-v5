@@ -14,7 +14,6 @@ const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted }) 
 
   // Restart the timer whenever the expiryTimestamp changes
   useEffect(() => {
-    console.log("SpotTimer: New expiryTimestamp received:", expiryTimestamp);
     restart(expiryTimestamp);
   }, [expiryTimestamp, restart]);
 

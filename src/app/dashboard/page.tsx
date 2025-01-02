@@ -7,6 +7,9 @@ import { Edition } from "../../types/pocketbase";
 import { Button } from "@nextui-org/button";
 import { Progress } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
+import ShallNotPass from "../../components/ShallNotPass";
+import { set } from "lodash";
+import { auth } from "../../../auth";
 
 
 export default function DashboardPage() {
@@ -178,92 +181,94 @@ export default function DashboardPage() {
     console.log("pb.authStore", pb.authStore);
     // if pocketbase_auth is in localstorage, use it to authenticate
     if (pb.authStore.isValid) {
-      setGoogleAuth(true);
-
-      // Retrieve and parse the data from localStorage
+      console.log("AuthStore is valid");
       const authData = localStorage.getItem("pocketbase_auth");
-      const googleData = localStorage.getItem("google_data");
-
       if (authData) {
-        refreshSpotifyAuth();
+        const parsedAuth = JSON.parse(authData);
+        console.log('parsedAuth:', parsedAuth);
+        console.log('is admin:', parsedAuth.record.is_admin);
+        if (parsedAuth.record.is_admin === true) {
+          setIsAdmin(true);
+          // Retrieve and parse the data from localStorage
+          const googleData = localStorage.getItem("google_data");
 
-        const fetchUser = async () => {
-          try {
-            // Parse the JSON
-            const parsedData = JSON.parse(authData);
 
-            // Access the `id`
-            const id = parsedData.record.id;
+          refreshSpotifyAuth();
 
-            // Fetch user data asynchronously
-            pb.autoCancellation(false)
-            const user = await pb.collection("users").getOne(id);
+          const fetchUser = async () => {
+            try {
+              // Parse the JSON
+              const parsedData = JSON.parse(authData);
 
-            console.log("ID:", id);
-            if (user.is_admin)
-              setIsAdmin(true);
+              // Access the `id`
+              const id = parsedData.record.id;
 
-            // You can set additional state here if needed
-            if (googleData) {
-              try {
-                // Parse the JSON and type it as GoogleData
-                const parsedGoogleData: GoogleData = JSON.parse(googleData);
+              // Fetch user data asynchronously
+              pb.autoCancellation(false)
+              const user = await pb.collection("users").getOne(id);
 
-                // Access properties safely
-                setGoogleUser(parsedGoogleData.meta.name);
-                setGoogleAvatar(parsedGoogleData.meta.avatarURL);
-              } catch (error) {
-                console.error("Error parsing google_data:", error);
+              console.log("ID:", id);
+              if (user.is_admin)
+                setIsAdmin(true);
+
+              // You can set additional state here if needed
+              if (googleData) {
+                try {
+                  // Parse the JSON and type it as GoogleData
+                  const parsedGoogleData: GoogleData = JSON.parse(googleData);
+
+                  // Access properties safely
+                  setGoogleUser(parsedGoogleData.meta.name);
+                  setGoogleAvatar(parsedGoogleData.meta.avatarURL);
+                } catch (error) {
+                  console.error("Error parsing google_data:", error);
+                }
               }
-            }
 
-            if (user.is_admin) {
-              setIsAdmin(true);
+              if (user.is_admin) {
+                setIsAdmin(true);
+              }
+            } catch (error) {
+              console.error("Error parsing pocketbase_auth data or fetching user:", error);
             }
-          } catch (error) {
-            console.error("Error parsing pocketbase_auth data or fetching user:", error);
-          }
-        };
+          };
 
-        // Call the async function
-        fetchUser();
+          // Call the async function
+          fetchUser();
+          const randomRequestKey = Math.random().toString(36).substring(7);
+          pb.collection("editions")
+            .getFullList({ requestKey: randomRequestKey, sort: "-created" })
+            .then((data) => {
+              const transformedEditions: Edition[] = data.map((item) => ({
+                id: item.id,
+                title: item.title,
+                date: item.date,
+                teams: item.teams,
+                winner_team: item.winner_team,
+                blurb: item.blurb,
+                home_song: item.home_song,
+                created: item.created,
+                updated: item.updated,
+                edition_gif: item.edition_gif,
+                end_gif_1: item.end_gif_1,
+                end_gif_2: item.end_gif_2,
+              }));
+              setEditions(transformedEditions);
+              setError(null);
+            })
+            .catch((err) => {
+              console.error("Failed to fetch editions:", err);
+              setError("Failed to fetch editions. Please try again later.");
+            })
+            .finally(() => setLoading(false));
+        } else {
+          setIsAdmin(false);
+          setLoading(false);
+        }
       } else {
         console.log("No pocketbase_auth data found in localStorage.");
       }
-
-
-
     }
-
-    const randomRequestKey = Math.random().toString(36).substring(7);
-    pb.collection("editions")
-      .getFullList({ requestKey: randomRequestKey, sort: "-created" })
-      .then((data) => {
-        const transformedEditions: Edition[] = data.map((item) => ({
-          id: item.id,
-          title: item.title,
-          date: item.date,
-          teams: item.teams,
-          winner_team: item.winner_team,
-          blurb: item.blurb,
-          home_song: item.home_song,
-          created: item.created,
-          updated: item.updated,
-          edition_gif: item.edition_gif,
-          end_gif_1: item.end_gif_1,
-          end_gif_2: item.end_gif_2,
-        }));
-        setEditions(transformedEditions);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch editions:", err);
-        setError("Failed to fetch editions. Please try again later.");
-      })
-      .finally(() => setLoading(false));
-
-
-
     // Dependencies (add necessary dependencies here, or an empty array if no dependencies)
   }, []);
 
@@ -274,12 +279,12 @@ export default function DashboardPage() {
         <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
         <h3 className="text-2xl">Loading...</h3>
       </div>
-      );
+    );
   }
 
-  if (!googleAuth) {
-    router.push("/");
-  }
+  // if (!isAdmin) {
+  //   return <ShallNotPass />
+  // }
 
   if (error) {
     return <div className="p-10">{error}</div>;
@@ -287,7 +292,7 @@ export default function DashboardPage() {
 
   return (
     <div className="p-10 w-full">
-      <h1 className="text-3xl mb-6">Welcome to the Nerd Trivia 3000 Admin Dashboard</h1>
+      <h1 className="text-3xl mb-6">Welcome to the <span className="font-reboot text-lg text-glow-blue-400">Nerd Trivia 3000</span> Admin Dashboard</h1>
       <h2 className="text-2xl mb-8">Editions</h2>
       <div className="ml-4">
         <ul>

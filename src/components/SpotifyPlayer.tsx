@@ -19,7 +19,6 @@ declare global {
       nextTrack: () => Promise<void>;
       setUri: (uri: { uri: string }) => Promise<void>;
       removeFromQueue: (position: number, count: number) => Promise<void>;
-      getCurrentState: () => Promise<{ duration: number } | null>;
       pause: () => Promise<void>;
     }
   }

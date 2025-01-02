@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher/client";
 
 export interface Message {
@@ -21,6 +21,7 @@ export function usePrimeDirectives(
 ) {
   const router = useRouter();
   const [navigationPath, setNavigationPath] = useState<string | null>(null);
+  const currentPath = usePathname();
 
   useEffect(() => {
     if (activeChannels[channelName]) {
@@ -88,7 +89,7 @@ export function usePrimeDirectives(
   }, [channelName, editionId, teamId, onMessage, onQuestionToggle]);
 
   useEffect(() => {
-    if (navigationPath) {
+    if (navigationPath && !currentPath.includes("present")) {
       localStorage.setItem("answerSubmitted", "false");
       router.push(navigationPath);
     }
