@@ -14,7 +14,7 @@ export default function ShallNotPass() {
         height={200} 
         alt="anime girl saying no" 
       />
-      <h1 className="text-3xl my-4">You need to be logged in to access the dashboard.</h1>
+      <h1 className="text-3xl my-4">You need to be logged in as an admin to access this page.</h1>
       <Button as={Link} href="/">Go back to the homepage</Button>
     </div>
   );

@@ -31,6 +31,7 @@ export default function ImpossibleAnswerCard({
             music_correct: musicCorrect,
             music_2_correct: music2Correct,
             misc_bonus: miscBonus,
+            team_id: answer.team_id
           };
           onSubmit(data);
         }}
@@ -44,7 +45,7 @@ export default function ImpossibleAnswerCard({
             <p className="text-md">
               <strong>Answer:</strong>
             </p>
-            <pre>{answer.answer}</pre>
+            <pre className="whitespace-pre-wrap">{answer.answer}</pre>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-md">Number of Correct Answers:</span>

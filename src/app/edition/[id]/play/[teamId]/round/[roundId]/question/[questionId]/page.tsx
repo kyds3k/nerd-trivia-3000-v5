@@ -9,10 +9,8 @@ import DOMPurify from "dompurify"; // Import the sanitizer
 import Typed from "typed.js";
 import { useRouter } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
-import { set } from "lodash";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
-import { send } from "process";
 
 
 export default function Question() {
@@ -57,8 +55,8 @@ export default function Question() {
 
 
   usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
-    console.log(`Notification received from team ${team}: ${message}`);
-    if (team == teamId) return;
+    console.log(`Notification received from team ${teamId}: ${message}`);
+    if (teamName && message.includes(teamName)) return;
     toast.info(message, {
       position: "top-right",
       autoClose: 3000,
@@ -97,10 +95,19 @@ export default function Question() {
       data.bantha_used = banthaUsed;
       data.team_name_lower = teamName?.toLowerCase();
       pb.autoCancellation(false);
-
       const answer = await pb.collection("answers").create(data);
       console.log("Answer submitted:", answer);
       localStorage.setItem("answerSubmitted", "true");
+
+      if (banthaUsed) {
+        try {
+          const updatedTeam = await pb.collection("teams").update(`${teamId}`, { banthashit_card: false });
+          console.log("Banthashit card updated:", updatedTeam);
+        } catch (error) {
+          console.error("Failed to update banthashit card:", error);
+        }
+      }      
+
       setAnswerSubmitted(true);
       setShowForm(false);
       sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
@@ -115,6 +122,7 @@ export default function Question() {
         console.error("Failed to submit answer:", error);
       }
     }
+   
   };
 
   const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
@@ -220,10 +228,10 @@ export default function Question() {
   }, [questionText, questionActive]);
 
   return (
-    <div className="p-4 md:p-10">
+    <div className="p-4 md:p-10 w-screen">
       <div className="flex justify-between mb-5">
         <h1 className="text-lg mb-5">
-          Round {roundId} Question {questionId}
+          R{roundId} Q{questionId}
         </h1>
         <h2 className="text-lg">
           <strong>Team:</strong> {teamName}
@@ -236,9 +244,9 @@ export default function Question() {
       )}
       {answerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-screen">
+          <div className="mt-6 w-full">
             <Form
-              className="mt-6 w-screen"
+              className="mt-6"
               validationBehavior="native"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -248,7 +256,7 @@ export default function Question() {
               }}
               onReset={() => setAction("reset")}
             >
-              <div className="w-screen max-w-lg md:max-w-lg flex flex-col gap-6">
+              <div className="w-full md:max-w-lg flex flex-col gap-6">
                 <Input
                   isRequired
                   errorMessage="Please enter a valid answer"
@@ -258,7 +266,6 @@ export default function Question() {
                   placeholder="Enter your answer"
                   type="text"
                   size="lg"
-                  className="inline-block"
                 />
                 {questionId == "3" && roundId == "1" && (
                   <Input
@@ -307,7 +314,7 @@ export default function Question() {
           null
         )
       ) : (
-        <div className="mt-6 w-screen">
+        <div className="mt-6">
           <p className="text-2xl">Answer submitted!</p>
         </div>
       )}

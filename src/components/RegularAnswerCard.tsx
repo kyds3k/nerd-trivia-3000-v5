@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
-import { Input, Form, Button, Divider, Switch } from "@nextui-org/react";
+import { Input, Form, Button, Divider, Switch, Image } from "@nextui-org/react";
 
 interface RegularAnswerProps {
   answer: any; // Replace `any` with the correct `Answer` type
@@ -53,20 +53,31 @@ export default function RegularAnswerCard({
         </CardHeader>
         <Divider className="h-px bg-slate-500" />
         <CardBody className="flex flex-col gap-6">
-          <div>
-            <p className="text-md">
-              <strong>Answer:</strong>
-            </p>
-            <pre>{answer.answer}</pre>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-md">Correct:</span>
-            <Switch
-              isSelected={answerCorrect}
-              onValueChange={(isSelected) => setAnswerCorrect(isSelected)}
-              aria-label="Answer Correct"
-            />
-          </div>
+          {answer.bantha_used ? (
+            <div className="flex gap-4 w-full items-center">
+              <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
+              <div className="flex flex-col gap-2">
+                <pre className="whitespace-pre-wrap">Answer: {answer.answer}</pre>
+                <p>Bantha used!!!</p>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <p className="text-md">
+                <strong>Answer:</strong>
+              </p>
+              <pre className="whitespace-pre-wrap">{answer.answer}</pre>
+              <div className="flex justify-between items-center">
+                <span className="text-md">Correct:</span>
+                <Switch
+                  isSelected={answerCorrect}
+                  onValueChange={(isSelected) => setAnswerCorrect(isSelected)}
+                  aria-label="Answer Correct"
+                />
+              </div>
+            </div>
+
+          )}
           {currentRound === "1" && questionNumber === "3" && (
             <>
               <p className="text-md">

@@ -86,6 +86,7 @@ export default function Question() {
   const submitAnswer = async (data: any) => {
     try {
       data.edition_id = editionId;
+      data.team_id = teamId;
       data.answer_type = "final";
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
@@ -98,7 +99,7 @@ export default function Question() {
       localStorage.setItem("answerSubmitted", "true");
       setAnswerSubmitted(true);
       setShowForm(false);
-      sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
+      sendMessage("answer", `${teamName} submitted their FINAL answer!`, `$teamId`);
     } catch (error: any) {
       const responseData = error?.response?.data;
       if (
@@ -215,7 +216,7 @@ export default function Question() {
   }, [questionText, questionActive]);
 
   return (
-    <div className="p-4 md:p-10">
+    <div className="p-4 md:p-10 w-screen">
       <h1 className="text-3xl mb-5">
         FINAL QUESTION
       </h1>
@@ -226,9 +227,9 @@ export default function Question() {
       )}
       {answerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-screen">
+          <div className="mt-6 w-full">
             <Form
-              className="mt-6 w-screen"
+              className="mt-6"
               validationBehavior="native"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -238,7 +239,7 @@ export default function Question() {
               }}
               onReset={() => setAction("reset")}
             >
-              <div className="w-screen max-w-lg md:max-w-lg flex flex-col gap-6">
+              <div className="w-full max-w-lg md:max-w-lg flex flex-col gap-6">
                 <Input
                   isRequired
                   errorMessage="Please enter a valid answer"

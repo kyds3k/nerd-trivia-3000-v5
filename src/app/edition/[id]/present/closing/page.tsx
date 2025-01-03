@@ -16,7 +16,6 @@ import DynamicText from "@/components/DynamicText"; // Correct for default expor
 import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
-import ShallNotPass from "@/components/ShallNotPass"
 
 interface Question {
   edition_id: string;
@@ -24,6 +23,7 @@ interface Question {
   answer: string;
   final_answer_gif: string;
   final_song: string;
+  end_gif_1: string;  end_gif_2: string;
   is_active: boolean;
 }
 
@@ -32,20 +32,13 @@ export default function Question() {
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
-  const [questionText, setQuestionText] = useState<string>("");
-  const [answer, setAnswer] = useState<string>("");
-  const [answerGif, setAnswerGif] = useState<string | null>(null);
   const [song, setSong] = useState<string | null>(null);
   const [songArtist, setSongArtist] = useState<string | null>(null);
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
-  const [isActive, setIsActive] = useState<boolean | null>(null);
+  const [endGif1, setEndGif1] = useState<string | null>(null);
+  const [endGif2, setEndGif2] = useState<string | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
-  const [questionActive, setQuestionActive] = useState<boolean | null>(null);
-  const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
 
   // Use the hook and pass the callback for question_toggle
@@ -57,55 +50,13 @@ export default function Question() {
     (message, team) => {
       console.log("Received message:", message, "for team:", team);
       // Handle notification messages
-    },
-    (active) => {
-      console.log("Question active status:", active);
-      setQuestionActive(active); // Ensure the type matches
     }
   );
 
   useHotkeys("ctrl+ArrowLeft", () => {
-    router.push(`/edition/${editionId}/present/wager/`);
+    router.push(`/edition/${editionId}/present/final/`);
   });
 
-  useHotkeys("ctrl+ArrowRight", () => {
-    localStorage.setItem("scoreBoardOrigin", "final");
-    router.push(`/edition/${editionId}/present/scoreboard/`);
-  });
-
-
-  const getLoadingQuote = async () => {
-    try {
-      pb.autoCancellation(false);
-      const loadingQuotes = await pb.collection("loading_quotes").getFullList();
-      const listCount = loadingQuotes.length;
-      const randomIndex = Math.floor(Math.random() * listCount);
-      setLoadingQuote(loadingQuotes[randomIndex].quote);
-    } catch (error) {
-      console.error("Failed to get loading quote:", error);
-    }
-  };  
-
-  const questionRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (questionRef.current) {
-      const container = questionRef.current;
-      const parentWidth = container.offsetWidth;
-      const parentHeight = container.offsetHeight;
-
-      // Start with a large font size and reduce it until the text fits
-      let fontSize = 100; // Initial font size
-      container.style.fontSize = `${fontSize}px`;
-
-      while (
-        container.scrollWidth > parentWidth ||
-        container.scrollHeight > parentHeight
-      ) {
-        fontSize -= 1; // Reduce font size
-        container.style.fontSize = `${fontSize}px`;
-      }
-    }
-  }, [questionText]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false }, [Fade()])
 
@@ -236,47 +187,6 @@ export default function Question() {
 
   useEffect(() => {
 
-    const initializeApp = async () => {
-      if (!pb.authStore.isValid) {
-        console.log("Not authenticated with Pocketbase.");
-        setLoading(false);
-        setGoogleAuth(false);
-        return;
-      }
-  
-      console.log("Authenticated with Pocketbase successfully.");
-      const authData = localStorage.getItem("pocketbase_auth");
-  
-      if (!authData) {
-        console.error("No auth data found.");
-        setLoading(false);
-        setGoogleAuth(false);
-        setIsAdmin(false);
-        return;
-      }
-  
-      const parsedAuth = JSON.parse(authData);
-      if (!parsedAuth.is_admin) {
-        console.log("Not an admin.");
-        setLoading(false);
-        setGoogleAuth(false);
-        setIsAdmin(false);
-        return;
-      }
-  
-      console.log("Admin authenticated.");
-      setIsAdmin(true);
-      setGoogleAuth(true);
-      refreshSpotifyAuth();
-    };
-
-
-    const convertSpotifyUrlToUri = (url: string): string | null => {
-      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-    };
-
-
     const fetchQuestion = async () => {
       try {
         pb.autoCancellation(false);
@@ -286,51 +196,40 @@ export default function Question() {
 
         console.log("Question fetched:", response);
 
-
-
-        setAnswerGif(response.final_answer_gif);
-        setIsActive(response.is_active);
-
         // Sanitize and set HTML content
-        if (response.question_text) {
-          const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
-          setQuestionText(sanitizedQuestion);
-        }
-
-        if (response.answer) {
-          const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
-          setAnswer(sanitizedAnswer);
-        }
 
         setSong(convertSpotifyUrlToUri(response.final_song));
 
-        setIsActive(response.is_active);
+        setEndGif1(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_1}`);
+        setEndGif2(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_2}`);
+
 
       } catch (error) {
         console.log("Failed to fetch edition:", error);
       }
     };
 
+    const convertSpotifyUrlToUri = (url: string): string | null => {
+      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
+      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
+    };
+    
     if (editionId) {
       fetchQuestion();
       refreshSpotifyAuth();
     }
   }, []);
 
-  useEffectOnce(() => {
-    getLoadingQuote();
-  });
-
   useEffect(() => {
     if (song) {
       getSongInfo(song);
     }
-  }, [song, isAdmin]);
+  }, [song]);
 
   return (
-    <div>
+    <div className="h-dvh overflow-y-hidden">
       <div className="flex justify-between p-4">
-        <h1 className="py-4 pl-4 text-2xl">FINAL QUESTION</h1>
+        <h1 className="py-4 pl-4 text-2xl">THE END</h1>
         {spotifyToken && (
           <div>
             <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
@@ -339,39 +238,28 @@ export default function Question() {
       </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
-          <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
-            {questionActive ? (
-              // <span ref={el} className="text-2xl"></span>
-              <DynamicText
-                html={questionText}
-                maxFontSize={80}
-                className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
-              />
-            ) : (
-              <p className="text-2xl flex">{loadingQuote}</p>
-            )}
-          </div>
-
-
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
-            <div className="p-8 flex items-center justify-center">
-              <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
-            </div>
-            <div className="flex items-center justify-center w-full grow relative">
-              {answerGif ? (
-                <Image
-                  src={answerGif}
-                  alt="Answer GIF"
-                  fill={true}
-                  unoptimized={true}
-                  className="object-contain"
-                />
+            <div className="flex items-center justify-center w-full">
+              {endGif1 ? (
+                <Image src={endGif1} className="object-contain" alt="End GIF 1" fill={true} unoptimized={true} />
               ) : (
-                <Spinner size="lg" />
+                <>
+                  <Spinner size="lg" />
+                </>
               )}
             </div>
           </div>
-
+          <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
+            <div className="flex items-center justify-center w-full">
+              {endGif2 ? (
+                <Image className="object-contain" src={endGif2} alt="End GIF 2" fill={true} unoptimized={true} />
+              ) : (
+                <>
+                  <Spinner size="lg" />
+                </>
+              )}
+            </div>
+          </div>
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
@@ -383,7 +271,7 @@ export default function Question() {
                 <Spinner size="lg" />
               </>
             )}
-          </div>
+          </div>          
         </div>
       </div>
     </div>

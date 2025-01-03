@@ -56,7 +56,7 @@ export default function Question() {
 
   usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
     console.log("Notification received:", message);
-    if (team == teamId) return;
+    if (teamName && message.includes(teamName)) return;
     toast.info(message, {
       position: "top-right",
       autoClose: 3000,
@@ -85,13 +85,16 @@ export default function Question() {
 
   const submitAnswer = async (data: any) => {
     try {
+      data.edition_id = editionId;
+      data.team_id = teamId;
       data.answer_type = "impossible";
-      data.id = teamId;
       data.team_identifier = teamIdentifier;
       data.team_name = teamName;
       data.impossible_number = impossibleId;
       data.team_name_lower = teamName?.toLowerCase();
       pb.autoCancellation(false);
+
+      console.log("Submitting answer:", data);
 
       const answer = await pb.collection("answers").create(data);
       console.log("Answer submitted:", answer);
@@ -202,7 +205,7 @@ export default function Question() {
 
 
   return (
-    <div className="p-4 md:p-10">
+    <div className="p-4 pb- md:p-10 w-screen">
       <h1 className="text-lg mb-5">
         Impossible Question {impossibleId}
       </h1>
@@ -213,9 +216,9 @@ export default function Question() {
       )}
       {answerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-screen">
+          <div className="mt-6 w-full">
             <Form
-              className="mt-6 w-screen"
+              className="mt-6"
               validationBehavior="native"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -225,7 +228,7 @@ export default function Question() {
               }}
               onReset={() => setAction("reset")}
             >
-              <div className="w-screen max-w-lg md:max-w-lg flex flex-col gap-6">
+              <div className="w-full flex flex-col gap-6">
                 <Textarea
                   isRequired
                   errorMessage="Please enter a valid answer"
@@ -236,7 +239,7 @@ export default function Question() {
                   placeholder="Enter your answer"
                   type="text"
                   size="lg"
-                  className="inline-block"
+                  className="md:max-w-xl"
                 />
                 <Input
                   isRequired
@@ -247,7 +250,7 @@ export default function Question() {
                   placeholder="Enter the artist's name"
                   type="text"
                   size="lg"
-                  className="inline-block"
+                  className="md:max-w-xl"
                 />
                 <Input
                   isRequired
@@ -258,7 +261,7 @@ export default function Question() {
                   placeholder="Enter the artist's name"
                   type="text"
                   size="lg"
-                  className="inline-block"
+                  className="md:max-w-xl"
                 />                
 
                 <Button className="w-fit" type="submit" color="primary">
@@ -271,7 +274,7 @@ export default function Question() {
           null
         )
       ) : (
-        <div className="mt-6 w-screen">
+        <div className="mt-6">
           <p className="text-2xl">Answer submitted!</p>
         </div>
       )}

@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
 		remotePatterns: [
 			{
 				protocol: "https",
-				hostname: "media.tenor.com",
+				hostname: "*",
 				port: ""
 			}
 		],
