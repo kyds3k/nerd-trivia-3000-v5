@@ -140,7 +140,7 @@ export default function Scoring() {
     updatedAnswer.misc_bonus = data.misc_bonus;
     updatedAnswer.bantha_used = data.bantha_used;
     updatedAnswer.excelsior = data.excelsior;
-    updatedAnswer.impossible_number = parseInt(questionNumber || "1");
+    updatedAnswer.impossible_number = parseInt(questionNumber || "");
     updatedAnswer.impossible_correct_count = data.correct_answers;
     console.log("Updated answer:", updatedAnswer);
 
