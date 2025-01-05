@@ -221,9 +221,6 @@ export default function DashboardPage() {
       }
     } else {
       console.log("No session found. Are cookies enabled?");
-      setTimeout(() => {
-        router.push("/");
-      }, 5000);
     }
   }, [session]);
   
