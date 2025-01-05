@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Image, Progress } from "@nextui-org/react";
@@ -9,6 +9,8 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTimer } from "react-timer-hook";
 import { set } from "lodash";
 import ShallNotPass from "@/components/ShallNotPass";
+import { useSession } from "next-auth/react";
+import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
 
 interface Edition {
   title: string;
@@ -16,13 +18,31 @@ interface Edition {
   edition_gif: string;
   blurb: string;
   home_song: string;
-  // Add other fields if needed, e.g., `id: string`, `description: string`, etc.
+}
+
+interface session {
+  accessToken: string;
+  user: {
+    name: string;
+    email: string;
+    image: string;
+  }
 }
 
 export default function EditionPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
-  const editionId = typeof params?.id === "string" ? params.id : undefined;
+  const editionId = useMemo(() => {
+    return typeof params?.id === "string" ? params.id : undefined;
+  }, [params]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") {
+      console.log("Edition ID:", editionId);
+    }
+  }, [editionId]);
+    
+
   const [date, setDate] = useState<string | null>(null);
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
   const [editionGif, setEditionGif] = useState<string | null>(null);
@@ -32,82 +52,12 @@ export default function EditionPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [hasSession, setHasSession] = useState<boolean>(false);
+  const { data: session } = useSession();
   
   interface SpotTimerProps {
     expiryTimestamp: Date;
   }  
-
-  const refreshSpotifyAuth = async () => {
-    // Check if a valid token exists in localStorage
-    const savedToken = localStorage.getItem("spotifyAuthToken");
-    const savedTokenExpiry = localStorage.getItem("spotifyAuthTokenExpiry");
-    const savedRefreshToken = localStorage.getItem("spotifyAuthRefreshToken");
-
-    // if token is expired, refresh it
-    if (savedToken && savedTokenExpiry && savedRefreshToken) {
-      console.log('Token:', savedToken);
-      console.log('Expiry:', savedTokenExpiry);
-      console.log('Refresh Token:', savedRefreshToken);
-      const expiry = parseInt(savedTokenExpiry);
-      const now = Date.now();
-      if (expiry < now) {
-        try {
-          const response = await fetch("https://accounts.spotify.com/api/token", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`)}`,
-            },
-            body: new URLSearchParams({
-              grant_type: "refresh_token",
-              refresh_token: savedRefreshToken,
-              client_id: `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}`
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem("spotifyAuthToken", data.access_token);
-            localStorage.setItem("spotifyAuthTokenExpiry", (Date.now() + data.expires_in * 1000).toString());
-            console.log("Refreshed Spotify token successfully:", data.access_token);
-          } else {
-            console.error("Failed to refresh Spotify token:", await response.json());
-          }
-        } catch (error) {
-          console.error("Failed to refresh Spotify token:", error);
-        }
-      } else {
-        console.log("Token is still valid");
-        setSpotifyToken(savedToken);
-      }
-
-    } else {
-      // If no valid token, initiate OAuth
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        const authData = await pb.collection("users").authWithOAuth2({
-          provider: 'spotify',
-          requestKey: randomRequestKey,
-          scopes: [
-            "streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private user-read-playback-position user-read-email"
-          ],
-        });
-
-        console.log("authData", authData);
-
-        // Save token and user info in localStorage
-        if (authData.meta?.accessToken) {
-          localStorage.setItem("spotifyAuthToken", authData.meta.accessToken);
-          localStorage.setItem("spotifyAuthRefreshToken", authData.meta.refreshToken);
-          localStorage.setItem("spotifyAuthTokenExpiry", authData.meta.expiry);
-          console.log("Authenticated with Spotify successfully:", authData.meta.name);
-        }
-
-      } catch (error) {
-        console.error("Failed to refresh Spotify auth state:", error);
-      }
-    }
-  }
 
 
   useHotkeys("ctrl+ArrowRight", () => {
@@ -122,8 +72,8 @@ export default function EditionPage() {
   useEffect(() => {
     const initializeApp = async () => {
       if (!pb.authStore.isValid) {
-        setLoading(false);
         setGoogleAuth(false);
+        setLoading(false);        
         return;
       }
   
@@ -131,24 +81,24 @@ export default function EditionPage() {
       const authData = localStorage.getItem("pocketbase_auth");
   
       if (!authData) {
-        setLoading(false);
         setGoogleAuth(false);
         setIsAdmin(false);
+        setLoading(false);        
         return;
       }
   
       const parsedAuth = JSON.parse(authData);
-      if (!parsedAuth.is_admin) {
-        setLoading(false);
+      if (!parsedAuth.record.is_admin) {
         setGoogleAuth(false);
         setIsAdmin(false);
+        setLoading(false);        
         return;
       }
   
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setGoogleAuth(true);
-      refreshSpotifyAuth();
+      setLoading(false);
   
       if (editionId) {
         await fetchEdition(editionId);
@@ -191,12 +141,23 @@ export default function EditionPage() {
   
     // initializeApp();
     if (editionId) {
+      initializeApp();
       fetchEdition(editionId);
-      refreshSpotifyAuth();
-      setLoading(false);
+      refreshSpotifyToken(setSpotifyToken);
     }
   }, [editionId]);
-  
+
+  useEffect(() => {
+    if (session) {
+      console.log("Session retrieved:", session);
+      setHasSession(true);
+      const spotToken = session.accessToken;
+      setSpotifyToken(spotToken ?? null);
+    } else {
+      console.log("No session found. Are cookies enabled?");
+      setHasSession(false);
+    }
+  }, [session]);  
 
   if (loading) {
     return (

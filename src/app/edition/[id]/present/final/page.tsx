@@ -17,6 +17,9 @@ import { Spinner } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass"
+import { useSession } from "next-auth/react";
+import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+
 
 interface Question {
   edition_id: string;
@@ -123,95 +126,6 @@ export default function Question() {
     }
   }, [emblaApi])
 
-  const refreshSpotifyAuth = async () => {
-    console.log("refreshSpotifyAuth called");
-    // Check if a valid token exists in localStorage
-    const savedToken = localStorage.getItem("spotifyAuthToken");
-    console.log("Saved token from localStorage:", savedToken);
-
-    const savedTokenExpiry = localStorage.getItem("spotifyAuthTokenExpiry");
-    const savedRefreshToken = localStorage.getItem("spotifyAuthRefreshToken");
-
-    // if token is expired, refresh it
-    if (savedToken && savedTokenExpiry && savedRefreshToken) {
-      console.log('Token:', savedToken);
-      console.log('Expiry:', savedTokenExpiry);
-      console.log('Refresh Token:', savedRefreshToken);
-      const expiry = parseInt(savedTokenExpiry);
-      const now = Date.now();
-      console.log('expiry:', expiry);
-      console.log('now:', now);
-      if (expiry < now) {
-        console.log('expiret! gotta refresh!')
-        try {
-          const response = await fetch("https://accounts.spotify.com/api/token", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`)}`,
-
-            },
-            body: new URLSearchParams({
-              grant_type: "refresh_token",
-              refresh_token: savedRefreshToken,
-              client_id: `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}`
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem("spotifyAuthToken", data.access_token);
-            setSpotifyToken(data.access_token);
-            localStorage.setItem("spotifyAuthTokenExpiry", (Date.now() + data.expires_in * 1000).toString());
-            localStorage.setItem("spotifyAuthRefreshToken", data.refresh_token);
-            console.log("Refreshed Spotify token successfully:", data.access_token);
-          } else {
-            console.error("Failed to refresh Spotify token:", await response.json());
-          }
-        } catch (error) {
-          console.error("Failed to refresh Spotify token:", error);
-          // if error contains "revoked", clear the token and do the oAuth flow again
-          if (console.error.toString().includes("revoked")) {
-            console.log("Token was revoked, clearing local storage");
-            localStorage.removeItem("spotifyAuthToken");
-            localStorage.removeItem("spotifyAuthTokenExpiry");
-            localStorage.removeItem("spotifyAuthRefreshToken");
-            refreshSpotifyAuth();
-          }
-        }
-      } else {
-        console.log("Token is still valid");
-        setSpotifyToken(savedToken);
-      }
-    } else {
-      // If no valid token, initiate OAuth
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        const authData = await pb.collection("users").authWithOAuth2({
-          requestKey: randomRequestKey,
-          provider: "spotify",
-          scopes: [
-            "streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private user-read-playback-position user-read-email"
-          ],
-        });
-
-        console.log("authData", authData);
-
-        // Save token and user info in localStorage
-        if (authData.meta?.accessToken) {
-          localStorage.setItem("spotifyAuthToken", authData.meta.accessToken);
-          setSpotifyToken(authData.meta.accessToken);
-          localStorage.setItem("spotifyAuthRefreshToken", authData.meta.refreshToken);
-          localStorage.setItem("spotifyAuthTokenExpiry", authData.meta.expiry);
-          console.log("Authenticated with Spotify successfully:", authData.meta.name);
-        }
-
-      } catch (error) {
-        console.error("Failed to refresh Spotify auth state:", error);
-      }
-    }
-  }
-
   // function to grab the album art, song name, and artist name from the Spotify API
   const getSongInfo = async (song: string) => {
     const songId = song.split(":")[2];
@@ -256,7 +170,7 @@ export default function Question() {
       }
   
       const parsedAuth = JSON.parse(authData);
-      if (!parsedAuth.is_admin) {
+      if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
         setLoading(false);
         setGoogleAuth(false);
@@ -267,7 +181,6 @@ export default function Question() {
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setGoogleAuth(true);
-      refreshSpotifyAuth();
     };
 
 
@@ -313,7 +226,7 @@ export default function Question() {
 
     if (editionId) {
       fetchQuestion();
-      refreshSpotifyAuth();
+      refreshSpotifyToken(setSpotifyToken);
     }
   }, []);
 

@@ -1,32 +1,6 @@
-// utils/apiUtils.ts
 import { signIn } from "next-auth/react"
 
-export const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
-  console.log("sendMessage called with:", { type, message, team });
-
-  try {
-    const response = await fetch('/api/notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ type, message, team }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const json = await response.json();
-    console.log("Data sent successfully:", json);
-    return json; // Return the response JSON for further use if needed
-  } catch (error) {
-    console.error("Error sending data:", error);
-    throw error; // Re-throw the error to handle it in the calling function
-  }
-};
-
-export const refreshSpotifyAuth = async (
+export const refreshSpotifyToken = async (
   setSpotifyToken: React.Dispatch<React.SetStateAction<string | null>>,
   retryCount: number = 0
 ) => {
@@ -39,7 +13,7 @@ export const refreshSpotifyAuth = async (
     console.error("Exceeded maximum retry attempts. Redirecting to sign-in.");
     localStorage.removeItem("spotifyAuthToken");
     localStorage.removeItem("spotifyRefreshTokenExpiry");
-    localStorage.removeItem("spotifyAuthRefreshToken");
+    localStorage.removeItem("spotifyRefreshToken");
     signIn("spotify"); // Redirect to OAuth flow
     return;
   }
@@ -78,12 +52,12 @@ export const refreshSpotifyAuth = async (
             "spotifyRefreshTokenExpiry",
             (Date.now() + data.expires_in * 1000).toString()
           );
-          localStorage.setItem("spotifyAuthRefreshToken", data.refresh_token);
+          localStorage.setItem("spotifyRefreshToken", data.refresh_token);
           console.log("Refreshed Spotify token successfully:", data.access_token);
         } else {
           console.error("Failed to refresh Spotify token:", await response.json());
           console.log("Retrying refreshSpotifyAuth...");
-          await refreshSpotifyAuth(setSpotifyToken, retryCount + 1);
+          await refreshSpotifyToken(setSpotifyToken, retryCount + 1);
         }
       } catch (error) {
         console.error("Error refreshing Spotify token:", error);
@@ -92,11 +66,11 @@ export const refreshSpotifyAuth = async (
           console.log("Token was revoked, clearing local storage");
           localStorage.removeItem("spotifyAuthToken");
           localStorage.removeItem("spotifyRefreshTokenExpiry");
-          localStorage.removeItem("spotifyAuthRefreshToken");
+          localStorage.removeItem("spotifyRefreshToken");
         }
 
         console.log("Retrying refreshSpotifyAuth...");
-        await refreshSpotifyAuth(setSpotifyToken, retryCount + 1);
+        await refreshSpotifyToken(setSpotifyToken, retryCount + 1);
       }
     } else {
       console.log("Token is still valid");

@@ -179,6 +179,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   };
 
   useEffect(() => {
+    console.log("Token updated:", token);
     const initializeSpotifySDK = () => {
       if (!(window as any).Spotify) {
         console.error("Spotify SDK not loaded yet.");
@@ -193,6 +194,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
 
       player.addListener("ready", ({ device_id }) => {
         console.log("Player is ready with Device ID:", device_id);
+        console.log("valid token: ", token);
+        localStorage.setItem("spotifyRefreshToken", token || "");
         setDeviceId(device_id);
         setIsPlayerReady(true);
       });
