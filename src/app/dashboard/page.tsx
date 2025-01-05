@@ -9,8 +9,10 @@ import { Progress } from "@nextui-org/react";
 import { useRouter } from "next/navigation";
 import ShallNotPass from "../../components/ShallNotPass";
 import { set } from "lodash";
-import { auth } from "../../../auth";
+import { useSession } from "next-auth/react";
 
+import SpotifySignIn from "@/components/SpotifySignIn";
+import SpotifySignOut from "@/components/SpotifySignOut";
 
 export default function DashboardPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
@@ -22,7 +24,9 @@ export default function DashboardPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [googleUser, setGoogleUser] = useState<string>("");
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
-
+  const { data: session } = useSession();
+  const [hasSession, setHasSession] = useState<boolean>(false);
+ 
 
   interface GoogleData {
     meta: {
@@ -90,72 +94,6 @@ export default function DashboardPage() {
     }
   };
 
-  const refreshSpotifyAuth = async () => {
-    // Check if a valid token exists in localStorage
-    const savedToken = localStorage.getItem("spotifyAuthToken");
-    const savedTokenExpiry = localStorage.getItem("spotifyAuthTokenExpiry");
-    const savedRefreshToken = localStorage.getItem("spotifyAuthRefreshToken");
-
-    // if token is expired, refresh it
-    if (savedToken && savedTokenExpiry && savedRefreshToken) {
-      console.log('Token:', savedToken);
-      console.log('Expiry:', savedTokenExpiry);
-      console.log('Refresh Token:', savedRefreshToken);
-      const expiry = parseInt(savedTokenExpiry);
-      const now = Date.now();
-      if (expiry < now) {
-        try {
-          const response = await fetch("https://accounts.spotify.com/api/token", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`,
-            },
-            body: new URLSearchParams({
-              grant_type: "refresh_token",
-              refresh_token: savedRefreshToken,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem("spotifyAuthToken", data.access_token);
-            localStorage.setItem("spotifyAuthTokenExpiry", (Date.now() + data.expires_in * 1000).toString());
-            console.log("Refreshed Spotify token successfully:", data.access_token);
-          } else {
-            console.log("Failed to refresh Spotify token:", await response.json());
-          }
-        } catch (error) {
-          console.log("Failed to refresh Spotify token:", error);
-        }
-      }
-    } else {
-      // If no valid token, initiate OAuth
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        const authData = await pb.collection("users").authWithOAuth2({
-          requestKey: randomRequestKey,
-          provider: "spotify",
-          scopes: [
-            "streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private user-read-playback-position user-read-email"
-          ],
-        });
-
-        console.log("authData", authData);
-
-        // Save token and user info in localStorage
-        if (authData.meta?.accessToken) {
-          localStorage.setItem("spotifyAuthToken", authData.meta.accessToken);
-          localStorage.setItem("spotifyAuthRefreshToken", authData.meta.refreshToken);
-          localStorage.setItem("spotifyAuthTokenExpiry", authData.meta.expiry);
-          console.log("Authenticated with Spotify successfully:", authData.meta.name);
-        }
-
-      } catch (error) {
-        console.error("Failed to refresh Spotify auth state:", error);
-      }
-    }
-  }
 
   const refreshAuthState = async () => {
     if (!pb.authStore.isValid) {
@@ -193,7 +131,7 @@ export default function DashboardPage() {
           const googleData = localStorage.getItem("google_data");
 
 
-          refreshSpotifyAuth();
+          //refreshSpotifyAuth();
 
           const fetchUser = async () => {
             try {
@@ -272,6 +210,23 @@ export default function DashboardPage() {
     // Dependencies (add necessary dependencies here, or an empty array if no dependencies)
   }, []);
 
+  useEffect(() => {
+    if (session) {
+      console.log("Session retrieved:", session);
+      setHasSession(true);
+      if (session) {
+        localStorage.setItem("spotifyRefreshToken", session.refreshToken ?? "");
+        localStorage.setItem("spotifyAuthToken", session.accessToken ?? "");
+        localStorage.setItem("spotifyRefreshTokenExpiry", String(session.expiresAt)); // Convert number to string
+      }
+    } else {
+      console.log("No session found. Are cookies enabled?");
+      setTimeout(() => {
+        router.push("/");
+      }, 5000);
+    }
+  }, [session]);
+  
 
   if (loading) {
     return (
@@ -282,9 +237,9 @@ export default function DashboardPage() {
     );
   }
 
-  // if (!isAdmin) {
-  //   return <ShallNotPass />
-  // }
+  if (!isAdmin) {
+    return <ShallNotPass />
+  }
 
   if (error) {
     return <div className="p-10">{error}</div>;
@@ -293,21 +248,22 @@ export default function DashboardPage() {
   return (
     <div className="p-10 w-full">
       <h1 className="text-3xl mb-6">Welcome to the <span className="font-reboot text-lg text-glow-blue-400">Nerd Trivia 3000</span> Admin Dashboard</h1>
+      <p>Session: {hasSession ? ("true") : ("false")}</p>
       <h2 className="text-2xl mb-8">Editions</h2>
       <div className="ml-4">
-        <ul>
-          {loading ? (
-            <>
-              <p className="mb-3">Loading editions . . .</p>
-              <Progress
-                size="md"
-                isIndeterminate
-                aria-label="Loading editions"
-                className="max-w-md"
-              />
-            </>
-          ) : (
-            editions.map((edition) => (
+        {loading ? (
+          <>
+            <p className="mb-3">Loading editions . . .</p>
+            <Progress
+              size="md"
+              isIndeterminate
+              aria-label="Loading editions"
+              className="max-w-md"
+            />
+          </>
+        ) : (
+          <ul>
+            {editions.map((edition) => (
               <li key={edition.id} className="mb-8">
                 <strong>{edition.title}</strong> -{" "}
                 {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
@@ -318,11 +274,16 @@ export default function DashboardPage() {
                   <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
                 </div>
               </li>
-            ))
-          )}
-        </ul>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="flex flex-col gap-4">
+        { !hasSession ? (
+        <SpotifySignIn />
+        ) : (
+          <SpotifySignOut />
+        )}
         <Button className="mt-6 w-fit" as={Link} href="/edition/new">Create New Edition</Button>
         <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
       </div>

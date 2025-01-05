@@ -6,6 +6,12 @@ import { Providers } from "./providers";
 import React from 'react';
 import { ToastContainer, Flip, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import {
+  SignInButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs'
 
 
 const geistSans = localFont({

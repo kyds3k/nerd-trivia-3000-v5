@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import Pocketbase from 'pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";
 import Scoring from '@/components/Scoring';
+import ShallNotPass from '@/components/ShallNotPass';
 
 interface Message {
   message: string;
@@ -35,6 +36,7 @@ export default function Admin() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [editionTitle, setEditionTitle] = useState<string>("");
   // const questions is an array of objects
   const [questions, setQuestions] = useState<any[]>([]);
@@ -68,7 +70,7 @@ export default function Admin() {
 
 
   // Handler for toggling a switch
-  const handleToggle = (key, value) => {
+  const handleToggle = (key: any, value: any) => {
     console.log('Key:', key);
     console.log('Value:', value);
 
@@ -221,45 +223,47 @@ export default function Admin() {
   const fetchQuestions = async () => {
     try {
       pb.autoCancellation(false);
-  
+
       const editionGrab = await pb.collection('editions').getOne(`${editionId}`);
       setEditionTitle(editionGrab.title);
-  
+
       const questionList = await pb.collection('questions').getFullList({
         filter: `edition_id="${editionId}"`,
       });
-  
+
       setQuestions(questionList); // Store the full question list
-  
+
       // Find the question with is_active === true
       const activeQuestion = questionList.find((question) => question.is_active);
-  
+
       if (activeQuestion) {
+        console.log('active question:', activeQuestion);
         const key = `switchR${activeQuestion.round_number}Q${activeQuestion.question_number}`;
         setSwitchStates((prev) => ({
           ...prev,
           [key]: true, // Set the active switch to true
         }));
-        return; // Exit early since an active question was found
+        return;
       }
-  
+
       // If no active question is found, search for the active impossible round
       const impossibleList = await pb.collection('impossible_rounds').getFullList({
         filter: `edition_id="${editionId}"`,
       });
-  
+
       const activeImpossible = impossibleList.find((impossible) => impossible.is_active);
-  
+
       if (activeImpossible) {
         const key = activeImpossible.impossible_number;
-        if (key === '1') {
+        console.log('active impossible:', key);
+        if (key === 1) {
           setSwitchI1(true);
-        } else {
+        } else if (key === 2) {
           setSwitchI2(true);
-        }
-        return; // Exit early since an active impossible round was found
+        } 
+        return;
       }
-  
+
       // If no impossible round is active, check if a wager round is active
       try {
         const wagerRecord = await pb.collection('wager_rounds').getFirstListItem(
@@ -267,12 +271,13 @@ export default function Admin() {
         );
         if (wagerRecord?.is_active) {
           setSwitchWager(true);
-          return; // Exit early since a wager round is active
+          // Exit early since a wager round is active
+          return;
         }
       } catch (error) {
         console.log('No active wager round found:', error);
       }
-  
+
       // If no wager round is active, check if a final round is active
       try {
         const finalRecord = await pb.collection('final_rounds').getFirstListItem(
@@ -288,7 +293,7 @@ export default function Admin() {
       console.error('Failed to fetch questions:', error);
     }
   };
-  
+
 
 
   const sendDirective = async (type: string | null, round: string | null, question: string | null, active: boolean | null) => {
@@ -391,7 +396,7 @@ export default function Admin() {
 
         await pb.collection('impossible_rounds').update(recordId, { is_active: isActive });
 
-        sendDirective('question_toggle', null, null, isActive);
+        sendDirective('question_toggle', "impossible", `${round?.toString()}`, isActive);
 
       }
 
@@ -427,11 +432,42 @@ export default function Admin() {
   };
 
   useEffect(() => {
+
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.error("Not authenticated with Pocketbase.");
+        return;
+      }
+
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+
+      if (!authData) {
+        console.error("No auth data found.");
+        setIsAdmin(false);
+        return;
+      }
+
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.record.is_admin) {
+        console.log("Not an admin.");
+        setIsAdmin(false);
+        return;
+      }
+
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+
+      if (editionId) {
+        //initializeApp();
+      }
+    };
+
     if (editionId) {
+      initializeApp();
       fetchQuestions();
     }
   }, [editionId]);
-
 
   useEffect(() => {
     const pusher = getPusherClient(); // Call the function to get the Pusher instance
@@ -451,159 +487,167 @@ export default function Admin() {
 
   return (
     <div className="admin p-4 md:p-10">
-      <h1 className='text-4xl mb-4'>Admin - {editionTitle}</h1>
-      <Tabs
-        aria-label='Admin Tabs'
-        destroyInactiveTabPanel={false}
-        size='lg'
-        variant='bordered'
-        classNames={{ tabList: "sticky top-14 mb-10" }}
-      >
-        <Tab key='navigation' title='Navigation'>
-          <div className='p-4 md:p-4 mb-3'>
-            <h3 className='text-2xl mb-2'>Rounds</h3>
-            <div className="flex gap-4">
-              {/* Round Buttons */}
-              {['1', '2', '3'].map(round => {
-                const identifier = `round_${round}`;
-                return (
-                  <Button
-                    key={identifier}
-                    onPress={() => handleButtonClick(identifier, 'round_jump', round, null, null)}
-                    size="sm"
-                    color={activeButton === identifier ? "success" : undefined} // Add color dynamically
-                  >
-                    Round {round}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-          <div className="p-4">
-            {/* loop through rounds 1-3, 5 questions per round. Each question has a button as above, and a nextui Switch with the label "Active" */}
-            <h3 className='text-2xl mb-2'>Questions</h3>
-            <div className="flex flex-col gap-6">
-              {[
-                { type: 'round', number: 1, order: 1 },
-                { type: 'impossible', number: 1, order: 2 },
-                { type: 'round', number: 2, order: 3 },
-                { type: 'impossible', number: 2, order: 3 },
-                { type: 'round', number: 3, order: 5 },
-              ].map(({ type, number, order }) => (
-                <div key={`${type}-${number}`} className={`flex flex-col gap-4 order-${order}`}>
-                  <h4>
-                    {type === 'round' ? `Round ${number}` : `Impossible ${number}`}
-                  </h4>
-                  <div className="flex flex-col gap-6">
-                    {type === 'round' ? (
-                      <div className="flex gap-6">
-                        {[...Array(5)].map((_, questionIndex) => {
-                          const questionNumber = questionIndex + 1;
-                          const key = `switchR${number}Q${questionNumber}`;
-                          return (
-                            <div key={key} className="flex flex-col gap-2">
-                              <Button
-                                // onPress={() =>
-                                //   sendDirective('question_jump', String(number), String(questionNumber), null)
-                                // }
-                                onPress={() => handleButtonClick(`question_jump_${String(number)}${String(questionNumber)}`, 'question_jump', String(number), String(questionNumber), null)}
-                                size="sm"
-                                color={activeButton === `question_jump_${String(number)}${String(questionNumber)}` ? "success" : undefined}
-                              >
-                                Question {questionNumber}
-                              </Button>
-                              <Switch
-                                className='overflow-hidden'
-                                isSelected={switchStates[key]}
-                                onValueChange={(value) => handleToggle(key, value)}
-                              >
-                                Active
-                              </Switch>
-                            </div>
-                          );
-                        })}
+      {!isAdmin ? (
+        <>
+          <ShallNotPass />
+        </>
+      ) : (
+        <>
+          <h1 className='text-4xl mb-4'>Admin - {editionTitle}</h1>
+          <Tabs
+            aria-label='Admin Tabs'
+            destroyInactiveTabPanel={false}
+            size='lg'
+            variant='bordered'
+            classNames={{ tabList: "sticky top-14 mb-4" }}
+          >
+            <Tab key='navigation' title='Navigation'>
+              <div className='md:px-4 pt-0 pb-4 mb-3'>
+                <h3 className='text-2xl mb-2'>Rounds</h3>
+                <div className="flex gap-4">
+                  {/* Round Buttons */}
+                  {['1', '2', '3'].map(round => {
+                    const identifier = `round_${round}`;
+                    return (
+                      <Button
+                        key={identifier}
+                        onPress={() => handleButtonClick(identifier, 'round_jump', round, null, null)}
+                        size="sm"
+                        color={activeButton === identifier ? "success" : undefined} // Add color dynamically
+                      >
+                        Round {round}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="p-4">
+                {/* loop through rounds 1-3, 5 questions per round. Each question has a button as above, and a nextui Switch with the label "Active" */}
+                <h3 className='text-2xl mb-2'>Questions</h3>
+                <div className="flex flex-col gap-6">
+                  {[
+                    { type: 'round', number: 1, order: 1 },
+                    { type: 'impossible', number: 1, order: 2 },
+                    { type: 'round', number: 2, order: 3 },
+                    { type: 'impossible', number: 2, order: 3 },
+                    { type: 'round', number: 3, order: 5 },
+                  ].map(({ type, number, order }) => (
+                    <div key={`${type}-${number}`} className={`flex flex-col gap-4 order-${order}`}>
+                      <h4>
+                        {type === 'round' ? `Round ${number}` : `Impossible ${number}`}
+                      </h4>
+                      <div className="flex flex-col gap-6">
+                        {type === 'round' ? (
+                          <div className="flex gap-6">
+                            {[...Array(5)].map((_, questionIndex) => {
+                              const questionNumber = questionIndex + 1;
+                              const key = `switchR${number}Q${questionNumber}`;
+                              return (
+                                <div key={key} className="flex flex-col gap-2">
+                                  <Button
+                                    // onPress={() =>
+                                    //   sendDirective('question_jump', String(number), String(questionNumber), null)
+                                    // }
+                                    onPress={() => handleButtonClick(`question_jump_${String(number)}${String(questionNumber)}`, 'question_jump', String(number), String(questionNumber), null)}
+                                    size="sm"
+                                    color={activeButton === `question_jump_${String(number)}${String(questionNumber)}` ? "success" : undefined}
+                                  >
+                                    Question {questionNumber}
+                                  </Button>
+                                  <Switch
+                                    className='overflow-hidden'
+                                    isSelected={switchStates[key]}
+                                    onValueChange={(value) => handleToggle(key, value)}
+                                  >
+                                    Active
+                                  </Switch>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              className="w-fit"
+                              // onPress={() => sendDirective('impossible_jump', String(number), null, null)}
+                              onPress={() => handleButtonClick(`impossible_jump_${String(number)}`, 'impossible_jump', String(number), null, null)}
+                              color={activeButton === `impossible_jump_${String(number)}` ? "success" : undefined}
+                              size="sm"
+                            >
+                              Impossible {number}
+                            </Button>
+                            <Switch
+                              isSelected={number === 1 ? switchI1 : switchI2}
+                              onValueChange={(value) =>
+                                number === 1 ? handleToggle('I1', value) : handleToggle('I2', value)
+                              }
+                            >
+                              Active
+                            </Switch>
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          className="w-fit"
-                          // onPress={() => sendDirective('impossible_jump', String(number), null, null)}
-                          onPress={() => handleButtonClick(`impossible_jump_${String(number)}`, 'impossible_jump', String(number), null, null)}
-                          color={activeButton === `impossible_jump_${String(number)}` ? "success" : undefined}
-                          size="sm"
-                        >
-                          Impossible {number}
-                        </Button>
-                        <Switch
-                          isSelected={number === 1 ? switchI1 : switchI2}
-                          onValueChange={(value) =>
-                            number === 1 ? handleToggle('I1', value) : handleToggle('I2', value)
-                          }
-                        >
-                          Active
-                        </Switch>
-                      </div>
-                    )}
+                    </div>
+                  ))}
+                  <div className="flex flex-col gap-4 order-5">
+                    <h4>Wager</h4>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        className="w-fit"
+                        onPress={() => handleButtonClick('wager', 'wager_jump', null, null, null)}
+                        size="sm"
+                        color={activeButton === 'wager' ? "success" : undefined}
+                      >
+                        Wager
+                      </Button>
+                      <Switch
+                        isSelected={switchWager}
+                        onValueChange={(value) => handleToggle('wager', value)}
+                      >
+                        Active
+                      </Switch>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 order-6">
+                    <h4>Final</h4>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        className="w-fit"
+                        onPress={() => handleButtonClick('final', 'final_jump', null, null, null)}
+                        size="sm"
+                        color={activeButton === 'final' ? "success" : undefined}
+                      >
+                        Final
+                      </Button>
+                      <Switch
+                        isSelected={switchFinal}
+                        onValueChange={(value) => handleToggle('final', value)}
+                      >
+                        Active
+                      </Switch>
+                    </div>
                   </div>
                 </div>
-              ))}
-              <div className="flex flex-col gap-4 order-5">
-                <h4>Wager</h4>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    className="w-fit"
-                    onPress={() => handleButtonClick('wager', 'wager_jump', null, null, null)}
-                    size="sm"
-                    color={activeButton === 'wager' ? "success" : undefined}
-                  >
-                    Wager
-                  </Button>
-                  <Switch
-                    isSelected={switchWager}
-                    onValueChange={(value) => handleToggle('wager', value)}
-                  >
-                    Active
-                  </Switch>
-                </div>
-              </div>
-              <div className="flex flex-col gap-4 order-6">
-                <h4>Final</h4>
-                <div className="flex flex-col gap-2">
-                  <Button
-                    className="w-fit"
-                    onPress={() => handleButtonClick('final', 'final_jump', null, null, null)}
-                    size="sm"
-                    color={activeButton === 'final' ? "success" : undefined}
-                  >
-                    Final
-                  </Button>
-                  <Switch
-                    isSelected={switchFinal}
-                    onValueChange={(value) => handleToggle('final', value)}
-                  >
-                    Active
-                  </Switch>
-                </div>
-              </div>
-            </div>
 
-          </div>
-        </Tab>
-        <Tab key='scoring' title='Scoring'>
-          <div>
-            <Scoring />
-          </div>
-          <div className="score-table">
+              </div>
+            </Tab>
+            <Tab key='scoring' title='Scoring'>
+              <div>
+                <Scoring />
+              </div>
+              <div className="score-table">
 
-          </div>
-        </Tab>
-        <Tab key='miscellany' title='Miscellany'>
-          <div className='p-4 md:p-10'>
-            <h2 className='text-2xl'>Miscellany</h2>
-            <p>Other admin tasks.</p>
-          </div>
-        </Tab>
-      </Tabs>
+              </div>
+            </Tab>
+            <Tab key='miscellany' title='Miscellany'>
+              <div className='p-4 md:p-10'>
+                <h2 className='text-2xl'>Miscellany</h2>
+                <p>Other admin tasks.</p>
+              </div>
+            </Tab>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 

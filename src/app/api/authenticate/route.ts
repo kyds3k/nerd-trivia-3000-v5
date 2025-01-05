@@ -5,6 +5,7 @@ export async function POST() {
 
   const adminEmail = process.env.POCKETBASE_ADMIN_EMAIL;
   const adminPass = process.env.POCKETBASE_ADMIN_PW;
+  const pb = new Pocketbase("https://nerd-trivia-3k.pockethost.io");
 
   
   console.log("Admin Email:", adminEmail); // Should print the email
@@ -16,7 +17,7 @@ export async function POST() {
 
   try {
     pb.autoCancellation(false);
-    const authData = await pb.admins.authWithPassword(adminEmail, adminPass, { cache: "no-store" });
+    const authData = await pb.collection("superusers").authWithPassword(adminEmail, adminPass, { cache: "no-store" });
     return NextResponse.json(authData, { status: 200 });
    
   } catch (error) {

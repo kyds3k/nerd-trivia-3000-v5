@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Spinner } from '@nextui-org/react';
+import { Spinner, Progress } from '@nextui-org/react';
 import { useRouter } from "next/navigation";
 import ShallNotPass from "@/components/ShallNotPass";
 
@@ -28,7 +28,6 @@ export default function Round() {
   : undefined;
   const [roundGif, setRoundGif] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
 
@@ -55,7 +54,6 @@ export default function Round() {
       if (!pb.authStore.isValid) {
         console.log("Not authenticated with Pocketbase.");
         setLoading(false);
-        setGoogleAuth(false);
         return;
       }
   
@@ -65,23 +63,22 @@ export default function Round() {
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
   
       const parsedAuth = JSON.parse(authData);
-      if (!parsedAuth.is_admin) {
+      console.log("Parsed auth data:", parsedAuth);
+      if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
   
       console.log("Admin authenticated.");
       setIsAdmin(true);
-      setGoogleAuth(true);
+      setLoading(false);
     };
   
 
@@ -100,28 +97,29 @@ export default function Round() {
       };
   
       if (editionId) {
-        //initializeApp();
-        setIsAdmin(true);
+        initializeApp();
         fetchRound();
       }
     
-  }, []);
+  }, [editionId]);
   
 
-  if (!isAdmin) {
-    return <ShallNotPass />;
-  }
 
   return (
     <div className="flex h-screen justify-center items-center">
-      {!roundGif ? (
+      {loading ? (
+        <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
+      ) : !isAdmin ? (
+        <ShallNotPass />
+      ) : !roundGif ? (
         <Spinner size="lg" />
       ) : (
-      <div className="roundContainer flex flex-col gap-4 items-center">
-        <h1 className="text-8xl">Round {roundId}</h1>
-        <Image src={roundGif} alt="Round Gif" height={500} />
-      </div>
+        <div className="roundContainer flex flex-col gap-4 items-center">
+          <h1 className="text-8xl">Round {roundId}</h1>
+          <Image src={roundGif} alt="Round Gif" height={500} />
+        </div>
       )}
     </div>
   );
+  
 }
