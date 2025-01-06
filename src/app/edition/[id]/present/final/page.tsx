@@ -14,7 +14,7 @@ import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from '@nextui-org/react';
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-transition-router";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass"
 import { useSession } from "next-auth/react";
@@ -32,7 +32,7 @@ interface Question {
 
 export default function Question() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const router = useRouter();
+  const router = useTransitionRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [questionText, setQuestionText] = useState<string>("");

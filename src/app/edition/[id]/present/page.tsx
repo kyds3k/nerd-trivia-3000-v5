@@ -11,6 +11,8 @@ import { set } from "lodash";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
 import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import { useTransitionRouter } from "next-transition-router";
+
 
 interface Edition {
   title: string;
@@ -32,6 +34,7 @@ interface session {
 export default function EditionPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
+  const router = useTransitionRouter();
   const editionId = useMemo(() => {
     return typeof params?.id === "string" ? params.id : undefined;
   }, [params]);
@@ -41,7 +44,7 @@ export default function EditionPage() {
       console.log("Edition ID:", editionId);
     }
   }, [editionId]);
-    
+
 
   const [date, setDate] = useState<string | null>(null);
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
@@ -54,15 +57,15 @@ export default function EditionPage() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [hasSession, setHasSession] = useState<boolean>(false);
   const { data: session } = useSession();
-  
+
   interface SpotTimerProps {
     expiryTimestamp: Date;
-  }  
+  }
 
 
   useHotkeys("ctrl+ArrowRight", () => {
     // Navigate to the first round, aka adding /round/1 to the URL
-    window.location.href = `/edition/${editionId}/present/round/1`;
+    router.push(`/edition/${editionId}/present/round/1`)
   });
 
 
@@ -73,50 +76,48 @@ export default function EditionPage() {
     const initializeApp = async () => {
       if (!pb.authStore.isValid) {
         setGoogleAuth(false);
-        setLoading(false);        
+        setLoading(false);
         return;
       }
-  
+
       console.log("Authenticated with Pocketbase successfully.");
       const authData = localStorage.getItem("pocketbase_auth");
-  
+
       if (!authData) {
         setGoogleAuth(false);
         setIsAdmin(false);
-        setLoading(false);        
+        setLoading(false);
         return;
       }
-  
+
       const parsedAuth = JSON.parse(authData);
       if (!parsedAuth.record.is_admin) {
         setGoogleAuth(false);
         setIsAdmin(false);
-        setLoading(false);        
+        setLoading(false);
         return;
       }
-  
+
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setGoogleAuth(true);
       setLoading(false);
-  
-      if (editionId) {
-        await fetchEdition(editionId);
-      }
+      refreshSpotifyToken(setSpotifyToken);
+
     };
-  
+
     const convertSpotifyUrlToUri = (url: string): string | null => {
       const match = url.match(/track\/([a-zA-Z0-9]+)/);
       return match ? `spotify:track:${match[1]}` : null;
     };
-  
+
     const fetchEdition = async (id: string) => {
       try {
         const randomRequestKey = Math.random().toString(36).substring(7);
         const response = await pb
           .collection("editions")
           .getOne<Edition>(id, { requestKey: randomRequestKey });
-  
+
         if (response.date) {
           const formattedDate = new Intl.DateTimeFormat("en-US", {
             year: "numeric",
@@ -125,11 +126,11 @@ export default function EditionPage() {
           }).format(new Date(response.date));
           setDate(formattedDate);
         }
-  
+
         setEditionTitle(response.title);
         setEditionGif(response.edition_gif);
         setPageSong(convertSpotifyUrlToUri(response.home_song));
-  
+
         if (response.blurb) {
           const sanitizedHtml = DOMPurify.sanitize(response.blurb);
           setBlurb(sanitizedHtml);
@@ -138,26 +139,25 @@ export default function EditionPage() {
         console.error("Failed to fetch edition:", error);
       }
     };
-  
+
     // initializeApp();
     if (editionId) {
       initializeApp();
       fetchEdition(editionId);
-      refreshSpotifyToken(setSpotifyToken);
     }
   }, [editionId]);
 
-  useEffect(() => {
-    if (session) {
-      console.log("Session retrieved:", session);
-      setHasSession(true);
-      const spotToken = session.accessToken;
-      setSpotifyToken(spotToken ?? null);
-    } else {
-      console.log("No session found. Are cookies enabled?");
-      setHasSession(false);
-    }
-  }, [session]);  
+  // useEffect(() => {
+  //   if (session) {
+  //     console.log("Session retrieved:", session);
+  //     setHasSession(true);
+  //     const spotToken = session.accessToken;
+  //     setSpotifyToken(spotToken ?? null);
+  //   } else {
+  //     console.log("No session found. Are cookies enabled?");
+  //     setHasSession(false);
+  //   }
+  // }, [session]);
 
   if (loading) {
     return (
@@ -165,37 +165,39 @@ export default function EditionPage() {
         <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
         <h3 className="text-2xl">Loading...</h3>
       </div>
-      );
+    );
   }
 
   // if (!googleAuth) {
   //   return <ShallNotPass />
   // }
 
-  
+
   return (
-    <div className="p-10 flex flex-col items-center justify-center">
-      <h3 className="text-4xl mb-4">Nerd Trivia: {date}</h3>
-      <h1 className="text-5xl">{editionTitle}</h1>
-      {editionGif && (
-        <Image
-          src={editionGif}
-          alt="Edition GIF"
-          width="800"
-          className="my-16"
-        />
-      )}
-      {blurb && (
-        <div
-          className="text-3xl mb-8"
-          dangerouslySetInnerHTML={{ __html: blurb }}
-        />
-      )}
-      {spotifyToken && (
-        <div>
-          <SpotifyPlayer token={spotifyToken} song={pageSong} songs={null} />
-        </div>
-      )}
-    </div>
+    <>
+      <div className="p-10 flex flex-col items-center justify-center">
+        <h3 className="text-4xl mb-4">Nerd Trivia: {date}</h3>
+        <h1 className="text-5xl">{editionTitle}</h1>
+        {editionGif && (
+          <Image
+            src={editionGif}
+            alt="Edition GIF"
+            width="800"
+            className="my-16"
+          />
+        )}
+        {blurb && (
+          <div
+            className="text-3xl mb-8"
+            dangerouslySetInnerHTML={{ __html: blurb }}
+          />
+        )}
+        {spotifyToken && (
+          <div>
+            <SpotifyPlayer token={spotifyToken} song={pageSong} songs={null} />
+          </div>
+        )}
+      </div>
+    </>
   );
 }

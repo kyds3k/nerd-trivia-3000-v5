@@ -2,17 +2,101 @@
 
 import { NextUIProvider } from "@nextui-org/react";
 import { SessionProvider } from "next-auth/react";
-import { ReactNode } from "react";
+import { gsap } from "gsap";
+import { TransitionRouter } from "next-transition-router";
+import { useRef } from "react";
 
 interface ProvidersProps {
-  children: ReactNode;
+  children: React.ReactNode;
   session?: any; // Adjust type if you have a specific type for the session
 }
 
 export function Providers({ children, session }: ProvidersProps) {
+  const firstLayer = useRef<HTMLDivElement | null>(null);
+
   return (
     <SessionProvider session={session}>
-      <NextUIProvider>{children}</NextUIProvider>
+      <NextUIProvider>
+        <TransitionRouter
+          auto={true}
+          leave={(next, from, to) => {
+            console.log({ from, to });
+            const tl = gsap
+              .timeline({
+                onComplete: next,
+              })
+              .fromTo(
+                firstLayer.current,
+                {
+                  alpha: 0
+
+                },
+                {
+                  alpha: 1,
+                  duration: 2,
+                  ease: "circ.inOut",
+                },
+              )
+              .fromTo(
+                firstLayer.current,
+                { y: "100%" },
+                {
+                  y: "0",
+                  duration: 0,
+                  delay: 0,
+                  ease: "circ.inOut",
+                },
+              )
+            return () => {
+              tl.kill();
+            };
+          }}
+          enter={(next) => {
+            const tl = gsap
+              .timeline()
+              .fromTo(
+                firstLayer.current,
+                {
+                  alpha: 1
+
+                },
+                {
+                  alpha: 0,
+                  duration: 3,
+                  ease: "circ.inOut",
+                },
+              )
+              .fromTo(
+                firstLayer.current,
+                { y: "100%" },
+                {
+                  y: "0",
+                  duration: 0,
+                  delay: 5,
+                  ease: "circ.inOut",
+                },
+              )
+              .call(next, undefined, "<50%");
+
+            return () => {
+              tl.kill();
+            };
+          }}
+        >
+          {children}
+          <div
+            ref={firstLayer}
+            className="fixed inset-0 z-50 translate-y-full"
+            style={{
+              backgroundImage: "url('https://media1.tenor.com/m/ufGNJfK-2qsAAAAC/tardis-doctor-who.gif')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+          </div>
+        </TransitionRouter>
+      </NextUIProvider>
     </SessionProvider>
   );
 }
