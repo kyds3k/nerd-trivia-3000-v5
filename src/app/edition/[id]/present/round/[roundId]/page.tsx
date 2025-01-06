@@ -8,7 +8,7 @@ import Pocketbase from "pocketbase";
 import { Image } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Spinner, Progress } from '@nextui-org/react';
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-transition-router";
 import ShallNotPass from "@/components/ShallNotPass";
 
 interface Round {
@@ -18,7 +18,7 @@ interface Round {
 
 export default function Round() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const router = useRouter();
+  const router = useTransitionRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const roundId = Array.isArray(params?.roundId) 

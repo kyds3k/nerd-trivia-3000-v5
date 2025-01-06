@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Pocketbase, { RecordModel } from "pocketbase";
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-transition-router";
 
 interface Edition {
   title: string;
@@ -19,7 +19,7 @@ interface Edition {
 export default function Scoreboard() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
-  const router = useRouter();
+  const router = useTransitionRouter();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [scores, setScores] = useState<RecordModel[]>([]);
   const [origin, setOrigin] = useState<string | null>(null);

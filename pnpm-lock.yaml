@@ -77,6 +77,9 @@ importers:
       framer-motion:
         specifier: 11.14.3
         version: 11.14.3(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      gsap:
+        specifier: ^3.12.5
+        version: 3.12.5
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
@@ -86,6 +89,9 @@ importers:
       next-auth:
         specifier: 5.0.0-beta.25
         version: 5.0.0-beta.25(next@15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0))(react@18.2.0)
+      next-transition-router:
+        specifier: ^0.2.7
+        version: 0.2.7(next@15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       pocketbase:
         specifier: ^0.24.0
         version: 0.24.0
@@ -2129,6 +2135,9 @@ packages:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
 
+  delegate-it@6.2.1:
+    resolution: {integrity: sha512-3/P/rwj+zal/99EEml7y1+bXjBY+Wok/WSg0EngWAtdvHK6iKTPbABQE84RyyRfR0Fmejs93BrkZQWlgyeWuFQ==}
+
   detect-libc@1.0.3:
     resolution: {integrity: sha512-pGjwhsmsp4kL2RTz08wcOlGN83otlqHeD/Z5T8GXZB+/YcpQ/dgo+lbU8ZsGxV0HIvqqxo9l7mqYwyYMD9bKDg==}
     engines: {node: '>=0.10'}
@@ -2525,6 +2534,9 @@ packages:
   graphemer@1.4.0:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
 
+  gsap@3.12.5:
+    resolution: {integrity: sha512-srBfnk4n+Oe/ZnMIOXt3gT605BX9x5+rh/prT2F1SsNJsU1XuMiP0E2aptW481OnonOGACZWBqseH5Z7csHxhQ==}
+
   has-bigints@1.1.0:
     resolution: {integrity: sha512-R3pbpkcIqv2Pm3dUwgjclDRVmWpTJW2DcMzcIhEXEx1oh/CEMObMm3KLmRJOdvhM7o4uQBnwr8pzRK2sJWIqfg==}
     engines: {node: '>= 0.4'}
@@ -2914,6 +2926,13 @@ packages:
         optional: true
       nodemailer:
         optional: true
+
+  next-transition-router@0.2.7:
+    resolution: {integrity: sha512-l8te40iMalx5BEAySZK/2pwdPks0DoRWedJJ6IxhbEQ7UO/yLyeBcr3D3g+qBymP7Tz5Bbg8US5rLxwEibR+fA==}
+    peerDependencies:
+      next: '>=14.0.0'
+      react: '>=18.2.0'
+      react-dom: '>=18.2.0'
 
   next@15.1.0:
     resolution: {integrity: sha512-QKhzt6Y8rgLNlj30izdMbxAwjHMFANnLwDwZ+WQh5sMhyt4lEBqDK9QpvWHtIM4rINKPoJ8aiRZKg5ULSybVHw==}
@@ -3617,6 +3636,9 @@ packages:
   typed-array-length@1.0.7:
     resolution: {integrity: sha512-3KS2b+kL7fsuk/eJZ7EQdnEmQoaho/r6KUef7hxvltNA5DR8NAUM+8wJMbJyZ4G9/7i3v5zPBIMN5aybAh2/Jg==}
     engines: {node: '>= 0.4'}
+
+  typed-query-selector@2.12.0:
+    resolution: {integrity: sha512-SbklCd1F0EiZOyPiW192rrHZzZ5sBijB6xM+cpmrwDqObvdtunOHHIk9fCGsoK5JVIYXoyEp4iEdE3upFH3PAg==}
 
   typed.js@2.1.0:
     resolution: {integrity: sha512-bDuXEf7YcaKN4g08NMTUM6G90XU25CK3bh6U0THC/Mod/QPKlEt9g/EjvbYB8x2Qwr2p6J6I3NrsoYaVnY6wsQ==}
@@ -6558,6 +6580,10 @@ snapshots:
 
   delayed-stream@1.0.0: {}
 
+  delegate-it@6.2.1:
+    dependencies:
+      typed-query-selector: 2.12.0
+
   detect-libc@1.0.3:
     optional: true
 
@@ -7110,6 +7136,8 @@ snapshots:
 
   graphemer@1.4.0: {}
 
+  gsap@3.12.5: {}
+
   has-bigints@1.1.0: {}
 
   has-flag@4.0.0: {}
@@ -7475,6 +7503,13 @@ snapshots:
       '@auth/core': 0.37.2
       next: 15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0)
       react: 18.2.0
+
+  next-transition-router@0.2.7(next@15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+    dependencies:
+      delegate-it: 6.2.1
+      next: 15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0)
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
 
   next@15.1.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)(sass@1.83.0):
     dependencies:
@@ -8319,6 +8354,8 @@ snapshots:
       is-typed-array: 1.1.15
       possible-typed-array-names: 1.0.0
       reflect.getprototypeof: 1.0.9
+
+  typed-query-selector@2.12.0: {}
 
   typed.js@2.1.0: {}
 

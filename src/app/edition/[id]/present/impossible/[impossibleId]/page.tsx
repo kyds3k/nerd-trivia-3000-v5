@@ -13,7 +13,7 @@ import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from '@nextui-org/react';
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-transition-router";
 import { set } from 'lodash';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass";
@@ -36,7 +36,7 @@ interface Impossible {
 
 export default function Impossible() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const router = useRouter();
+  const router = useTransitionRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : undefined;

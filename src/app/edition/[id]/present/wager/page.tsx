@@ -12,7 +12,7 @@ import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import { Spinner } from '@nextui-org/react';
-import { useRouter } from "next/navigation";
+import { useTransitionRouter } from "next-transition-router";
 import { set } from 'lodash';
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
@@ -30,7 +30,7 @@ interface Wager {
 }
 
 export default function Wager() {
-  const router = useRouter();
+  const router = useTransitionRouter();
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
