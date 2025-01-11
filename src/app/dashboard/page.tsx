@@ -265,7 +265,7 @@ export default function DashboardPage() {
                 <strong>{edition.title}</strong> -{" "}
                 {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
                 <div className="my-4 flex gap-2">
-                  <Button as={Link} href={`/edition/${edition.id}/present`}>Present</Button>
+                  <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
                   <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
                   <Button as={Link} href={`edition/${edition.id}/edit`}>Edit</Button>
                   <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
@@ -277,7 +277,11 @@ export default function DashboardPage() {
       </div>
       <div className="flex flex-col gap-4">
         { !hasSession ? (
-        <SpotifySignIn />
+        <div className="flex flex-col gap-4">
+          <p>You must sign in to Spotify before presenting an edition</p>
+          <SpotifySignIn />
+        </div>
+
         ) : (
           <SpotifySignOut />
         )}

@@ -102,6 +102,10 @@ export default function EditionPage() {
       setIsAdmin(true);
       setGoogleAuth(true);
       setLoading(false);
+      if (session)
+        console.log('session:', session);
+      else 
+        console.log('no session');
       refreshSpotifyToken(setSpotifyToken);
 
     };
@@ -145,7 +149,7 @@ export default function EditionPage() {
       initializeApp();
       fetchEdition(editionId);
     }
-  }, [editionId]);
+  }, []);
 
   // useEffect(() => {
   //   if (session) {

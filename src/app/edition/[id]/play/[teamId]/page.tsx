@@ -16,7 +16,6 @@ interface Edition {
   edition_gif: string;
   blurb: string;
   home_song: string;
-  // Add other fields if needed, e.g., `id: string`, `description: string`, etc.
 }
 
 export default function TeamPage() {
@@ -123,30 +122,6 @@ export default function TeamPage() {
     }
   }
 
-  // Setup the real-time subscription for team events tags
-  // function teamWatch() {
-  //   const subscription = pb.collection('teams').subscribe('*', (event) => {
-  //     // Listen for "create", "update", and "delete" events on the 'imagetags' collection
-  //     console.log('Event detected:', event.action);
-  //     switch (event.action) {
-  //       case 'create':
-  //         console.log('Create event:', event.record);
-  //         toast(`${event.record.team_name} has joined the game!`);
-  //         break;
-  //       case 'update':
-  //         console.log('Update event:', event.record);
-  //         break;
-  //       case 'delete':
-  //         console.log('Delete event:', event.record);
-  //         break;
-  //     }
-  //   });
-
-  //   pb.realtime.subscribe('example', (e) => {
-  //     console.log(e)
-  //   })
-  // }
-
 
   useEffect(() => {
     console.log("pb.authStore", pb.authStore);
@@ -199,7 +174,6 @@ export default function TeamPage() {
         fetchUser();
         getEdition();
         getTeam();
-        //teamWatch();
 
       } else {
         console.log("No pocketbase_auth data found in localStorage.");
@@ -207,8 +181,6 @@ export default function TeamPage() {
     } else {
       router.push("/");
     }
-
-    // Dependencies (add necessary dependencies here, or an empty array if no dependencies)
   }, []);
   
   return (
