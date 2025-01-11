@@ -7,6 +7,8 @@ import { Button, Form, Input, Image, Slider } from "@nextui-org/react";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import Pocketbase from "pocketbase";
+import CyberButton from "@/components/CyberButton";
+
 
 export default function Wager() {
   const params = useParams();
@@ -223,9 +225,12 @@ export default function Wager() {
                   size="lg"
                   className="md:max-w-lg"
                 />
-                <Button className="w-fit" type="submit" color="primary">
-                  Submit
-                </Button>
+                <CyberButton
+                  text="SUBMIT"
+                  glitchText="ANSWER"
+                  className="mt-4 w-fit"
+                  buttonType="submit"
+                />
               </div>
             </Form>
           </div>

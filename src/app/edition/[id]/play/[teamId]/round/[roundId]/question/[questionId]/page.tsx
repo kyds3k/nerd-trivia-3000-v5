@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
+import CyberButton from "@/components/CyberButton";
 
 
 export default function Question() {
@@ -106,7 +107,7 @@ export default function Question() {
         } catch (error) {
           console.error("Failed to update banthashit card:", error);
         }
-      }      
+      }
 
       setAnswerSubmitted(true);
       setShowForm(false);
@@ -122,7 +123,7 @@ export default function Question() {
         console.error("Failed to submit answer:", error);
       }
     }
-   
+
   };
 
   const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
@@ -304,9 +305,13 @@ export default function Question() {
                   size="lg"
                   className="inline-block"
                 />
-                <Button className="w-fit" type="submit" color="primary">
-                  Submit
-                </Button>
+                <CyberButton
+                  text="SUBMIT"
+                  glitchText="ANSWER"
+                  onClick={() => console.log("Button Clicked!")}
+                  className="mt-4 w-fit"
+                  buttonType="submit"
+                />
               </div>
             </Form>
           </div>
