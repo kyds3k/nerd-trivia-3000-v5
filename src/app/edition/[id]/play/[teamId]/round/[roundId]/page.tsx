@@ -15,10 +15,6 @@ interface Round {
 }
 
 export default function Round() {
-  // const params = useParams();
-  // const editionId = typeof params?.id === "string" ? params.id : undefined;
-  // const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
-  //const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const params = useParams();
   const editionId = params?.id as string;
   const roundId = parseInt(params?.roundId as string);
@@ -26,7 +22,6 @@ export default function Round() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
 
   const [roundGif, setRoundGif] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
 
   usePrimeDirectives("directives", editionId, teamId);
 
@@ -35,7 +30,7 @@ export default function Round() {
       pb.autoCancellation(false);
       try {
         const round = await pb.collection('rounds').getFirstListItem(
-          `edition_id = "${editionId}" && round = ${roundId}` // Removed quotes around roundId
+          `edition_id = "${editionId}" && round = ${roundId}`
         );
         if (round) {
           setRoundGif(round.round_gif);
