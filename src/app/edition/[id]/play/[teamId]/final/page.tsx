@@ -13,6 +13,7 @@ import { set } from "lodash";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import { send } from "process";
+import CyberButton from "@/components/CyberButton";
 
 
 export default function Question() {
@@ -268,9 +269,12 @@ export default function Question() {
                   size="lg"
                   className="inline-block"
                 />
-                <Button className="w-fit" type="submit" color="primary">
-                  Submit
-                </Button>
+                <CyberButton
+                  text="SUBMIT"
+                  glitchText="ANSWER"
+                  className="mt-4 w-fit"
+                  buttonType="submit"
+                />
               </div>
             </Form>
           </div>

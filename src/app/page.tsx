@@ -146,7 +146,7 @@ export default function HomePage() {
       {googleAuth ? (
         <>
           <div className="user flex items-center gap-4 mb-4">
-            {googleAvatar && <Image src={googleAvatar} referrerPolicy="no-referrer" width="50" height="50" alt="User Avatar" />}
+            {googleAvatar && <Image src={googleAvatar} referrerPolicy="no-referrer" width="100" height="100" alt="User Avatar" />}
             <p>{googleUser}</p>
           </div>
           <div className="mt-6 flex flex-col">
