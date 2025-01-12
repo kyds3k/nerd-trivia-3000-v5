@@ -36,7 +36,13 @@ const playBold = localFont({
 
 const reboot = localFont({
 	src: "fonts/reboot-crush.ttf",
-	variable: "--font-reboot",
+	variable: "--font-linebeam",
+	weight: "400",
+});
+
+const linebeam = localFont({
+	src: "fonts/Linebeam.ttf",
+	variable: "--font-linebeam",
 	weight: "400",
 });
 
@@ -44,8 +50,6 @@ export const metadata: Metadata = {
 	title: "Nerd Trivia 3000",
 	description: "Trivia for nerds, by a nerd.",
 };
-
-
 
 export default function RootLayout({
 	children,
@@ -76,7 +80,7 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body
-				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} font-sans antialiased grid-bg`}
+				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} ${linebeam.variable} font-sans antialiased grid-bg`}
 			>
 				<Providers>
 					{children}
