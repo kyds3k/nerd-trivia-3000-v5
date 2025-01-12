@@ -14,6 +14,8 @@ import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import { send } from "process";
 import CyberButton from "@/components/CyberButton";
+import { motion } from "framer-motion";
+
 
 
 export default function Question() {
@@ -218,76 +220,97 @@ export default function Question() {
 
   return (
     <div className="p-4 md:p-10 w-screen">
-      <h1 className="text-3xl mb-5">
-        FINAL QUESTION
-      </h1>
-      {questionActive ? (
-        <span ref={el} className="text-2xl"></span>
-      ) : (
-        <p className="text-2xl flex">{loadingQuote}</p>
-      )}
-      {answerSubmitted === false ? (
-        showForm ? (
-          <div className="mt-6 w-full">
-            <Form
-              className="mt-6"
-              validationBehavior="native"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(e.currentTarget));
-                console.log("data", data);
-                submitAnswer(data);
-              }}
-              onReset={() => setAction("reset")}
-            >
-              <div className="w-full max-w-lg md:max-w-lg flex flex-col gap-6">
-                <Input
-                  isRequired
-                  errorMessage="Please enter a valid answer"
-                  label="Answer"
-                  labelPlacement="outside"
-                  name="answer"
-                  placeholder="Enter your answer"
-                  type="text"
-                  size="lg"
-                  className="inline-block"
-                />
-                {banthashitCard && (
-                  <div className="flex gap-4">
-                    <p>Bantha is sad! You waited too long, you cannot use Banthashit in the final round!</p>
-                    <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
-                  </div>
-                )}
-                <Input
-                  isRequired
-                  errorMessage="Please enter artist name"
-                  label="Music Artist"
-                  labelPlacement="outside"
-                  name="music_answer"
-                  placeholder="Enter the artist's name"
-                  type="text"
-                  size="lg"
-                  className="inline-block"
-                />
-                <CyberButton
-                  text="SUBMIT"
-                  glitchText="ANSWER"
-                  className="mt-4 w-fit"
-                  buttonType="submit"
-                />
-              </div>
-            </Form>
-          </div>
-        ) : (
-          null
-        )
-      ) : (
+      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+        <h1 className="text-3xl mb-5">FINAL QUESTION</h1>
+  
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className="mt-6 w-full"
+        >
+          {questionActive ? (
+            <span ref={el} className="text-2xl"></span>
+          ) : (
+            <p className="text-2xl flex">{loadingQuote}</p>
+          )}
+        </motion.div>
+      </div>
+  
+      {answerSubmitted ? (
         <div className="mt-6 w-screen">
           <p className="text-2xl">Answer submitted!</p>
         </div>
+      ) : (
+        showForm && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="mt-6 w-full"
+          >
+            <div data-augmented-ui="tl-clip bl-clip r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+              <Form
+                className="mt-6"
+                validationBehavior="native"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = Object.fromEntries(new FormData(e.currentTarget));
+                  console.log("data", data);
+                  submitAnswer(data);
+                }}
+                onReset={() => setAction("reset")}
+              >
+                <div className="w-full max-w-lg flex flex-col gap-6">
+                  <Input
+                    isRequired
+                    errorMessage="Please enter a valid answer"
+                    label="Answer"
+                    labelPlacement="outside"
+                    name="answer"
+                    placeholder="Enter your answer"
+                    type="text"
+                    size="lg"
+                    className="inline-block"
+                  />
+  
+                  {banthashitCard && (
+                    <div className="flex gap-4">
+                      <p>Bantha is sad! You waited too long, you cannot use Banthashit in the final round!</p>
+                      <Image
+                        src="https://i.imgur.com/pWDb7GL.gif"
+                        width={89}
+                        height={64}
+                        alt="Bantha Card"
+                      />
+                    </div>
+                  )}
+  
+                  <Input
+                    isRequired
+                    errorMessage="Please enter artist name"
+                    label="Music Artist"
+                    labelPlacement="outside"
+                    name="music_answer"
+                    placeholder="Enter the artist's name"
+                    type="text"
+                    size="lg"
+                    className="inline-block"
+                  />
+  
+                  <CyberButton
+                    text="SUBMIT"
+                    glitchText="ANSWER"
+                    className="mt-4 w-fit"
+                    buttonType="submit"
+                  />
+                </div>
+              </Form>
+            </div>
+          </motion.div>
+        )
       )}
     </div>
-  );
-
-
-}
+  ); 

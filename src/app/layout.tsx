@@ -6,12 +6,6 @@ import { Providers } from "./providers";
 import React from 'react';
 import { ToastContainer, Flip, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {
-  SignInButton,
-  SignedIn,
-  SignedOut,
-  UserButton
-} from '@clerk/nextjs'
 
 
 const geistSans = localFont({
@@ -63,6 +57,7 @@ export default function RootLayout({
 	return (
 		<html lang="en" className="dark">
 			<head>
+				<link rel="stylesheet" type="text/css" href="/augmented-ui.min.css" />
 				{/* Define onSpotifyWebPlaybackSDKReady globally */}
 				<script
 					dangerouslySetInnerHTML={{
@@ -81,7 +76,7 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body
-				className={`${play.variable} ${reboot.variable} font-sans antialiased bg-black`}
+				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} font-sans antialiased bg-black`}
 			>
 				<Providers>
 					{children}

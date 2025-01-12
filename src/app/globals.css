@@ -15,4 +15,5 @@ html, body {
 body {
   color: var(--foreground);
   background: var(--background);
+  word-spacing: .3rem;
 }
