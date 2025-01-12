@@ -176,9 +176,6 @@ export default function Question() {
         console.error("Failed to get question:", error);
       }
     };
-    ``
-
-
 
     const fetchTeam = async () => {
       console.log("teamId", teamId);
