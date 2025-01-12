@@ -12,6 +12,7 @@ import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import CyberButton from "@/components/CyberButton";
+import { motion } from "framer-motion";
 
 
 export default function Question() {
@@ -23,6 +24,7 @@ export default function Question() {
   const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
+  const typedTeamName = useRef<HTMLSpanElement | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
   const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
@@ -211,6 +213,24 @@ export default function Question() {
   const el = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
+    if (!typedTeamName.current) return;
+  
+    const typed = new Typed(typedTeamName.current, {
+      strings: [teamName || ""], // Use a default string if teamName is null
+      typeSpeed: 20,
+      backSpeed: 30,
+      showCursor: false,
+      loop: false,
+    });
+  
+    // Destroying
+    return () => {
+      typed.destroy();
+    };
+  }, [teamName]); // Add teamName as a dependency if it can change
+  
+
+  useEffect(() => {
     if (el.current && questionActive && questionText) {
       const typed = new Typed(el.current, {
         strings: [questionText],
@@ -229,99 +249,153 @@ export default function Question() {
   }, [questionText, questionActive]);
 
   return (
-    <div className="p-4 md:p-10 w-screen">
-      <div className="flex justify-between mb-5">
-        <h1 className="text-lg mb-5">
-          R{roundId} Q{questionId}
-        </h1>
-        <h2 className="text-lg">
-          <strong>Team:</strong> {teamName}
-        </h2>
+    <div className="p-6 ">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-xy r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
+        <div className="flex justify-between mb-5 ">
+          <h1 className="text-lg mb-5">
+            R{roundId} Q{questionId}
+          </h1>
+          {teamName != null && (
+          <h2 className="text-lg">
+            <strong>Team:</strong><span ref={typedTeamName}></span>
+          </h2>
+          )}
+        </div>
+        {questionActive ? (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <span ref={el} className="text-2xl text-white drop-shadow-[0_0_5px_rgba(56,189,248,0.8)"></span>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <p className="text-2xl flex">{loadingQuote}</p>
+          </motion.div>
+        )}
       </div>
-      {questionActive ? (
-        <span ref={el} className="text-2xl"></span>
-      ) : (
-        <p className="text-2xl flex">{loadingQuote}</p>
-      )}
       {answerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-full">
-            <Form
-              className="mt-6"
-              validationBehavior="native"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(e.currentTarget));
-                console.log("data", data);
-                submitAnswer(data);
-              }}
-              onReset={() => setAction("reset")}
-            >
-              <div className="w-full md:max-w-lg flex flex-col gap-6">
-                <Input
-                  isRequired
-                  errorMessage="Please enter a valid answer"
-                  label="Answer"
-                  labelPlacement="outside"
-                  name="answer"
-                  placeholder="Enter your answer"
-                  type="text"
-                  size="lg"
-                />
-                {questionId == "3" && roundId == "1" && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
+              <Form
+                validationBehavior="native"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = Object.fromEntries(new FormData(e.currentTarget));
+                  console.log("data", data);
+                  submitAnswer(data);
+                }}
+                onReset={() => setAction("reset")}
+              >
+                <div className="w-full md:max-w-lg flex flex-col gap-6">
                   <Input
                     isRequired
                     errorMessage="Please enter a valid answer"
-                    label="Banthashit Answer"
+                    label="Answer"
                     labelPlacement="outside"
-                    name="bantha_answer"
-                    placeholder="Enter your banthashit answer"
+                    name="answer"
+                    placeholder="Enter your answer"
                     type="text"
                     size="lg"
-                    className="inline-block"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
                   />
-                )}
-                {banthashitCard && (
-                  <div className="flex gap-4">
-                    <Switch
-                      name="bantha_used"
+                  {questionId == "3" && roundId == "1" && (
+                    <Input
+                      isRequired
+                      errorMessage="Please enter a valid answer"
+                      label="Banthashit Answer"
+                      labelPlacement="outside"
+                      name="bantha_answer"
+                      placeholder="Enter your banthashit answer"
+                      type="text"
                       size="lg"
-                      className="overflow-hidden"
-                      onChange={(e) => setBanthaUsed(e.target.checked)}
-                    >
-                      <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
-                      Use Banthashit Card?
-                    </Switch>
-                  </div>
-                )}
-                <Input
-                  isRequired
-                  errorMessage="Please enter artist name"
-                  label="Music Artist"
-                  labelPlacement="outside"
-                  name="music_answer"
-                  placeholder="Enter the artist's name"
-                  type="text"
-                  size="lg"
-                  className="inline-block"
-                />
-                <CyberButton
-                  text="SUBMIT"
-                  glitchText="ANSWER"
-                  onClick={() => console.log("Button Clicked!")}
-                  className="mt-4 w-fit"
-                  buttonType="submit"
-                />
-              </div>
-            </Form>
-          </div>
+                      classNames={{
+                        inputWrapper:
+                          "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                        input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                      }}
+                      radius="none" // Removes rounded edges
+                      variant="bordered"
+                    />
+                  )}
+                  {banthashitCard && (
+                    <div className="flex gap-4">
+                      <Switch
+                        name="bantha_used"
+                        size="lg"
+                        className="overflow-hidden"
+                        onChange={(e) => setBanthaUsed(e.target.checked)}
+                      >
+                        <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
+                        Use Banthashit Card?
+                      </Switch>
+                    </div>
+                  )}
+                  <Input
+                    isRequired
+                    errorMessage="Please enter artist name"
+                    label="Music Artist"
+                    labelPlacement="outside"
+                    name="music_answer"
+                    placeholder="Enter the artist's name"
+                    type="text"
+                    size="lg"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
+                  />
+                  <CyberButton
+                    text="SUBMIT"
+                    glitchText="ANSWER"
+                    onClick={() => console.log("Button Clicked!")}
+                    className="mt-4 w-fit"
+                    buttonType="submit"
+                  />
+                </div>
+              </Form>
+            </div>
+          </motion.div>
         ) : (
           null
         )
       ) : (
-        <div className="mt-6">
-          <p className="text-2xl">Answer submitted!</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+          animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+          exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+          transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+          className="mt-6 w-full"
+        >
+          <div className="mt-6">
+            <p className="text-2xl">Answer submitted!</p>
+          </div>
+        </motion.div>
       )}
     </div>
   );

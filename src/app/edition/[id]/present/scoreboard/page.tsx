@@ -6,6 +6,7 @@ import Pocketbase, { RecordModel } from "pocketbase";
 import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTransitionRouter } from "next-transition-router";
+import { motion } from "framer-motion";
 
 interface Edition {
   title: string;
@@ -65,7 +66,7 @@ export default function Scoreboard() {
     () => {
       if (origin === "1" || origin === "2")
         router.push(`/edition/${editionId}/present/impossible/${origin}`);
-      else 
+      else
         router.push(`/edition/${editionId}/present/round/3/question/5`);
     },
     [origin]
@@ -77,30 +78,49 @@ export default function Scoreboard() {
   }, []);
 
   return (
-    <div className="p-4 md:p-10">
-      <h1 className="text-4xl text-center mb-10">Scoreboard</h1>
-      <div className="flex justify-center">
-        <Table isStriped className="table-auto w-3/4">
-          <TableHeader>
-            <TableColumn className="px-4 py-2 text-3xl">Team</TableColumn>
-            <TableColumn className="px-4 py-2 text-3xl">Points</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {scores.map((score, index) => (
-              <TableRow
-                key={index}
-                className="fade-in-up"
-                style={{
-                  animationDelay: `${(scores.length - index - 1) * 2}s`, // Delay based on reverse index
-                }}
-              >
-                <TableCell className="text-2xl">{score.team_name}</TableCell>
-                <TableCell className="text-2xl">{score.points_for_game}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <motion.div
+      initial={{ scale: 0 }} // Starts at 0 size
+      animate={{ scale: 1 }} // Animates to full size
+      transition={{
+        duration: 1, // Animation duration in seconds
+        ease: "easeInOut", // Easing function
+      }}
+    >
+      <div className="flex flex-col justify-center items-center h-screen">
+        <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 nerd-aug bluecard bluecard__alt w-3/4">
+          <div className="p-4 pb-10 md:p-10">
+            <h1 className="text-4xl text-center mb-10">Scoreboard</h1>
+            <div className="flex justify-center">
+              <Table className="table-auto w-full" radius="none" classNames={{
+                wrapper:
+                  "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                td: "animate-neon",
+                th: "rounded-none",
+                thead: "rounded-none"
+              }}>
+                <TableHeader>
+                  <TableColumn className="px-4 py-2 text-3xl">Team</TableColumn>
+                  <TableColumn className="px-4 py-2 text-3xl">Points</TableColumn>
+                </TableHeader>
+                <TableBody>
+                  {scores.map((score, index) => (
+                    <TableRow
+                      key={index}
+                      className="fade-in-up"
+                      style={{
+                        animationDelay: `${(scores.length - index - 1) * 3}s`, // Delay based on reverse index
+                      }}
+                    >
+                      <TableCell className="text-2xl">{score.team_name}</TableCell>
+                      <TableCell className="text-2xl">{score.points_for_game}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

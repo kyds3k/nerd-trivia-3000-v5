@@ -172,21 +172,17 @@ export default function EditionPage() {
     );
   }
 
-  // if (!googleAuth) {
-  //   return <ShallNotPass />
-  // }
-
 
   return (
-    <>
-      <div className="p-10 flex flex-col items-center justify-center">
+    <div className="p-10">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-xy r-clip-xy both " className="p-10 flex flex-col items-center justify-center nerd-aug bluecard">
         <h3 className="text-4xl mb-4">Nerd Trivia: {date}</h3>
         <h1 className="text-5xl">{editionTitle}</h1>
         {editionGif && (
           <Image
             src={editionGif}
             alt="Edition GIF"
-            width="800"
+            width="600"
             className="my-16"
           />
         )}
@@ -202,6 +198,6 @@ export default function EditionPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

@@ -1,3 +1,9 @@
+.grid-bg {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+  url("/images/red-grid.png") bottom center no-repeat;
+  background-size: cover;
+}
+
 .neonBorder {
   transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
   border: 1px solid #c4c4c4;
@@ -173,4 +179,100 @@
 .fade-in-up {
   opacity: 0;
   animation: fadeInUp 0.8s ease forwards;
+}
+
+/* Augmented UI */
+
+.nerd-aug {
+  &.bluecard {
+    --aug-border-all: 1px;
+    --aug-b-extend1: 10%;
+    --aug-b-center: 70%;
+    --aug-b-inset1: 0%;
+    --aug-t-inset1: 0%;
+    --aug-t-extend1: 10%;
+    --aug-t-center: 95%;
+    --aug-r-inset1: 0%;
+    --aug-r-extend1: 15%;
+    --aug-r-center: 50%;
+    --aug-border-bg: #06b6d4;
+    --aug-inlay-bg: linear-gradient(to bottom right, #06b6d4, #000000);
+    --aug-inlay-opacity: .2;
+    --aug-inlay-all: 3px;
+
+    &__alt {
+      --aug-r-inset1: 0%;
+      --aug-r-extend1: 15%;
+      --aug-r-center: 80%;
+    }
+  }
+}
+
+/* REGULAR SCANLINES SETTINGS */
+/* MOVING SCANLINE SETTINGS */
+/* MIXINS */
+/* CSS .scanlines CLASS */
+/* line 51, src/sass/vendors/_scanlines.scss */
+.scanlines {
+  position: relative;
+  overflow: hidden;
+}
+
+/* line 55, src/sass/vendors/_scanlines.scss */
+.scanlines:before, .scanlines:after {
+  display: block;
+  pointer-events: none;
+  content: "";
+  position: absolute;
+}
+
+/* line 64, src/sass/vendors/_scanlines.scss */
+.scanlines:before {
+  width: 100%;
+  height: 1px;
+  z-index: 2147483649;
+  background: rgba(20, 24, 36, 0.3);
+  opacity: 0.75;
+  -webkit-animation: scanline 6s linear infinite;
+          animation: scanline 6s linear infinite;
+}
+
+/* line 77, src/sass/vendors/_scanlines.scss */
+.scanlines:after {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2147483648;
+  background: -webkit-linear-gradient(top, transparent 50%, rgba(20, 24, 36, 0.3) 51%);
+  background: linear-gradient(to bottom, transparent 50%, rgba(20, 24, 36, 0.3) 51%);
+  background-size: 100% 2px;
+  -webkit-animation: scanlines 4s steps(30) infinite;
+          animation: scanlines 4s steps(30) infinite;
+}
+
+/* ANIMATE UNIQUE SCANLINE */
+@-webkit-keyframes scanline {
+  0% {
+    -webkit-transform: translate3d(0, 200000%, 0);
+            transform: translate3d(0, 200000%, 0);
+  }
+}
+@keyframes scanline {
+  0% {
+    -webkit-transform: translate3d(0, 200000%, 0);
+            transform: translate3d(0, 200000%, 0);
+  }
+}
+
+@-webkit-keyframes scanlines {
+  0% {
+    background-position: 0 50%;
+  }
+}
+
+@keyframes scanlines {
+  0% {
+    background-position: 0 50%;
+  }
 }

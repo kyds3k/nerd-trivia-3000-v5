@@ -14,6 +14,7 @@ import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import { send } from "process";
 import CyberButton from "@/components/CyberButton";
+import { motion } from "framer-motion";
 
 
 
@@ -25,6 +26,7 @@ export default function Question() {
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : '';
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
+  const typedTeamName = useRef<HTMLSpanElement | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
   const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
@@ -205,76 +207,129 @@ export default function Question() {
     }
   }, [questionText, questionActive]);
 
+  useEffect(() => {
+    if (!typedTeamName.current) return;
+  
+    const typed = new Typed(typedTeamName.current, {
+      strings: [teamName || ""], // Use a default string if teamName is null
+      typeSpeed: 20,
+      backSpeed: 30,
+      showCursor: false,
+      loop: false,
+    });
+  
+    // Destroying
+    return () => {
+      typed.destroy();
+    };
+  }, [teamName]); // Add teamName as a dependency if it can change
+
 
   return (
-    <div className="p-4 pb- md:p-10 w-screen">
-      <h1 className="text-lg mb-5">
-        Impossible Question {impossibleId}
-      </h1>
-      {questionActive ? (
-        <span ref={el} className="text-2xl"></span>
-      ) : (
-        <p className="text-2xl flex">{loadingQuote}</p>
-      )}
+    <div className="p-4 pb-10 md:p-10 w-screen">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-2 justify-normal md:justify-between mb-5 ">
+        <h1 className="text-lg mb-1 md:mb-5">
+          Impossible Question {impossibleId}
+        </h1>
+        {teamName != null && (
+          <h2 className="text-lg">
+            <strong>Team:</strong><span ref={typedTeamName}></span>
+          </h2>
+          )}        
+      </div>
+        {questionActive ? (
+          <span ref={el} className="text-md md:text-2xl"></span>
+        ) : (
+          <p className="text-2xl flex">{loadingQuote}</p>
+        )}
+      </div>
       {answerSubmitted === false ? (
         showForm ? (
-          <div className="mt-6 w-full">
-            <Form
-              className="mt-6"
-              validationBehavior="native"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = Object.fromEntries(new FormData(e.currentTarget));
-                console.log("data", data);
-                submitAnswer(data);
-              }}
-              onReset={() => setAction("reset")}
-            >
-              <div className="w-full flex flex-col gap-6">
-                <Textarea
-                  isRequired
-                  errorMessage="Please enter a valid answer"
-                  label="Answer"
-                  labelPlacement="outside"
-                  name="answer"
-                  isClearable
-                  placeholder="Enter your answer"
-                  type="text"
-                  size="lg"
-                  className="md:max-w-xl"
-                />
-                <Input
-                  isRequired
-                  errorMessage="Please enter artist #1 name"
-                  label="Music Artist #1"
-                  labelPlacement="outside"
-                  name="music_answer"
-                  placeholder="Enter the artist's name"
-                  type="text"
-                  size="lg"
-                  className="md:max-w-xl"
-                />
-                <Input
-                  isRequired
-                  errorMessage="Please enter artist #2 name"
-                  label="Music Artist #2"
-                  labelPlacement="outside"
-                  name="music_answer_2"
-                  placeholder="Enter the artist's name"
-                  type="text"
-                  size="lg"
-                  className="md:max-w-xl"
-                />
 
-                <CyberButton
-                  text="SUBMIT"
-                  glitchText="ANSWER"
-                  className="mt-4 w-fit"
-                  buttonType="submit"
-                />
+            <motion.div
+              initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+              animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+              exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+              transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+              className="mt-6 w-full"
+            >
+              <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
+                <Form
+                  validationBehavior="native"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const data = Object.fromEntries(new FormData(e.currentTarget));
+                    console.log("data", data);
+                    submitAnswer(data);
+                  }}
+                  onReset={() => setAction("reset")}
+                >
+                  <div className="w-full flex flex-col gap-6">
+                    <Textarea
+                      isRequired
+                      errorMessage="Please enter a valid answer"
+                      label="Answer"
+                      labelPlacement="outside"
+                      name="answer"
+                      isClearable
+                      placeholder="Enter your answer"
+                      type="text"
+                      size="lg"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500 md:max-w-xl",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
+                    />
+                    <Input
+                      isRequired
+                      errorMessage="Please enter artist #1 name"
+                      label="Music Artist #1"
+                      labelPlacement="outside"
+                      name="music_answer"
+                      placeholder="Enter the artist's name"
+                      type="text"
+                      size="lg"
+                      classNames={{
+                        inputWrapper:
+                          "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500 md:max-w-xl",
+                        input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                      }}
+                      radius="none" // Removes rounded edges
+                      variant="bordered"
+                    />
+                    <Input
+                      isRequired
+                      errorMessage="Please enter artist #2 name"
+                      label="Music Artist #2"
+                      labelPlacement="outside"
+                      name="music_answer_2"
+                      placeholder="Enter the artist's name"
+                      type="text"
+                      size="lg"
+                      classNames={{
+                        inputWrapper:
+                          "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500 md:max-w-xl",
+                        input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                      }}
+                      radius="none" // Removes rounded edges
+                      variant="bordered"
+                    />
+
+                    <CyberButton
+                      text="SUBMIT"
+                      glitchText="ANSWER"
+                      className="mt-4 w-fit"
+                      buttonType="submit"
+                    />
+                  </div>
+                </Form>
               </div>
-            </Form>
-          </div>
+            </motion.div>
+
         ) : (
           null
         )

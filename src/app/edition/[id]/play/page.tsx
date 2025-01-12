@@ -207,7 +207,7 @@ export default function EditionPage() {
 
 
   return (
-    <div className="p-4 md:p-10 flex flex-col items-center md:items-start md:justify-center w-screen overflow-x-hidden">
+    <div className="p-4 pb-10 md:p-10 flex flex-col items-center md:items-start md:justify-center w-screen overflow-x-hidden">
       <h1 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h1>
       <h2 className="text-2xl mb-2">{date}</h2>
 

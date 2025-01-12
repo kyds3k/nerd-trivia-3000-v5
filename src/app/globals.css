@@ -15,4 +15,11 @@ html, body {
 body {
   color: var(--foreground);
   background: var(--background);
+  word-spacing: .3rem;
+}
+
+.nextui-table {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: black !important;
 }

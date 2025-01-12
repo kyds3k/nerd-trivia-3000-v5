@@ -17,10 +17,19 @@ const config: Config = {
         'editor-bg': "#232327",
       },
       fontFamily: {
-        sans: ["var(--font-play)"],
+        sans: ["var(--font-dos)"],
         "reboot": "var(--font-reboot)",
       },
-      
+      keyframes: {
+        neonFlicker: {
+          "0%, 100%": { boxShadow: "0 0 3px #06b6d4, 0 0 6px #06b6d4" }, // Subtle glow
+          "50%": { boxShadow: "0 0 4px #06d4c2, 0 0 8px #06d4c2" }, // Slightly brighter mid-state
+          "75%": { boxShadow: "0 0 3.5px #06a6cc, 0 0 7px #06a6cc" }, // Smooth transition
+        },
+      },
+      animation: {
+        neon: 'neonFlicker 2s infinite',
+      },      
     },
   },
   darkMode: "class",

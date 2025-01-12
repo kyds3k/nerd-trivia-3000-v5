@@ -241,7 +241,7 @@ export default function Question() {
   }, [song, isAdmin]);
 
   return (
-    <div>
+    <div className="max-h-svh overflow-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">FINAL QUESTION</h1>
         {spotifyToken && (
