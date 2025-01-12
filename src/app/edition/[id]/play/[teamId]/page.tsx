@@ -184,7 +184,7 @@ export default function TeamPage() {
   }, []);
   
   return (
-    <div className="p-4 md:p-10 flex flex-col md:justify-center">
+    <div className="p-4 pb-10 md:p-10 flex flex-col md:justify-center">
       <h3 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h3>
       <h4 className="text-2xl text-center mb-4">{date}</h4>
       <h1 className="text-3xl md:text-5xl text-center md:text-left mb-5">{editionTitle}</h1>

@@ -141,7 +141,7 @@ export default function HomePage() {
   }, [googleAuth]);
 
   return (
-    <div className="p-4 md:p-10 w-screen flex flex-col justify-center items-center">
+    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col justify-center items-center">
       <h1 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-10">Nerd Trivia 3000</h1>
       {googleAuth ? (
         <>
