@@ -55,7 +55,6 @@ export default function Impossible() {
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const s = localStorage.getItem("spotifyAuthToken");
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
 

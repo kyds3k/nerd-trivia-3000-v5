@@ -68,7 +68,6 @@ export default function Question() {
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [hasSession, setHasSession] = useState<boolean>(false);
   const { data: session } = useSession();
@@ -250,7 +249,6 @@ export default function Question() {
       if (!pb.authStore.isValid) {
         console.error("Not authenticated with Pocketbase.");
         setLoading(false);
-        setGoogleAuth(false);
         return;
       }
 
@@ -260,7 +258,6 @@ export default function Question() {
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
@@ -269,18 +266,14 @@ export default function Question() {
       if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
 
       console.log("Admin authenticated.");
       setIsAdmin(true);
-      setGoogleAuth(true);
-
+      setLoading(false);
       refreshSpotifyToken(setSpotifyToken);
-
-
 
       if (editionId) {
         //initializeApp();
@@ -319,7 +312,11 @@ export default function Question() {
     }
   }, [questionText, questionActive]);
 
-  return !isAdmin ? (
+  return loading ? (
+    <div className="flex flex-col justify-center items-center h-screen bg-black">
+      <Spinner size="lg" />
+    </div>
+  ) : !isAdmin ? (
     <ShallNotPass />
   ) : (
     <div>
@@ -327,15 +324,14 @@ export default function Question() {
         <h1 className="text-2xl">
           Round {roundId} Question {questionId} -{" "}
           <span
-            className={`${
-              roundId === "3" ? "font-reboot text-glow-blue-600" : ""
-            } px-2 inline-block`}
+            className={`${roundId === "3" ? "font-reboot text-glow-blue-600" : ""
+              } px-2 inline-block`}
           >
             {Number(questionId) * (roundId === "3" ? 200 : 100)}
           </span>{" "}
           points
         </h1>
-  
+
         {spotifyToken && (
           <div>
             <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
@@ -376,7 +372,7 @@ export default function Question() {
               )}
             </div>
           </div>
-  
+
           {isBanthaShitQuestion && (
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
               <div className="p-8 flex items-center justify-center">
@@ -419,5 +415,5 @@ export default function Question() {
       </div>
     </div>
   );
-  
+
 }

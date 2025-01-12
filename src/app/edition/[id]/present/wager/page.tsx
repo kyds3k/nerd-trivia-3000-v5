@@ -46,7 +46,6 @@ export default function Wager() {
   const [wagerPlacingGif, setWagerPlacingGif] = useState<string | null>(null);
   const [timerStarted, setTimerStarted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
 
@@ -103,7 +102,6 @@ export default function Wager() {
       if (!pb.authStore.isValid) {
         console.log("Not authenticated with Pocketbase.");
         setLoading(false);
-        setGoogleAuth(false);
         return;
       }
   
@@ -113,7 +111,6 @@ export default function Wager() {
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
@@ -122,14 +119,12 @@ export default function Wager() {
       if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
   
       console.log("Admin authenticated.");
       setIsAdmin(true);
-      setGoogleAuth(true);
       refreshSpotifyToken(setSpotifyToken);
     };
 

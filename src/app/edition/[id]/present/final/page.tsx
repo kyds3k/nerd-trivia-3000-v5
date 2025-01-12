@@ -47,7 +47,6 @@ export default function Question() {
   const [questionActive, setQuestionActive] = useState<boolean | null>(null);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
 
@@ -154,7 +153,6 @@ export default function Question() {
       if (!pb.authStore.isValid) {
         console.log("Not authenticated with Pocketbase.");
         setLoading(false);
-        setGoogleAuth(false);
         return;
       }
   
@@ -164,7 +162,6 @@ export default function Question() {
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
@@ -173,14 +170,12 @@ export default function Question() {
       if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
         setLoading(false);
-        setGoogleAuth(false);
         setIsAdmin(false);
         return;
       }
   
       console.log("Admin authenticated.");
       setIsAdmin(true);
-      setGoogleAuth(true);
     };
 
 
