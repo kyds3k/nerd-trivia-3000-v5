@@ -486,7 +486,7 @@ export default function Admin() {
   }, []);
 
   return (
-    <div className="admin p-4 md:p-10">
+    <div className="admin p-4 pb-10 md:p-10">
       {!isAdmin ? (
         <>
           <ShallNotPass />
@@ -640,7 +640,7 @@ export default function Admin() {
               </div>
             </Tab>
             <Tab key='miscellany' title='Miscellany'>
-              <div className='p-4 md:p-10'>
+              <div className='p-4 pb-10 md:p-10'>
                 <h2 className='text-2xl'>Miscellany</h2>
                 <p>Other admin tasks.</p>
               </div>

@@ -26,6 +26,7 @@ export default function Question() {
   const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : '';
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
+  const typedTeamName = useRef<HTMLSpanElement | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
   const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
@@ -206,15 +207,39 @@ export default function Question() {
     }
   }, [questionText, questionActive]);
 
+  useEffect(() => {
+    if (!typedTeamName.current) return;
+  
+    const typed = new Typed(typedTeamName.current, {
+      strings: [teamName || ""], // Use a default string if teamName is null
+      typeSpeed: 20,
+      backSpeed: 30,
+      showCursor: false,
+      loop: false,
+    });
+  
+    // Destroying
+    return () => {
+      typed.destroy();
+    };
+  }, [teamName]); // Add teamName as a dependency if it can change
+
 
   return (
-    <div className="p-4 md:p-10 w-screen">
-      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border " className="p-4 md:p-10 w-full nerd-aug bluecard">
-        <h1 className="text-lg mb-5">
+    <div className="p-4 pb-10 md:p-10 w-screen">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
+      <div className="flex flex-col md:flex-row gap-0 md:gap-2 justify-normal md:justify-between mb-5 ">
+        <h1 className="text-lg mb-1 md:mb-5">
           Impossible Question {impossibleId}
         </h1>
+        {teamName != null && (
+          <h2 className="text-lg">
+            <strong>Team:</strong><span ref={typedTeamName}></span>
+          </h2>
+          )}        
+      </div>
         {questionActive ? (
-          <span ref={el} className="text-2xl"></span>
+          <span ref={el} className="text-md md:text-2xl"></span>
         ) : (
           <p className="text-2xl flex">{loadingQuote}</p>
         )}
@@ -229,7 +254,7 @@ export default function Question() {
               transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
               className="mt-6 w-full"
             >
-              <div data-augmented-ui="tl-clip bl-clip r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+              <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
                 <Form
                   validationBehavior="native"
                   onSubmit={(e) => {

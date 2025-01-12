@@ -1,3 +1,9 @@
+.grid-bg {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
+  url("/images/red-grid.png") bottom center no-repeat;
+  background-size: cover;
+}
+
 .neonBorder {
   transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
   border: 1px solid #c4c4c4;
@@ -180,10 +186,25 @@
 .nerd-aug {
   &.bluecard {
     --aug-border-all: 1px;
+    --aug-b-extend1: 10%;
+    --aug-b-center: 70%;
+    --aug-b-inset1: 0%;
+    --aug-t-inset1: 0%;
+    --aug-t-extend1: 10%;
+    --aug-t-center: 95%;
+    --aug-r-inset1: 0%;
+    --aug-r-extend1: 15%;
+    --aug-r-center: 50%;
     --aug-border-bg: #06b6d4;
-    // --aug-inlay-bg: #586ae2;
-    // --aug-inlay-opacity: .2;
+    --aug-inlay-bg: linear-gradient(to bottom right, #06b6d4, #000000);
+    --aug-inlay-opacity: .2;
     --aug-inlay-all: 3px;
+
+    &__alt {
+      --aug-r-inset1: 0%;
+      --aug-r-extend1: 15%;
+      --aug-r-center: 80%;
+    }
   }
 }
 

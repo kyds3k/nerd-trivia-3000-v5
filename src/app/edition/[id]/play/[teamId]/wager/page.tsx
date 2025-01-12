@@ -188,8 +188,8 @@ export default function Wager() {
 
 
   return (
-    <div className="p-4 md:p-10 w-screen">
-      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border " className="p-4 md:p-10 w-full nerd-aug bluecard">
+    <div className="p-4 pb-10 md:p-10 w-screen">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
         <h1 className="text-3xl mb-5">
           Wager Round
         </h1>
@@ -206,7 +206,7 @@ export default function Wager() {
             transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
             className="mt-6 w-full"
           >
-            <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border " className="p-4 md:p-10 w-full nerd-aug bluecard">
+            <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
               <div className="mt-6">
                 <Form
                   className="mt-6"

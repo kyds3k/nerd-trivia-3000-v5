@@ -76,7 +76,7 @@ export default function RootLayout({
 				></script>
 			</head>
 			<body
-				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} font-sans antialiased bg-black`}
+				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} font-sans antialiased grid-bg`}
 			>
 				<Providers>
 					{children}

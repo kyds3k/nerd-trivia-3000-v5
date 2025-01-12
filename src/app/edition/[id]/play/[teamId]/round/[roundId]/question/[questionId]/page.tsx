@@ -24,6 +24,7 @@ export default function Question() {
   const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
+  const typedTeamName = useRef<HTMLSpanElement | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
   const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
@@ -212,6 +213,24 @@ export default function Question() {
   const el = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
+    if (!typedTeamName.current) return;
+  
+    const typed = new Typed(typedTeamName.current, {
+      strings: [teamName || ""], // Use a default string if teamName is null
+      typeSpeed: 20,
+      backSpeed: 30,
+      showCursor: false,
+      loop: false,
+    });
+  
+    // Destroying
+    return () => {
+      typed.destroy();
+    };
+  }, [teamName]); // Add teamName as a dependency if it can change
+  
+
+  useEffect(() => {
     if (el.current && questionActive && questionText) {
       const typed = new Typed(el.current, {
         strings: [questionText],
@@ -231,14 +250,16 @@ export default function Question() {
 
   return (
     <div className="p-6 ">
-      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border " className="p-4 md:p-10 w-full nerd-aug bluecard">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-xy r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
         <div className="flex justify-between mb-5 ">
           <h1 className="text-lg mb-5">
             R{roundId} Q{questionId}
           </h1>
+          {teamName != null && (
           <h2 className="text-lg">
-            <strong>Team:</strong> {teamName}
+            <strong>Team:</strong><span ref={typedTeamName}></span>
           </h2>
+          )}
         </div>
         {questionActive ? (
           <motion.div
@@ -271,7 +292,7 @@ export default function Question() {
             transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
             className="mt-6 w-full"
           >
-            <div data-augmented-ui="tl-clip bl-clip r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+            <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
               <Form
                 validationBehavior="native"
                 onSubmit={(e) => {

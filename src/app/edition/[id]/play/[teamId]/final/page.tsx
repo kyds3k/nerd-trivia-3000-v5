@@ -219,10 +219,10 @@ export default function Question() {
   }, [questionText, questionActive]);
 
   return (
-    <div className="p-4 md:p-10 w-screen">
-      <div data-augmented-ui="tl-clip bl-clip b-clip-x r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+    <div className="p-4 pb-10 md:p-10 w-screen">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-xy xy border" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
         <h1 className="text-3xl mb-5">FINAL QUESTION</h1>
-  
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -237,7 +237,7 @@ export default function Question() {
           )}
         </motion.div>
       </div>
-  
+
       {answerSubmitted ? (
         <div className="mt-6 w-screen">
           <p className="text-2xl">Answer submitted!</p>
@@ -251,7 +251,7 @@ export default function Question() {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="mt-6 w-full"
           >
-            <div data-augmented-ui="tl-clip bl-clip r-clip border" className="p-4 md:p-10 w-full nerd-aug bluecard">
+            <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
               <Form
                 className="mt-6"
                 validationBehavior="native"
@@ -273,9 +273,15 @@ export default function Question() {
                     placeholder="Enter your answer"
                     type="text"
                     size="lg"
-                    className="inline-block"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500 md:max-w-xl",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
                   />
-  
+
                   {banthashitCard && (
                     <div className="flex gap-4">
                       <p>Bantha is sad! You waited too long, you cannot use Banthashit in the final round!</p>
@@ -287,7 +293,7 @@ export default function Question() {
                       />
                     </div>
                   )}
-  
+
                   <Input
                     isRequired
                     errorMessage="Please enter artist name"
@@ -297,9 +303,15 @@ export default function Question() {
                     placeholder="Enter the artist's name"
                     type="text"
                     size="lg"
-                    className="inline-block"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500 md:max-w-xl",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
                   />
-  
+
                   <CyberButton
                     text="SUBMIT"
                     glitchText="ANSWER"
@@ -313,4 +325,5 @@ export default function Question() {
         )
       )}
     </div>
-  ); 
+  );
+}
