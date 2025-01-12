@@ -319,12 +319,12 @@ export default function Question() {
   ) : !isAdmin ? (
     <ShallNotPass />
   ) : (
-    <div>
+    <div className="h-screen overflow-hidden">
       <div className="flex justify-between p-4">
         <h1 className="text-2xl">
           Round {roundId} Question {questionId} -{" "}
           <span
-            className={`${roundId === "3" ? "font-reboot text-glow-blue-600" : ""
+            className={`${roundId === "3" ? "font-linebeam text-glow-blue-600 text-3xl -mx-2" : ""
               } px-2 inline-block`}
           >
             {Number(questionId) * (roundId === "3" ? 200 : 100)}
@@ -348,7 +348,7 @@ export default function Question() {
                 className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
               />
             ) : (
-              <p className="text-2xl flex">{loadingQuote}</p>
+              <p className="text-4xl flex">{loadingQuote}</p>
             )}
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">

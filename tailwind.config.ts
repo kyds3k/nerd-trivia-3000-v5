@@ -19,6 +19,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-dos)"],
         "reboot": "var(--font-reboot)",
+        "linebeam": "var(--font-linebeam)",
       },
       keyframes: {
         neonFlicker: {

@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Button, Image, Link } from "@nextui-org/react";
@@ -141,8 +141,8 @@ export default function HomePage() {
   }, [googleAuth]);
 
   return (
-    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col justify-center items-center">
-      <h1 className="font-reboot text-xl md:text-4xl text-center text-glow-blue-400 mb-10">Nerd Trivia 3000</h1>
+    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col justify-center items-center h-svh">
+      <h1 className="font-linebeam text-4xl md:text-8xl text-center text-glow-blue-400 mb-10 uppercase">Nerd Trivia 3000</h1>
       {googleAuth ? (
         <>
           <div className="user flex items-center gap-4 mb-4">
@@ -160,7 +160,7 @@ export default function HomePage() {
         </>
       ) : (
         <>
-          <Button className="w-fit my-auto" size="lg" onPress={() => loginGoogle()}>Login with Google</Button>
+          <Button className="w-fit" size="lg" onPress={() => loginGoogle()}>Login with Google</Button>
         </>
       )}
     </div>

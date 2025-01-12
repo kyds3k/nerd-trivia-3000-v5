@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
   const { data: session } = useSession();
   const [hasSession, setHasSession] = useState<boolean>(false);
- 
+
 
   interface GoogleData {
     meta: {
@@ -223,7 +223,7 @@ export default function DashboardPage() {
       console.log("No session found. Are cookies enabled?");
     }
   }, [session]);
-  
+
 
   if (loading) {
     return (
@@ -244,49 +244,54 @@ export default function DashboardPage() {
 
   return (
     <div className="p-10 w-full">
-      <h1 className="text-3xl mb-6">Welcome to the <span className="font-reboot text-lg text-glow-blue-400">Nerd Trivia 3000</span> Admin Dashboard</h1>
-      <p>Session: {hasSession ? ("true") : ("false")}</p>
-      <h2 className="text-2xl mb-8">Editions</h2>
-      <div className="ml-4">
-        {loading ? (
-          <>
-            <p className="mb-3">Loading editions . . .</p>
-            <Progress
-              size="md"
-              isIndeterminate
-              aria-label="Loading editions"
-              className="max-w-md"
-            />
-          </>
-        ) : (
-          <ul>
-            {editions.map((edition) => (
-              <li key={edition.id} className="mb-8">
-                <strong>{edition.title}</strong> -{" "}
-                {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
-                <div className="my-4 flex gap-2">
-                  <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
-                  <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
-                  <Button as={Link} href={`edition/${edition.id}/edit`}>Edit</Button>
-                  <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="flex flex-col gap-4">
-        { !hasSession ? (
-        <div className="flex flex-col gap-4">
-          <p>You must sign in to Spotify before presenting an edition</p>
-          <SpotifySignIn />
-        </div>
+      <h1 className="text-5xl mb-10 text-center">Welcome to the <span className="font-linebeam text-5xl uppercase text-glow-blue-400">Nerd Trivia 3000</span> Admin Terminal</h1>
+      <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt mb-10">
+        <h2 className="text-2xl mb-8">Editions</h2>
+        <div className="ml-4">
+          {loading ? (
+            <>
+              <p className="mb-3">Loading editions . . .</p>
+              <Progress
+                size="md"
+                isIndeterminate
+                aria-label="Loading editions"
+                className="max-w-md"
+              />
+            </>
+          ) : (
+            <ul>
+              {editions.map((edition) => (
+                <li key={edition.id} className="mb-8">
+                  <strong>{edition.title}</strong> -{" "}
+                  {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
+                  <div className="my-4 flex gap-2">
+                    <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
+                    <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
+                    <Button as={Link} href={`edition/${edition.id}/edit`}>Edit</Button>
+                    <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
+                  </div>
+                </li>
+              ))}
+              <li><Button className="mt-6 w-fit" as={Link} href="/edition/new">Create New Edition</Button></li>
+            </ul>
 
-        ) : (
-          <SpotifySignOut />
-        )}
-        <Button className="mt-6 w-fit" as={Link} href="/edition/new">Create New Edition</Button>
-        <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
+          )}
+        </div>
+      </div>
+      <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt">
+        <h2 className="text-2xl mb-8">I/O</h2>
+        <div className="flex flex-col gap-4">
+          {!hasSession ? (
+            <div className="flex flex-col gap-4">
+              <p>You must sign in to Spotify before presenting an edition</p>
+              <SpotifySignIn />
+            </div>
+
+          ) : (
+            <SpotifySignOut />
+          )}
+          <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
+        </div>
       </div>
     </div>
   );

@@ -151,18 +151,6 @@ export default function EditionPage() {
     }
   }, []);
 
-  // useEffect(() => {
-  //   if (session) {
-  //     console.log("Session retrieved:", session);
-  //     setHasSession(true);
-  //     const spotToken = session.accessToken;
-  //     setSpotifyToken(spotToken ?? null);
-  //   } else {
-  //     console.log("No session found. Are cookies enabled?");
-  //     setHasSession(false);
-  //   }
-  // }, [session]);
-
   if (loading) {
     return (
       <div className="flex flex-col gap-5 justify-center items-center h-screen w-screen">
@@ -174,9 +162,10 @@ export default function EditionPage() {
 
 
   return (
-    <div className="p-10">
-      <div data-augmented-ui="tl-clip bl-clip b-clip-xy r-clip-xy both " className="p-10 flex flex-col items-center justify-center nerd-aug bluecard">
-        <h3 className="text-4xl mb-4">Nerd Trivia: {date}</h3>
+    <div className="p-4">
+      <div className="p-2 flex flex-col items-center justify-center">
+        <h3 className="text-8xl mb-4 font-linebeam text-glow-blue-400 uppercase">Nerd Trivia</h3>
+        <p className="text-3xl mb-4">{date}</p>
         <h1 className="text-5xl">{editionTitle}</h1>
         {editionGif && (
           <Image
@@ -188,7 +177,7 @@ export default function EditionPage() {
         )}
         {blurb && (
           <div
-            className="text-3xl mb-8"
+            className="text-3xl mb-8 w-3/4 text-center"
             dangerouslySetInnerHTML={{ __html: blurb }}
           />
         )}
