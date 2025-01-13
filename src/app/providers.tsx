@@ -92,6 +92,7 @@ export function Providers({ children, session }: ProvidersProps) {
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
+              pointerEvents: "none",
             }}
           >
           </div>
