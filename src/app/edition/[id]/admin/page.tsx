@@ -493,7 +493,7 @@ export default function Admin() {
         </>
       ) : (
         <>
-          <h1 className='text-4xl mb-4'>Admin - {editionTitle}</h1>
+          <h1 className='text-4xl mb-4'><span className="font-linebeam text-5xl mr-3 text-glow-blue-400">NERD TRIVIA 3000</span> Admin - {editionTitle}</h1>
           <Tabs
             aria-label='Admin Tabs'
             destroyInactiveTabPanel={false}

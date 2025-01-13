@@ -164,7 +164,7 @@ export default function EditionPage() {
   return (
     <div className="p-4">
       <div className="p-2 flex flex-col items-center justify-center">
-        <h3 className="text-8xl mb-4 font-linebeam text-glow-blue-400 uppercase">Nerd Trivia</h3>
+        <h3 className="text-8xl mb-4 font-linebeam text-glow-blue-400 uppercase">Nerd Trivia 3000</h3>
         <p className="text-3xl mb-4">{date}</p>
         <h1 className="text-5xl">{editionTitle}</h1>
         {editionGif && (

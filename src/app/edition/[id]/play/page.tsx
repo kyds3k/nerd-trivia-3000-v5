@@ -34,12 +34,14 @@ export default function EditionPage() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
   const [action, setAction] = useState<string | null>(null);
-  const teamId = Math.floor(10000 + Math.random() * 90000) + "-" + ["str", "dex", "con", "dex", "int", "wis", "cha"][Math.floor(Math.random() * 10)];
-  
+  const attributes = ["str", "dex", "con", "dex", "int", "wis", "cha"];
+  const randomAttribute = attributes[Math.floor(Math.random() * attributes.length)];
+  const teamId = Math.floor(10000 + Math.random() * 90000) + "-" + randomAttribute;
+
   const [submitResults, setSubmitResults] = useState<boolean>(false);
   const [teamCreated, setTeamCreated] = useState<boolean>(false);
   const [teamExists, setTeamExists] = useState<boolean>(false);
-  
+
   const [searchResults, setSearchResults] = useState<boolean>(false);
   const [teamSearched, setTeamSearched] = useState<boolean>(false);
   const [teamFound, setTeamFound] = useState<boolean>(false);
@@ -132,7 +134,7 @@ export default function EditionPage() {
           console.log("Team updated:", team);
           setTimeout(() => {
             router.push(`/edition/${editionId}/play/${team.id}`);
-          }, 3000);          
+          }, 3000);
         } catch (error) {
           console.log("Failed to update team:", error);
         }
@@ -207,95 +209,134 @@ export default function EditionPage() {
 
 
   return (
-    <div className="p-4 pb-10 md:p-10 flex flex-col items-center md:items-start md:justify-center w-screen overflow-x-hidden">
-      <h1 className="font-linebeam text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h1>
-      <h2 className="text-2xl mb-2">{date}</h2>
+    <div className="p-4 pb-10 md:p-10 flex flex-col items-center md:justify-center w-screen overflow-x-hidden">
+      <h1 className="font-linebeam text-6xl md:text-8xl w-full uppercase text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h1>
+      <h2 className="w-full text-center text-lg md:text-2xl mb-4 md:mb-2">{date}</h2>
 
-      <h3 className="text-3xl md:text-4xl text-center md:text-left mb-6">{editionTitle}</h3>
-
-      <h4 className="text-2xl text-center md:text-left mb-4">Welcome, {googleUser}!</h4>
-      <h5 className="text-xl text-center md:text-left mb-4">Register your team</h5>
-      <Form
-        className="w-full max-w-xs flex flex-col gap-4"
-        validationBehavior="native"
-        onReset={() => setAction("reset")}
-        onSubmit={(e) => {
-          e.preventDefault();
-          let data = Object.fromEntries(new FormData(e.currentTarget));
-          console.log("data", data);
-          submitTeam(data);
-        }}
-      >
-        <Input
-          isRequired
-          errorMessage="Please enter a valid team name"
-          label="Team Name"
-          labelPlacement="outside"
-          name="team_name"
-          placeholder="Enter your team name"
-          type="text"
-        />
-
-        <input type="hidden" name="user_email" value={userEmail} />
-
-        <input type="hidden" name="team_identifier" value={teamId} />
-
-        <div className="flex gap-2">
-          <Button color="primary" type="submit">
-            Submit
-          </Button>
-          <Button type="reset" variant="flat">
-            Reset
-          </Button>
-        </div>
-      </Form>
-      {submitResults && (
-        <>
-          <Alert title="Sorry!" description="Team name already exists. Please choose another." color="warning" isVisible={!teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
-          <Alert title="Great Success!" description="You are a unique flower! Team created - redirecting you to the game..." color="success" isVisible={teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
-        </>
-      )}
+      <h3 className="text-3xl md:text-4xl text-center w-full mb-6 md:mb-10">{editionTitle}</h3>
 
 
-      <p className="text-xl text-center md:text-left my-8 w-screen">- OR -</p>
+      <div className="w-11/12 md:px-0 md:w-1/2">
+        <h5 className="text-2xl text-center md:text-left mb-10 md:mb-10 w-full">Register your team</h5>
 
-      <h5 className="text-xl text-center md:text-left mb-4">Captain an existing team</h5>
+        <Form
+          className="w-full md:max-w-screen-xl flex flex-col gap-4"
+          validationBehavior="native"
+          onReset={() => setAction("reset")}
+          onSubmit={(e) => {
+            e.preventDefault();
+            let data = Object.fromEntries(new FormData(e.currentTarget));
+            console.log("data", data);
+            submitTeam(data);
+          }}
+        >
+          <Input
+            isRequired
+            errorMessage="Please enter a valid team name"
+            label="Team Name"
+            labelPlacement="outside"
+            name="team_name"
+            placeholder="Enter your team name"
+            type="text"
+            size="lg"
+            classNames={{
+              inputWrapper:
+                "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+              input: "placeholder-gray-400 text-white focus-visible:outline-none",
+            }}
+            radius="none" // Removes rounded edges
+            variant="bordered"            
+          />
 
-      <Form
-        className="w-full max-w-xs flex flex-col gap-4"
-        validationBehavior="native"
-        onReset={() => setAction("reset")}
-        onSubmit={(e) => {
-          e.preventDefault();
-          let data = Object.fromEntries(new FormData(e.currentTarget));
-          captainTeam(data);
-        }}
-      >
+          <input type="hidden" name="user_email" value={userEmail} />
 
-        <Input
-          isRequired
-          errorMessage="Please enter a valid identifier"
-          label="Team Identifier"
-          labelPlacement="outside"
-          name="team_identifier"
-          placeholder="Enter your team identifier"
-          type="text"
-        />
-        <div className="flex gap-2">
-          <Button color="primary" type="submit">
-            Submit
-          </Button>
-          <Button type="reset" variant="flat">
-            Reset
-          </Button>
-        </div>
-      </Form>
-      {searchResults && (
-        <>
-          <Alert title="Sorry!" description="Team not found! Please try again." color="warning" isVisible={!teamFound} classNames={{ "base": "mt-6 w-fit" }} />
-          <Alert title="Great Success!" description="Team found! Redirecting you to the game..." color="success" isVisible={teamFound} classNames={{ "base": "mt-6 w-fit" }} />
-        </>
-      )}
+          <input type="hidden" name="team_identifier" value={teamId} />
+
+          <div className="flex gap-2">
+            <Button
+              color="primary"
+              type="submit"
+              data-augmented-ui="both"
+              className="w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse"
+            >
+              Submit
+            </Button>
+            <Button
+              type="reset"
+              variant="flat"
+              data-augmented-ui="both"
+              className="w-fit border-none rounded-none text-white bg-black nerd-aug blackbutton"
+            >
+              Reset
+            </Button>
+          </div>
+        </Form>
+        {submitResults && (
+          <>
+            <Alert title="Sorry!" description="Team name already exists. Please choose another." color="warning" isVisible={!teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
+            <Alert title="Great Success!" description="You are a unique flower! Team created - redirecting you to the game..." color="success" isVisible={teamCreated} classNames={{ "base": "mt-6 w-fit" }} />
+          </>
+        )}
+
+
+        <p className="text-2xl md:text-4xl text-center my-8 w-full">- OR -</p>
+
+        <h5 className="text-xl text-center md:text-left mb-4">Captain an existing team</h5>
+
+        <Form
+          className="w-full md:max-w-screen-xl flex flex-col gap-4"
+          validationBehavior="native"
+          onReset={() => setAction("reset")}
+          onSubmit={(e) => {
+            e.preventDefault();
+            let data = Object.fromEntries(new FormData(e.currentTarget));
+            captainTeam(data);
+          }}
+        >
+
+          <Input
+            isRequired
+            errorMessage="Please enter a valid identifier"
+            label="Team Identifier"
+            labelPlacement="outside"
+            name="team_identifier"
+            placeholder="Enter your team identifier"
+            type="text"
+            size="lg"
+            classNames={{
+              inputWrapper:
+                "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+              input: "placeholder-gray-400 text-white focus-visible:outline-none",
+            }}
+            radius="none" // Removes rounded edges
+            variant="bordered"            
+          />
+          <div className="flex gap-2">
+            <Button
+              color="primary"
+              type="submit"
+              data-augmented-ui="both"
+              className="w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse"
+            >
+              Submit
+            </Button>
+            <Button
+              type="reset"
+              variant="flat"
+              data-augmented-ui="both"
+              className="w-fit border-none rounded-none text-white bg-black nerd-aug blackbutton"
+            >
+              Reset
+            </Button>
+          </div>
+        </Form>
+        {searchResults && (
+          <>
+            <Alert title="Sorry!" description="Team not found! Please try again." color="warning" isVisible={!teamFound} classNames={{ "base": "mt-6 w-fit" }} />
+            <Alert title="Great Success!" description="Team found! Redirecting you to the game..." color="success" isVisible={teamFound} classNames={{ "base": "mt-6 w-fit" }} />
+          </>
+        )}
+      </div>
     </div>
   );
 }

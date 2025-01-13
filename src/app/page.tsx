@@ -141,8 +141,8 @@ export default function HomePage() {
   }, [googleAuth]);
 
   return (
-    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col justify-center items-center h-svh">
-      <h1 className="font-linebeam text-4xl md:text-8xl text-center text-glow-blue-400 mb-10 uppercase">Nerd Trivia 3000</h1>
+    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col pt-10 md:pt-0 md:justify-center items-center h-svh">
+      <h1 className="font-linebeam text-6xl flex md:text-8xl text-center text-glow-blue-400 mb-10 uppercase">Nerd Trivia 3000</h1>
       {googleAuth ? (
         <>
           <div className="user flex items-center gap-4 mb-4">
@@ -151,16 +151,43 @@ export default function HomePage() {
           </div>
           <div className="mt-6 flex flex-col">
             <h4 className="text-2xl mb-2">Join the game!</h4>
-            <Link underline="always" className="mb-4" href={`/edition/${editionId}/play`}>{editionTitle}</Link>
+            <Link 
+              underline="always" 
+              className="text-cyan-500" 
+              size="lg" 
+              href={`/edition/${editionId}/play`}
+            >
+              {editionTitle}
+            </Link>
             {isAdmin && (
-              <Button as={Link} className="w-fit" href="/dashboard">Admin Dashboard</Button>
+              <Button 
+                as={Link} 
+                className="w-fit" 
+                href="/dashboard">Admin Dashboard
+              </Button>
             )}
-            <Button className="w-fit mt-6" onPress={() => logoutGoogle()}>Logout</Button>
+            <Button
+            data-augmented-ui="both"
+            className="mt-6 w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse" 
+            size="lg" 
+            variant="bordered"            
+              onPress={() => logoutGoogle()}
+            >
+              Logout
+            </Button>
           </div>
         </>
       ) : (
         <>
-          <Button className="w-fit" size="lg" onPress={() => loginGoogle()}>Login with Google</Button>
+          <Button 
+            data-augmented-ui="both"
+            className="w-fit  border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse" 
+            size="lg" 
+            variant="bordered"            
+            onPress={() => loginGoogle()}
+          >
+            Login with Google
+          </Button>
         </>
       )}
     </div>

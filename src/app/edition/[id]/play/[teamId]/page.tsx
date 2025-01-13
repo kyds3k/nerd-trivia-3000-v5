@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
-import { Button } from "@nextui-org/react";
+import { Button, Link, Popover, PopoverTrigger, PopoverContent } from "@nextui-org/react";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
+import { motion } from "framer-motion";
 
 
 interface Edition {
@@ -33,8 +34,10 @@ export default function TeamPage() {
   const [action, setAction] = useState<string | null>(null);
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
+  const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [teamWins, setTeamWins] = useState<number | null>(null);
   const [teamAllTimePoints, setTeamAllTimePoints] = useState<number | null>(null);
+  const [teamLoaded, setTeamLoaded] = useState<boolean>(false);
 
   // Use the hook and pass the callback for question_toggle
   // Assuming active might be a string, convert it to a boolean
@@ -63,7 +66,7 @@ export default function TeamPage() {
       theme: "dark",
       transition: Flip,
     });
-  });  
+  });
 
   interface GoogleData {
     meta: {
@@ -82,6 +85,8 @@ export default function TeamPage() {
       setTeamName(team.team_name);
       setTeamWins(team.wins);
       setTeamAllTimePoints(team.all_time_points);
+      setTeamIdentifier(team.team_identifier);
+      setTeamLoaded(true);
     } catch (error) {
       console.error("Failed to get team:", error);
     }
@@ -182,23 +187,39 @@ export default function TeamPage() {
       router.push("/");
     }
   }, []);
-  
+
   return (
-    <div className="p-4 pb-10 md:p-10 flex flex-col md:justify-center">
-      <h3 className="font-linebeam text-xl md:text-4xl text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h3>
-      <h4 className="text-2xl text-center mb-4">{date}</h4>
-      <h1 className="text-3xl md:text-5xl text-center md:text-left mb-5">{editionTitle}</h1>
+    <div className="p-4 pb-10 md:p-10 flex flex-col items-center md:justify-center w-screen overflow-x-hidden">
+      <h1 className="font-linebeam text-6xl md:text-8xl w-full uppercase text-center text-glow-blue-400 mb-4">Nerd Trivia 3000</h1>
+      <h2 className="w-full text-center text-lg md:text-2xl mb-4 md:mb-2">{date}</h2>
 
-      <h4 className="text-2xl md:text-left mb-8">Welcome, {teamName}!</h4>
-      <p className="text-xl md:text-left mb-2">Wins: {teamWins}</p>
-      <p className="text-xl md:text-left mb-8">All-time points: {teamAllTimePoints}</p>
-      <p className="text-2xl md:text-left mb-4">Game will start soon! HOLD!!!</p>
-      <Button
-        onPress={logoutGoogle}
-        size="sm"
-        className="mt-4 w-fit"
-      >Logout</Button>
+      <h3 className="text-3xl md:text-5xl text-center md:text-left mb-10">{editionTitle}</h3>
 
+      {teamLoaded && (
+        <motion.div
+          initial={{ scale: 0 }} // Starts at 0 size
+          animate={{ scale: 1 }} // Animates to full size
+          transition={{
+            duration: 1, // Animation duration in seconds
+            ease: "easeInOut", // Easing function
+          }}
+        >
+          <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-8 md:p-10 w-11/12 md:w-full nerd-aug bluecard bluecard__alt">
+            <h4 className="text-2xl md:text-left mb-8">Welcome, {teamName}!</h4>
+            <p className="text-xl md:text-left mb-2">Wins: {teamWins}</p>
+            <p className="text-xl md:text-left mb-2">All-time points: {teamAllTimePoints}</p>
+            <p className="text-xl md:text-left mb-8">Team Identifier: {teamIdentifier} <Popover placement="top" backdrop="blur" classNames={{ base: "w-11/12 md:w-fit p-0 shadow-none border-none bg-none rounded-none", backdrop: "p-0 border-none bg-none rounded-none", content: "bg-transparent p-0 border-none shadow-none bg-none rounded-none" }}><PopoverTrigger><span className="text-cyan-500 text-sm underline cursor-pointer">(what's this?)</span></PopoverTrigger><PopoverContent><div className="p-4 w-11/12 md:w-fit bg-black border-1 border-cyan-500"><p>You can use this identifier to play as the same team in future games and save your stats!</p></div></PopoverContent></Popover></p>
+
+            <p className="text-2xl md:text-left mb-12">Game will start soon! HOLD!!!</p>
+            <Button
+              onPress={logoutGoogle}
+              size="lg"
+              data-augmented-ui="both"
+              className="w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse"
+            >Logout</Button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }
