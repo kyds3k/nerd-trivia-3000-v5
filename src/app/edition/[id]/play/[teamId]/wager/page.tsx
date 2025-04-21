@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
-import { Button, Form, Input, Image, Slider } from "@nextui-org/react";
+import { Button, Form, Input, Image, Slider } from "@heroui/react";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import Pocketbase from "pocketbase";

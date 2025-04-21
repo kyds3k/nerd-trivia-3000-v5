@@ -5,9 +5,9 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image } from "@nextui-org/react";
+import { Image } from "@heroui/react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Spinner, Progress } from '@nextui-org/react';
+import { Spinner, Progress } from "@heroui/react";
 import { useTransitionRouter } from "next-transition-router";
 import ShallNotPass from "@/components/ShallNotPass";
 

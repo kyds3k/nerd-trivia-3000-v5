@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
-import { Button, Link, Popover, PopoverTrigger, PopoverContent } from "@nextui-org/react";
+import { Button, Link, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
 import { toast } from "react-toastify";
 import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";

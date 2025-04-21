@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Spinner, Button, Form, Input, Textarea, Image } from "@nextui-org/react";
+import { Spinner, Button, Form, Input, Textarea, Image } from "@heroui/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import Typed from "typed.js";
 import { useRouter } from "next/navigation";

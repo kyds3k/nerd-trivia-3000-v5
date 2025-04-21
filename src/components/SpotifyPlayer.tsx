@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Button } from "@nextui-org/button";
+import { Button } from "@heroui/button";
 import { useHotkeys } from "react-hotkeys-hook";
 import SpotTimer from "@/components/SpotTimer";
 

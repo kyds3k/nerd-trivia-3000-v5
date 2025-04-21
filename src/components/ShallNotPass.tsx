@@ -1,7 +1,7 @@
 import React from 'react';
-import { Image } from '@nextui-org/react';
+import { Image } from "@heroui/react";
 import Link from 'next/link';
-import { Button } from '@nextui-org/react';
+import { Button } from "@heroui/react";
 
 
 

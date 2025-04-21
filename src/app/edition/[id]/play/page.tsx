@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
-import { Image, Form, Input, Button, Alert } from "@nextui-org/react";
+import { Image, Form, Input, Button, Alert } from "@heroui/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import { set } from "lodash";
 import { sendMessage } from "@/app/utils/toolbox";

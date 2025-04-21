@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { Image, Progress } from "@nextui-org/react";
+import { Image, Progress } from "@heroui/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { useHotkeys } from "react-hotkeys-hook";

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Pocketbase, { RecordModel } from "pocketbase";
-import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@nextui-org/react";
+import { Table, TableHeader, TableBody, TableColumn, TableRow, TableCell } from "@heroui/react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTransitionRouter } from "next-transition-router";
 import { motion } from "framer-motion";
