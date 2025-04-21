@@ -1,6 +1,6 @@
 "use client";
 
-import { NextUIProvider } from "@nextui-org/react";
+import { HeroUIProvider } from "@heroui/react";
 import { SessionProvider } from "next-auth/react";
 import { gsap } from "gsap";
 import { TransitionRouter } from "next-transition-router";
@@ -16,7 +16,7 @@ export function Providers({ children, session }: ProvidersProps) {
 
   return (
     <SessionProvider session={session}>
-      <NextUIProvider>
+      <HeroUIProvider>
         <TransitionRouter
           auto={true}
           leave={(next, from, to) => {
@@ -97,7 +97,7 @@ export function Providers({ children, session }: ProvidersProps) {
           >
           </div>
         </TransitionRouter>
-      </NextUIProvider>
+      </HeroUIProvider>
     </SessionProvider>
   );
 }

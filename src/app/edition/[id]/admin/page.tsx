@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import useEffectOnce from "react-use/lib/useEffectOnce";
-import { Button, Image, Link, Tabs, Tab, Form, Select, Switch, cn } from '@nextui-org/react';
+import { Button, Image, Link, Tabs, Tab, Form, Select, Switch, cn } from "@heroui/react";
 import { useParams } from "next/navigation";
 import Pocketbase from 'pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";

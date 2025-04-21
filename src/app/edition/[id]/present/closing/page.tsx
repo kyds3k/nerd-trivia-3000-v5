@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useEffectOnce } from 'react-use';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-//import { Image } from "@nextui-org/react";
+//import { Image } from "@heroui/react";
 import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
 import SpotifyPlayer from "@/components/SpotifyPlayer";
@@ -13,7 +13,7 @@ import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
-import { Spinner } from '@nextui-org/react';
+import { Spinner } from "@heroui/react";
 import { useTransitionRouter } from "next-transition-router";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 

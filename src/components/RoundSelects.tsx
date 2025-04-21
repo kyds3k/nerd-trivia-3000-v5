@@ -1,4 +1,4 @@
-import { Select, SelectItem, Form, Button } from "@nextui-org/react";
+import { Select, SelectItem, Form, Button } from "@heroui/react";
 import { useState } from "react";
 
 const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string) => void }) => {

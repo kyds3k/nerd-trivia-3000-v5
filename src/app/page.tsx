@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Image, Link } from "@nextui-org/react";
+import { Button, Image, Link } from "@heroui/react";
 import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
 

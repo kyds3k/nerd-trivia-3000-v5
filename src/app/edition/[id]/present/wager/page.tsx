@@ -5,13 +5,13 @@ import React from 'react';
 import { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
-//import { Image } from "@nextui-org/react";
+//import { Image } from "@heroui/react";
 import Image from 'next/image';
 import SpotifyPlayer from "@/components/SpotifyPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
-import { Spinner } from '@nextui-org/react';
+import { Spinner } from "@heroui/react";
 import { useTransitionRouter } from "next-transition-router";
 import { set } from 'lodash';
 import ShallNotPass from "@/components/ShallNotPass";

@@ -12,7 +12,7 @@ import {
   Divider,
   DatePicker,
   Progress
-} from "@nextui-org/react";
+} from "@heroui/react";
 import { useRouter } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { parseDate, CalendarDate } from "@internationalized/date";

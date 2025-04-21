@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     silenceDeprecations: ['legacy-js-api'],
   },
 	experimental: {
-		optimizePackageImports: ["@nextui-org/react"],
+		optimizePackageImports: ["@heroui/react"],
 		parallelServerCompiles: true,
 		ppr: false,
 		webpackBuildWorker: true,

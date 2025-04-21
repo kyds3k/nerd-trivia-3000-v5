@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from "next/navigation";
 import Pocketbase from 'pocketbase';
-import { Image } from "@nextui-org/react";
+import { Image } from "@heroui/react";
 import NextImage from "next/image";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Spinner } from '@nextui-org/react';
+import { Spinner } from "@heroui/react";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 
 interface Round {

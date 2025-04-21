@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState} from "react";
-import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
-import { Input, Form, Button, Divider, Switch } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
+import { Input, Form, Button, Divider, Switch } from "@heroui/react";
 
 interface WagerProps {
   wager: any; // Replace `any` with the correct `Wager` type

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardHeader, CardBody, CardFooter } from "@nextui-org/card";
-import { Input, Form, Button, Divider, Switch, Image } from "@nextui-org/react";
+import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
+import { Input, Form, Button, Divider, Switch, Image } from "@heroui/react";
 
 interface RegularAnswerProps {
   answer: any; // Replace `any` with the correct `Answer` type
