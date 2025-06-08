@@ -15,21 +15,37 @@ import {
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import Pocketbase from "pocketbase";
-import { parseDate, CalendarDate } from "@internationalized/date";
+import { parseDate, CalendarDate, DateValue } from "@internationalized/date";
 import { useDateFormatter } from "@react-aria/i18n";
 import { useParams } from "next/navigation";
 import { useCallback } from 'react';
-import debounce from 'lodash/debounce';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
+import { useEditionDraft } from "../../../../src/hooks/useEditionDraft";
+import { useDateField } from "../../../../src/hooks/useDateField";
 
 
 export default function NewEditionPage() {
+
+  const {
+    editionData,
+    updateField,
+    updateArrayItem,
+    addArrayItem,
+    removeArrayItem,
+    clearDraft,
+  } = useEditionDraft();
+
+  const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
+
+
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadMessage, setLoadMessage] = useState("Creating edition . . .");
   const [authData, setAuthData] = useState(null);
-  const [title, setTitle] = useState("");
+
+
+
   const [date, setDate] = React.useState<any>(null);
   let formatter = useDateFormatter({ dateStyle: "full" });
   const [blurb, setBlurb] = useState("");
@@ -89,9 +105,9 @@ export default function NewEditionPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
 
-  
 
- 
+
+
   pb.autoCancellation(false);
 
 
@@ -294,9 +310,9 @@ export default function NewEditionPage() {
       const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
 
       const updatedEdition = await pb.collection("editions").create({
-        title: title,
+        title: editionData.title,
         date: formattedDate, // Ensure `date` is formatted correctly
-        edition_gif: editionGif,
+        edition_gif: editionData.editionGif,
         blurb: blurb,
         home_song: homeSong,
         end_gif_1: endGif1,
@@ -311,7 +327,7 @@ export default function NewEditionPage() {
       for (let i = 1; i < 4; i++) {
         const roundGif = i === 1 ? r1Gif : i === 2 ? r2Gif : r3Gif;
         await pb.collection("rounds").create({
-        //console.log({        
+          //console.log({        
           edition_id: editionId,
           round: i,
           type: "regular",
@@ -391,6 +407,15 @@ export default function NewEditionPage() {
     }
   };
 
+  function syncArrayToCount<T>(
+    current: T[] | undefined,
+    count: number,
+    fallback: T,
+  ): T[] {
+    const updated = [...(current || [])];
+    while (updated.length < count) updated.push(fallback);
+    return updated.slice(0, count);
+  }
 
 
   const refreshAuthState = async () => {
@@ -411,26 +436,23 @@ export default function NewEditionPage() {
     }
   };
 
-  // Update the number of impossible answers when the input changes
   useEffect(() => {
-    setImp1Answers((prev) => {
-      const newAnswers = [...prev];
-      while (newAnswers.length < numImpossibleAnswers) {
-        newAnswers.push(""); // Add empty strings for new slots
-      }
-      return newAnswers.slice(0, numImpossibleAnswers); // Trim if the size decreases
-    });
-  }, [numImpossibleAnswers]);
+    // Impossible 1
+    updateField("imp1Songs")(syncArrayToCount(editionData.imp1Songs, editionData.imp1SongCount, ""));
+    updateField("imp1Answers")(syncArrayToCount(editionData.imp1Answers, editionData.imp1AnswerCount, ""));
+    updateField("imp1AnswerGifs")(syncArrayToCount(editionData.imp1AnswerGifs, editionData.imp1AnswerCount, ""));
 
-  useEffect(() => {
-    setImp2Answers((prev) => {
-      const newAnswers = [...prev];
-      while (newAnswers.length < numImpossibleAnswers2) {
-        newAnswers.push(""); // Add empty strings for new slots
-      }
-      return newAnswers.slice(0, numImpossibleAnswers2); // Trim if the size decreases
-    });
-  }, [numImpossibleAnswers2]);
+    // Impossible 2
+    updateField("imp2Songs")(syncArrayToCount(editionData.imp2Songs, editionData.imp2SongCount, ""));
+    updateField("imp2Answers")(syncArrayToCount(editionData.imp2Answers, editionData.imp2AnswerCount, ""));
+    updateField("imp2AnswerGifs")(syncArrayToCount(editionData.imp2AnswerGifs, editionData.imp2AnswerCount, ""));
+  }, [
+    editionData.imp1SongCount,
+    editionData.imp1AnswerCount,
+    editionData.imp2SongCount,
+    editionData.imp2AnswerCount,
+  ]);
+
 
 
   useEffect(() => {
@@ -439,815 +461,776 @@ export default function NewEditionPage() {
 
   return (
     <div>
-        <div className="p-10">
-          <div className="absolute top-10 right-10">
-            <Button
-              onClick={() => router.push("/dashboard")}>
-              Return to Dashboard
-            </Button>
-          </div>
-          <h1 className="mb-6 text-2xl">New Edition</h1>
-          {loading ? (
-            <div>
-              <p className="mb-3">{loadMessage}</p>
-              <Progress
-                size="md"
-                isIndeterminate
-                aria-label="Loading edition"
-                className="max-w-md my-4"
-              />
-            </div>
-          ) : (
-            <p className="my-4">{error}</p>
-          )}
-          <Tabs
-            aria-label="Rounds"
-            destroyInactiveTabPanel={true}
-            size="lg"
-            variant="bordered"
-            classNames={{ tabList: "mb-4 sticky top-14" }}
-          >
-            <Tab key="landing" title="Landing">
-              <h3 className="mb-8 text-2xl">Landing Page</h3>
-
-              <div className="ml-4">
-                <div className="mb-4 w-1/2">
-                  <label className="mb-2 block" htmlFor="edition_title">
-                    Title:
-                  </label>
-                  <Input
-                    id="edition_title"
-                    type="text"
-                    data-identifier="edition_title"
-                    data-type="title"
-                    value={title}
-                    onValueChange={setTitle}
-                    required
-                  />
-                </div>
-                <div className="mb-4 w-1/6">
-                  <label className="mb-2 block" htmlFor="edition_date">
-                    Date:
-                  </label>
-                  <DatePicker
-                    label="Edition date"
-                    data-type="date"
-                    data-identifier="edition_date"
-                    value={date}
-                    onChange={(newDate) => {
-                      if (newDate) setDate(newDate);
-                    }}
-                    className="max-w-[284px]"
-                  />
-                </div>
-                <div className="mb-4 w-1/4">
-                  <label className="mb-2 block" htmlFor="edition_gif">
-                    Edition GIF:
-                  </label>
-                  <Input
-                    id="edition_gif"
-                    type="text"
-                    data-type="gif"
-                    data-identifier="edition_gif"
-                    value={editionGif}
-                    onValueChange={setEditionGif}
-                  />
-                </div>
-                <div className="mb-4 w-1/2">
-                  <label className="mb-2 block" htmlFor="edition_blurb">
-                    Blurb
-                  </label>
-                  <Tiptap state={blurb} setState={setBlurb} identifier="edition_blurb" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
-                </div>
-                <div className="mb-4 w-1/4">
-                  <label className="mb-2 block" htmlFor="edition_home_song">
-                    Home Song:
-                  </label>
-                  <Input
-                    id="edition_home_song"
-                    type="text"
-                    data-type="song"
-                    data-identifier="edition_home_song"
-                    value={homeSong}
-                    onValueChange={setHomeSong}
-                    required
-                  />
-                </div>
-              </div>
-            </Tab>
-            <Tab key="round1" title="Round 1">
-              <h3 className="mb-8 text-2xl">Round 1</h3>
-              <div className="ml-4">
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block text-lg" htmlFor="r1_gif">
-                    Round 1 GIF:
-                  </label>
-                  <Input
-                    id="r1_gif"
-                    type="text"
-                    data-type="gif"
-                    data-identifier="r1_gif"
-                    value={r1Gif}
-                    onValueChange={setR1Gif}
-                  />
-                </div>
-
-                {Array.from({ length: 5 }, (_, index) => (
-                  <div key={`round1-question${index + 1}`}>
-                    <h3 className="mb-2">Question {index + 1}</h3>
-                    <Tiptap
-                      state={round1Questions[index]}
-                      setState={(value) => updateQuestion(1, index, value)}
-                      identifier={`r1q${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">Song</h3>
-                    <Input
-                      data-identifier={`r1s${index + 1}`}
-                      type="text"
-                      data-type="song"
-                      className="w-1/2 mb-6"
-                      value={round1Songs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedSongs = [...round1Songs];
-                        updatedSongs[index] = e.target.value;
-                        setRound1Songs(updatedSongs); // Update the specific song in the array
-                      }}
-                    />
-                    <h3 className="mb-2">Answer {index + 1}</h3>
-                    <Tiptap
-                      state={round1Answers[index]}
-                      setState={(value) => updateAnswer(1, index, value)}
-                      identifier={`r1a${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">GIF</h3>
-                    <Input
-                      data-identifier={`r1g${index + 1}`}
-                      type="text"
-                      data-type="gif"
-                      className="w-1/2 mb-6"
-                      value={round1AnswerGifs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedGifs = [...round1AnswerGifs];
-                        updatedGifs[index] = e.target.value;
-                        setRound1AnswerGifs(updatedGifs); // Update the specific gif in the array
-                      }}
-                    />
-                    {index == 2 && (
-                      <div>
-                        <h3 className="mb-2">Bantha Answer</h3>
-                        <Tiptap
-                          state={banthaAnswer}
-                          setState={setBanthaAnswer}
-                          identifier="bantha_answer"
-                          classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                        />
-                        <h3 className="mb-2">Bantha Answer GIF</h3>
-                        <Input
-                          data-identifier={`bantha_answer_gif`}
-                          type="text"
-                          data-type="gif"
-                          className="w-1/2 mb-6"
-                          value={banthaAnswerGif} // Bind the value dynamically
-                          onValueChange={setBanthaAnswerGif}
-                        />
-                      </div>
-                    )}
-                    <Divider className="my-4" />
-                    <hr className="block my-10 bg-gray-500"></hr>
-                  </div>
-                ))}
-              </div>
-            </Tab>
-            <Tab key="impossible1" title="Impossible 1">
-              <h3 className="mb-8 text-2xl">Impossible 1</h3>
-              <div className="ml-4">
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Intro GIF</h4>
-                  <Input
-                    data-identifier="i1_intro_gif"
-                    data-type="text"
-                    type="text"
-                    className="w-1/2"
-                    value={imp1IntroGif}
-                    onValueChange={setImp1IntroGif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Theme</h4>
-                  <Input
-                    data-identifier="i1_theme"
-                    data-type="text"
-                    type="text"
-                    className="w-1/2"
-                    value={imp1Theme}
-                    onValueChange={setImp1Theme}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Theme GIF</h4>
-                  <Input
-                    data-identifier="i1_gif"
-                    type="text"
-                    data-type="gif"
-                    className="w-1/2"
-                    value={imp1Gif}
-                    onValueChange={setImp1Gif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Question</h4>
-                  <Tiptap state={imp1Question} setState={setImp1Question} identifier="i1_question" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
-                </div>
-
-                {/* Songs */}
-                <div className="mb-8">
-                  <h4 className="mb-2">Songs</h4>
-                  <Select
-                    label="Number of Songs"
-                    data-identifier="i1_num_songs"
-                    className="w-80 mb-8"
-                    value={numImpossibleSongs}
-                    onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
-                      if (typeof selectedValue === "string") {
-                        setNumImpossibleSongs(parseInt(selectedValue));
-                      } else if (typeof selectedValue === "number") {
-                        setNumImpossibleSongs(selectedValue);
-                      }
-                    }}
-                  >
-                    {Array.from({ length: 3 }, (_, index) => (
-                      <SelectItem key={`${index + 1}`} textValue="song_count" value={index + 1}>
-                        {index + 1}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  {/* Render the Song Inputs Based on State */}
-                  <div className="song_list ml-4" data-impossible="1">
-                    {Array.from({ length: numImpossibleSongs }).map((_, index) => (
-                      <div key={index}>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Song {index + 1}</h4>
-                          <Input
-                            data-identifier={`i1_song${index + 1}`}
-                            type="text"
-                            data-type="song"
-                            required
-                            value={imp1Songs[index] ?? ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                              handleImp1Songs(index, e.target.value ?? "")
-                            }
-                          />
-
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Answers */}
-                <div className="mb-4">
-                  <h4 className="mb-2">Answers</h4>
-                  <Select
-                    label="Number of Answers"
-                    data-identifier="i1_num_answers"
-                    className="w-80 mb-8"
-                    onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
-                      //("selectedValue from select", selectedValue);
-                      if (typeof selectedValue === "string") {
-                        setNumImpossibleAnswers(parseInt(selectedValue));
-                      } else if (typeof selectedValue === "number") {
-                        setNumImpossibleAnswers(selectedValue);
-                      }
-                    }}
-                  >
-                    {Array.from({ length: 20 }, (_, index) => (
-                      <SelectItem key={`${index + 1}`} textValue="answer_count" value={index + 1}>
-                        {index + 1}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  <div className="mb-8">
-                    <h4 className="mb-2">Points per answer</h4>
-                    <Input
-                      data-identifier="i1_ppa"
-                      type="number"
-                      data-type="number"
-                      step="50"
-                      min="50"
-                      className="w-1/12"
-                      value={imp1Ppa}
-                      onValueChange={setImp1Ppa}
-                    />
-                  </div>
-
-                  <hr className="block my-10 bg-gray-500"></hr>
-
-                  {/* Render the Answer Inputs Based on State */}
-                  <div className="answer_list ml-4" data-impossible="1">
-                    {Array.from({ length: numImpossibleAnswers }).map((_, index) => (
-                      <div key={index}>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Answer {index + 1}</h4>
-                          <Tiptap
-                            key={`imp1-${index}`}
-                            state={imp1Answers[index] || ""}
-                            setState={(value) => updateAnswer("imp1", index, value)}
-                            identifier={`imp1a${index + 1}`}
-                            classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                          />
-                        </div>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Answer {index + 1} GIF</h4>
-                          <Input
-                            data-identifier={`i1a${index + 1}_gif`}
-                            data-type="gif"
-                            type="text"
-                            className="w-1/2"
-                            value={imp1AnswerGifs[index] ?? ""}
-                            onValueChange={(newGif: string) => {
-                              setImp1AnswerGifs((prevGifs) => ({
-                                ...prevGifs,
-                                [index]: newGif, // Use newGif directly since onValueChange provides the value
-                              }));
-                            }}
-                          />
-                        </div>
-                        <hr className="block my-10 bg-gray-300"></hr>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Tab>
-            <Tab key="round2" title="Round 2">
-              <h3 className="mb-8 text-2xl">Round 2</h3>
-              <div className="ml-4">
-
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block text-lg" htmlFor="r2_gif">
-                    Round 2 GIF:
-                  </label>
-                  <Input
-                    id="r2_gif"
-                    type="text"
-                    data-type="gif"
-                    data-identifier="r2_gif"
-                    value={r2Gif}
-                    onValueChange={setR2Gif}
-                  />
-                </div>
-
-                {Array.from({ length: 5 }, (_, index) => (
-                  <div key={`round1-question${index + 1}`}>
-                    <h3 className="mb-2">Question {index + 1}</h3>
-                    <Tiptap
-                      state={round2Questions[index]}
-                      setState={(value) => updateQuestion(2, index, value)}
-                      identifier={`r2q${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">Song</h3>
-                    <Input
-                      data-identifier={`r2s${index + 1}`}
-                      type="text"
-                      data-type="song"
-                      className="w-1/2 mb-6"
-                      value={round2Songs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedSongs = [...round2Songs];
-                        updatedSongs[index] = e.target.value;
-                        setRound2Songs(updatedSongs); // Update the specific song in the array
-                      }}
-                    />
-                    <h3 className="mb-2">Answer {index + 1}</h3>
-                    <Tiptap
-                      state={round2Answers[index]}
-                      setState={(value) => updateAnswer(2, index, value)}
-                      identifier={`r2a${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">GIF</h3>
-                    <Input
-                      data-identifier={`r2g${index + 1}`}
-                      type="text"
-                      data-type="gif"
-                      className="w-1/2 mb-6"
-                      value={round2AnswerGifs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedGifs = [...round2AnswerGifs];
-                        updatedGifs[index] = e.target.value;
-                        setRound2AnswerGifs(updatedGifs); // Update the specific gif in the array
-                      }}
-                    />
-                    <Divider className="my-4" />
-                    <hr className="block my-10 bg-gray-500"></hr>
-                  </div>
-                ))}
-
-              </div>
-            </Tab>
-
-            <Tab key="impossible2" title="Impossible 2">
-              <h3 className="mb-8 text-2xl">Impossible 2</h3>
-              <div className="ml-4">
-                <div className="mb-8">
-                  <h4 className="mb-2">Intro GIF</h4>
-                  <Input
-                    data-identifier="i2_intro_gif"
-                    data-type="text"
-                    type="text"
-                    className="w-1/2"
-                    value={imp2IntroGif}
-                    onValueChange={setImp2IntroGif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Theme</h4>
-                  <Input
-                    data-identifier="i2_theme"
-                    data-type="text"
-                    type="text"
-                    className="w-1/2"
-                    value={imp2Theme}
-                    onValueChange={setImp2Theme}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Theme GIF</h4>
-                  <Input
-                    data-identifier="i2_gif"
-                    type="text"
-                    data-type="gif"
-                    className="w-1/2"
-                    value={imp2Gif}
-                    onValueChange={setImp2Gif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Question</h4>
-                  <Tiptap
-                    state={imp2Question}
-                    setState={setImp2Question}
-                    identifier="i2_question"
-                    classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                  />
-                </div>
-
-                {/* Songs */}
-                <div className="mb-8">
-                  <h4 className="mb-2">Songs</h4>
-                  <Select
-                    label="Number of Songs"
-                    data-identifier="i2_num_songs"
-                    className="w-80 mb-8"
-                    value={numImpossibleSongs2}
-                    onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
-                      if (typeof selectedValue === "string") {
-                        setNumImpossibleSongs2(parseInt(selectedValue));
-                      } else if (typeof selectedValue === "number") {
-                        setNumImpossibleSongs2(selectedValue);
-                      }
-                    }}
-                  >
-                    {Array.from({ length: 3 }, (_, index) => (
-                      <SelectItem key={`${index + 1}`} textValue="song_count" value={index + 1}>
-                        {index + 1}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  {/* Render the Song Inputs Based on State */}
-                  <div className="song_list ml-4" data-impossible="2">
-                    {Array.from({ length: numImpossibleSongs2 }).map((_, index) => (
-                      <div key={index}>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Song {index + 1}</h4>
-                          <Input
-                            data-identifier={`i2_song${index + 1}`}
-                            type="text"
-                            data-type="song"
-                            required
-                            value={imp2Songs[index] ?? ""}
-                            onBlur={(e) => handleImp2Songs(index, e.target.getAttribute("value") ?? "")}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Answers */}
-                <div className="mb-4">
-                  <h4 className="mb-2">Answers</h4>
-                  <Select
-                    label="Number of Answers"
-                    data-identifier="i2_num_answers"
-                    className="w-80 mb-8"
-                    onSelectionChange={(keys) => {
-                      const selectedValue = Array.from(keys)[0];
-                      if (typeof selectedValue === "string") {
-                        setNumImpossibleAnswers2(parseInt(selectedValue));
-                      } else if (typeof selectedValue === "number") {
-                        setNumImpossibleAnswers2(selectedValue);
-                      }
-                    }}
-                  >
-                    {Array.from({ length: 20 }, (_, index) => (
-                      <SelectItem key={`${index + 1}`} textValue="answer_count" value={index + 1}>
-                        {index + 1}
-                      </SelectItem>
-                    ))}
-                  </Select>
-
-                  <div className="mb-8">
-                    <h4 className="mb-2">Points per answer</h4>
-                    <Input
-                      data-identifier="i2_ppa"
-                      type="number"
-                      data-type="number"
-                      step="50"
-                      min="50"
-                      className="w-1/12"
-                      value={imp2Ppa}
-                      onValueChange={setImp2Ppa}
-                    />
-                  </div>
-
-                  <hr className="block my-10 bg-gray-500"></hr>
-
-                  {/* Render the Answer Inputs Based on State */}
-                  <div className="answer_list ml-4" data-impossible="2">
-                    {Array.from({ length: numImpossibleAnswers2 }).map((_, index) => (
-                      <div key={index}>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Answer {index + 1}</h4>
-                          <Tiptap
-                            key={`imp2-${index}`}
-                            state={imp2Answers[index] || ""}
-                            setState={(value) => updateAnswer("imp2", index, value)}
-                            identifier={`imp2a${index + 1}`}
-                            classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                          />
-                        </div>
-                        <div className="mb-4">
-                          <h4 className="mb-2">Answer {index + 1} GIF</h4>
-                          <Input
-                            data-identifier={`i2a${index + 1}_gif`}
-                            data-type="gif"
-                            type="text"
-                            className="w-1/2"
-                            value={imp2AnswerGifs[index] ?? ""}
-                            onValueChange={(newGif: string) => {
-                              setImp2AnswerGifs((prevGifs) => ({
-                                ...prevGifs,
-                                [index]: newGif,
-                              }));
-                            }}
-                          />
-                        </div>
-                        <hr className="block my-10 bg-gray-300"></hr>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Tab>
-
-
-            <Tab key="round3" title="Round 3">
-              <h3 className="mb-8 text-2xl">Round 3</h3>
-              <div className="ml-4">
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block text-lg" htmlFor="r3_gif">
-                    Round 3 GIF:
-                  </label>
-                  <Input
-                    id="r3_gif"
-                    type="text"
-                    data-type="gif"
-                    data-identifier="r3_gif"
-                    value={r3Gif}
-                    onValueChange={setR3Gif}
-                  />
-                </div>
-
-                {Array.from({ length: 5 }, (_, index) => (
-                  <div key={`round3-question${index + 1}`}>
-                    <h3 className="mb-2">Question {index + 1}</h3>
-                    <Tiptap
-                      state={round3Questions[index]}
-                      setState={(value) => updateQuestion(3, index, value)}
-                      identifier={`r3q${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">Song</h3>
-                    <Input
-                      data-identifier={`r3s${index + 1}`}
-                      type="text"
-                      data-type="song"
-                      className="w-1/2 mb-6"
-                      value={round3Songs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedSongs = [...round3Songs];
-                        updatedSongs[index] = e.target.value;
-                        setRound3Songs(updatedSongs); // Update the specific song in the array
-                      }}
-                    />
-                    <h3 className="mb-2">Answer {index + 1}</h3>
-                    <Tiptap
-                      state={round3Answers[index]}
-                      setState={(value) => updateAnswer(3, index, value)}
-                      identifier={`r3a${index + 1}`}
-                      classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
-                    />
-                    <h3 className="mb-2">GIF</h3>
-                    <Input
-                      data-identifier={`r3g${index + 1}`}
-                      type="text"
-                      data-type="gif"
-                      className="w-1/2 mb-6"
-                      value={round3AnswerGifs[index]} // Bind the value dynamically
-                      onChange={(e) => {
-                        const updatedGifs = [...round3AnswerGifs];
-                        updatedGifs[index] = e.target.value;
-                        setRound3AnswerGifs(updatedGifs); // Update the specific gif in the array
-                      }}
-                    />
-                    <Divider className="my-4" />
-                    <hr className="block my-10 bg-gray-500"></hr>
-                  </div>
-                ))}
-
-              </div>
-            </Tab>
-
-            <Tab key="wager" title="Wager">
-              <h3 className="mb-8 text-2xl">Wager</h3>
-              <div className="ml-5">
-                <div className="mb-8 w-1/2">
-                  <label className="mb-2 block" htmlFor="wager_gif">
-                    Wager Intro GIF:
-                  </label>
-                  <Input
-                    id="wager_gif"
-                    type="text"
-                    data-type="gif"
-                    value={wagerGif}
-                    onValueChange={setWagerGif}
-                  />
-                </div>
-
-                <div className="mb-8 w-1/2">
-                  <label className="mb-2 block" htmlFor="final_category">
-                    Final Category:
-                  </label>
-                  <Input
-                    id="final_category"
-                    type="text"
-                    data-type="text"
-                    value={finalCat}
-                    onValueChange={setFinalCat}
-                  />
-                </div>
-
-                <div className="mb-8 w-1/2">
-                  <label className="mb-2 block" htmlFor="final_cat_gif">
-                    Final Category GIF:
-                  </label>
-                  <Input
-                    id="final_cat_gif"
-                    type="text"
-                    data-type="gif"
-                    value={finalCatGif}
-                    onBlur={(e) => setFinalCatGif(e.target.getAttribute("value") ?? "")}
-                  />
-                </div>
-
-                <div className="mb-8 w-1/2">
-                  <label className="mb-2 block" htmlFor="wager_placing_gif">
-                    Wager Placing GIF:
-                  </label>
-                  <Input
-                    id="wager_placing_gif"
-                    type="text"
-                    data-type="gif"
-                    value={wagerPlacingGif}
-                    onValueChange={setWagerPlacingGif}
-                  />
-                </div>
-
-                <div className="mb-8 w-1/2">
-                  <label className="mb-2 block" htmlFor="wager_song">
-                    Wager Placing Song:
-                  </label>
-                  <Input
-                    id="wager_song"
-                    type="text"
-                    data-type="song"
-                    value={wagerSong}
-                    onValueChange={setWagerSong}
-                  />
-                </div>
-
-              </div>
-            </Tab>
-
-            <Tab key="final" title="Final">
-              <h3 className="mb-8 text-2xl">Final Question</h3>
-
-              <div className="ml-5">
-
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block" htmlFor="final_intro_gif">
-                    Final Question Intro GIF:
-                  </label>
-                  <Input
-                    id="final_intro_gif"
-                    type="text"
-                    data-type="gif"
-                    value={finalIntroGif}
-                    onValueChange={setFinalIntroGif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Question</h4>
-                  <Tiptap state={finalQuestion} setState={setFinalQuestion} identifier="final_question" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Answer</h4>
-                  <Tiptap state={finalAnswer} setState={setFinalAnswer} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Answer GIF:</h4>
-                  <Input
-                    data-identifier="final_answer_gif"
-                    data-type="gif"
-                    className="w-1/2"
-                    value={finalAnswerGif}
-                    onValueChange={setFinalAnswerGif}
-                  />
-                </div>
-
-                <div className="mb-8">
-                  <h4 className="mb-2">Song:</h4>
-                  <Input
-                    data-identifier="final_song"
-                    data-type="song"
-                    className="w-1/2"
-                    value={finalSong}
-                    onValueChange={setFinalSong}
-                  />
-                </div>
-
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block" htmlFor="edition_end_gif_1">
-                    End GIF 1:
-                  </label>
-                  <Input
-                    id="edition_end_gif_1"
-                    type="text"
-                    value={endGif1}
-                    onValueChange={setEndGif1}
-                    data-type="gif"
-                  />
-                </div>
-
-                <div className="mb-8 w-1/4">
-                  <label className="mb-2 block" htmlFor="edition_end_gif_2">
-                    End GIF 2:
-                  </label>
-                  <Input
-                    id="edition_end_gif_2"
-                    type="text"
-                    value={endGif2}
-                    onValueChange={setEndGif2}
-                    data-type="gif"
-                  />
-                </div>
-              </div>
-            </Tab>
-          </Tabs>
-          <Button type="submit" onClick={handleCreateEdition} className="mt-6">
-            Create Edition
+      <div className="p-10">
+        <div className="absolute top-10 right-10">
+          <Button
+            onPress={() => router.push("/dashboard")}>
+            Return to Dashboard
           </Button>
         </div>
+        <h1 className="mb-6 text-2xl">New Edition</h1>
+        {loading ? (
+          <div>
+            <p className="mb-3">{loadMessage}</p>
+            <Progress
+              size="md"
+              isIndeterminate
+              aria-label="Loading edition"
+              className="max-w-md my-4"
+            />
+          </div>
+        ) : (
+          <p className="my-4">{error}</p>
+        )}
+        <Tabs
+          aria-label="Rounds"
+          destroyInactiveTabPanel={true}
+          size="lg"
+          variant="bordered"
+          classNames={{ tabList: "mb-4 sticky top-14" }}
+        >
+          <Tab key="landing" title="Landing">
+            <h3 className="mb-8 text-2xl">Landing Page</h3>
+
+            <div className="ml-4">
+              <div className="mb-4 w-1/2">
+                <label className="mb-2 block" htmlFor="edition_title">
+                  Title:
+                </label>
+                <Input
+                  id="edition_title"
+                  type="text"
+                  data-identifier="edition_title"
+                  data-type="title"
+                  value={editionData.title}
+                  onValueChange={updateField("title")}
+                  required
+                />
+              </div>
+              <div className="mb-4 w-1/6">
+                <label className="mb-2 block" htmlFor="edition_date">
+                  Date:
+                </label>
+                <DatePicker
+                  label="Edition date"
+                  value={parsedDate}
+                  onChange={onDateChange}
+                  className="max-w-[284px]"
+                  data-type="date"
+                  data-identifier="edition_date"
+                />
+              </div>
+              <div className="mb-4 w-1/4">
+                <label className="mb-2 block" htmlFor="edition_gif">
+                  Edition GIF:
+                </label>
+                <Input
+                  id="edition_gif"
+                  type="text"
+                  data-type="gif"
+                  data-identifier="edition_gif"
+                  value={editionData.editionGif}
+                  onValueChange={updateField("editionGif")}
+                />
+              </div>
+              <div className="mb-4 w-1/2">
+                <label className="mb-2 block" htmlFor="edition_blurb">
+                  Blurb
+                </label>
+                <Tiptap state={editionData.blurb || ""} setState={updateField("blurb")} identifier="edition_blurb" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
+              </div>
+              <div className="mb-4 w-1/4">
+                <label className="mb-2 block" htmlFor="edition_home_song">
+                  Home Song:
+                </label>
+                <Input
+                  id="edition_home_song"
+                  type="text"
+                  data-type="song"
+                  data-identifier="edition_home_song"
+                  value={editionData.homeSong}
+                  onValueChange={updateField("homeSong")}
+                  required
+                />
+              </div>
+            </div>
+          </Tab>
+          {/* ************ ROUND 1 ************ */}
+          <Tab key="round1" title="Round 1">
+            <h3 className="mb-8 text-2xl">Round 1</h3>
+            <div className="ml-4">
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block text-lg" htmlFor="r1_gif">
+                  Round 1 GIF:
+                </label>
+                <Input
+                  id="r1_gif"
+                  type="text"
+                  data-type="gif"
+                  data-identifier="r1_gif"
+                  value={editionData.r1Gif}
+                  onValueChange={updateField("r1Gif")}
+                />
+              </div>
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={`round1-question${index + 1}`}>
+                  <h3 className="mb-2">Question {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r1Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r1Questions", index, newVal)}
+                    identifier={`r1q${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">Song</h3>
+                  <Input
+                    data-identifier={`r1s${index + 1}`}
+                    type="text"
+                    data-type="song"
+                    className="w-1/2 mb-6"
+                    value={editionData.r1Songs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r1Songs", index, newVal)}
+                  />
+                  <h3 className="mb-2">Answer {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r1Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r1Answers", index, newVal)}
+                    identifier={`r1a${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">GIF</h3>
+                  <Input
+                    data-identifier={`r1g${index + 1}`}
+                    type="text"
+                    data-type="gif"
+                    className="w-1/2 mb-6"
+                    value={editionData.r1AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r1AnswerGifs", index, newVal)}
+                  />
+                  {index == 2 && (
+                    <div>
+                      <h3 className="mb-2">Bantha Answer</h3>
+                      <Tiptap
+                        state={editionData.banthaAnswer || ""}
+                        setState={updateField("banthaAnswer")}
+                        identifier="bantha_answer"
+                        classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                      />
+                      <h3 className="mb-2">Bantha Answer GIF</h3>
+                      <Input
+                        data-identifier={`bantha_answer_gif`}
+                        type="text"
+                        data-type="gif"
+                        className="w-1/2 mb-6"
+                        value={editionData.banthaAnswerGif} // Bind the value dynamically
+                        onValueChange={updateField("banthaAnswerGif")}
+                      />
+                    </div>
+                  )}
+                  <Divider className="my-4" />
+                  <hr className="block my-10 bg-gray-500"></hr>
+                </div>
+              ))}
+            </div>
+          </Tab>
+          {/* ************ IMPOSSIBLE 1 ************ */}
+          <Tab key="impossible1" title="Impossible 1">
+            <h3 className="mb-8 text-2xl">Impossible 1</h3>
+            <div className="ml-4">
+
+              <div className="mb-8">
+                <h4 className="mb-2">Intro GIF</h4>
+                <Input
+                  data-identifier="i1_intro_gif"
+                  data-type="text"
+                  type="text"
+                  className="w-1/2"
+                  value={editionData.imp1IntroGif}
+                  onValueChange={updateField("imp1IntroGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Theme</h4>
+                <Input
+                  data-identifier="i1_theme"
+                  data-type="text"
+                  type="text"
+                  className="w-1/2"
+                  value={editionData.imp1Theme}
+                  onValueChange={updateField("imp1Theme")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Theme GIF</h4>
+                <Input
+                  data-identifier="i1_gif"
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={editionData.imp1ThemeGif}
+                  onValueChange={updateField("imp1ThemeGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Question</h4>
+                <Tiptap state={editionData.imp1Question || ""} setState={updateField("imp1Question")} identifier="i1_question" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
+              </div>
+
+              {/* Songs */}
+              <div className="mb-8">
+                <h4 className="mb-2">Songs</h4>
+                <Select
+                  label="Number of Songs"
+                  data-identifier="i1_num_songs"
+                  className="w-80 mb-8"
+                  selectedKeys={[String(editionData.imp1SongCount)]}
+                  onSelectionChange={(keys) => {
+                    const selectedValue = Array.from(keys)[0];
+                    const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
+                    updateField("imp1SongCount")(value);
+                  }}
+                >
+                  {[1, 2, 3].map((num, index) => (
+                    <SelectItem key={`${index + 1}`} value={index + 1} textValue={`${index + 1}`}>
+                      {index + 1}
+                    </SelectItem>
+                  ))}
+                </Select>
+
+
+                {/* Render the Song Inputs Based on State */}
+                <div className="song_list ml-4" data-impossible="1">
+                  {Array.from({ length: editionData.imp1SongCount }).map((_, index) => (
+                    <div key={index}>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Song {index + 1}</h4>
+                        <Input
+                          key={`imp1_song_${index}`}
+                          data-identifier={`i1_song${index + 1}`}
+                          type="text"
+                          data-type="song"
+                          required
+                          value={editionData.imp1Songs?.[index] || ""}
+                          onValueChange={(newVal) => updateArrayItem("imp1Songs", index, newVal)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+              </div>
+
+              {/* Answers */}
+              <div className="mb-4">
+                <h4 className="mb-2">Answers</h4>
+                <Select
+                  label="Number of Answers"
+                  data-identifier="i1_num_answers"
+                  className="w-80 mb-8"
+                  selectedKeys={[String(editionData.imp1AnswerCount)]}
+                  onSelectionChange={(keys) => {
+                    const selectedValue = Array.from(keys)[0];
+                    const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
+                    updateField("imp1AnswerCount")(value);
+                  }}
+
+                >
+                  {Array.from({ length: 20 }, (_, index) => (
+                    <SelectItem key={index + 1} value={index + 1} textValue={`${index + 1}`}>
+                      {index + 1}
+                    </SelectItem>
+                  ))}
+
+                </Select>
+
+                <div className="mb-8">
+                  <h4 className="mb-2">Points per answer</h4>
+                  <Input
+                    data-identifier="i1_ppa"
+                    type="number"
+                    data-type="number"
+                    step="50"
+                    min="50"
+                    className="w-1/12"
+                    value={editionData.imp1AnswerValue}
+                    onValueChange={updateField("imp1AnswerValue")}
+                  />
+                </div>
+
+                <hr className="block my-10 bg-gray-500"></hr>
+
+                {/* Render the Answer Inputs Based on State */}
+                <div className="answer_list ml-4" data-impossible="1">
+                  {Array.from({ length: editionData.imp1AnswerCount || 0 }).map((_, index) => (
+                    <div key={index}>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Answer {index + 1}</h4>
+                        <Tiptap
+                          key={`imp1-${index}`}
+                          state={editionData.imp1Answers[index] || ""}
+                          setState={(value) => updateArrayItem("imp1Answers", index, value)}
+                          identifier={`imp1a${index + 1}`}
+                          classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Answer {index + 1} GIF</h4>
+                        <Input
+                          data-identifier={`i1a${index + 1}_gif`}
+                          data-type="gif"
+                          type="text"
+                          className="w-1/2"
+                          value={editionData.imp1AnswerGifs[index] || ""}
+                          onValueChange={(newGif: string) => updateArrayItem("imp1AnswerGifs", index, newGif)}
+                        />
+                      </div>
+                      <hr className="block my-10 bg-gray-300" />
+                    </div>
+                  ))}
+
+                </div>
+              </div>
+            </div>
+          </Tab>
+          {/* ************ ROUND 2 ************ */}
+          <Tab key="round2" title="Round 2">
+            <h3 className="mb-8 text-2xl">Round 2</h3>
+            <div className="ml-4">
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block text-lg" htmlFor="r2_gif">
+                  Round 2 GIF:
+                </label>
+                <Input
+                  id="r2_gif"
+                  type="text"
+                  data-type="gif"
+                  data-identifier="r2_gif"
+                  value={editionData.r2Gif}
+                  onValueChange={updateField("r2Gif")}
+                />
+              </div>
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={`round2-question${index + 1}`}>
+                  <h3 className="mb-2">Question {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r2Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r2Questions", index, newVal)}
+                    identifier={`r2q${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">Song</h3>
+                  <Input
+                    data-identifier={`r2s${index + 1}`}
+                    type="text"
+                    data-type="song"
+                    className="w-1/2 mb-6"
+                    value={editionData.r2Songs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r2Songs", index, newVal)}
+                  />
+                  <h3 className="mb-2">Answer {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r2Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r2Answers", index, newVal)}
+                    identifier={`r2a${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">GIF</h3>
+                  <Input
+                    data-identifier={`r2g${index + 1}`}
+                    type="text"
+                    data-type="gif"
+                    className="w-1/2 mb-6"
+                    value={editionData.r2AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r2AnswerGifs", index, newVal)}
+                  />
+                  <Divider className="my-4" />
+                  <hr className="block my-10 bg-gray-500"></hr>
+                </div>
+              ))}
+            </div>
+          </Tab>
+
+
+          {/* ************ IMPOSSIBLE 2 ************ */}
+          <Tab key="impossible2" title="Impossible 2">
+            <h3 className="mb-8 text-2xl">Impossible 2</h3>
+            <div className="ml-4">
+
+              <div className="mb-8">
+                <h4 className="mb-2">Intro GIF</h4>
+                <Input
+                  data-identifier="i2_intro_gif"
+                  data-type="text"
+                  type="text"
+                  className="w-1/2"
+                  value={editionData.imp2IntroGif}
+                  onValueChange={updateField("imp2IntroGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Theme</h4>
+                <Input
+                  data-identifier="i2_theme"
+                  data-type="text"
+                  type="text"
+                  className="w-1/2"
+                  value={editionData.imp2Theme}
+                  onValueChange={updateField("imp2Theme")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Theme GIF</h4>
+                <Input
+                  data-identifier="i2_gif"
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={editionData.imp2ThemeGif}
+                  onValueChange={updateField("imp2ThemeGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Question</h4>
+                <Tiptap
+                  state={editionData.imp2Question || ""}
+                  setState={updateField("imp2Question")}
+                  identifier="i2_question"
+                  classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                />
+              </div>
+
+              {/* Songs */}
+              <div className="mb-8">
+                <h4 className="mb-2">Songs</h4>
+                <Select
+                  label="Number of Songs"
+                  data-identifier="i2_num_songs"
+                  className="w-80 mb-8"
+                  selectedKeys={[String(editionData.imp2SongCount)]}
+                  onSelectionChange={(keys) => {
+                    const selectedValue = Array.from(keys)[0];
+                    const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
+                    updateField("imp2SongCount")(value);
+                  }}
+                >
+                  {[1, 2, 3].map((num, index) => (
+                    <SelectItem key={`${index + 1}`} value={index + 1} textValue={`${index + 1}`}>
+                      {index + 1}
+                    </SelectItem>
+                  ))}
+                </Select>
+
+                <div className="song_list ml-4" data-impossible="2">
+                  {Array.from({ length: editionData.imp2SongCount }).map((_, index) => (
+                    <div key={index}>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Song {index + 1}</h4>
+                        <Input
+                          key={`imp2_song_${index}`}
+                          data-identifier={`i2_song${index + 1}`}
+                          type="text"
+                          data-type="song"
+                          required
+                          value={editionData.imp2Songs?.[index] || ""}
+                          onValueChange={(newVal) => updateArrayItem("imp2Songs", index, newVal)}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Answers */}
+              <div className="mb-4">
+                <h4 className="mb-2">Answers</h4>
+                <Select
+                  label="Number of Answers"
+                  data-identifier="i2_num_answers"
+                  className="w-80 mb-8"
+                  selectedKeys={[String(editionData.imp2AnswerCount)]}
+                  onSelectionChange={(keys) => {
+                    const selectedValue = Array.from(keys)[0];
+                    const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
+                    updateField("imp2AnswerCount")(value);
+                  }}
+                >
+                  {Array.from({ length: 20 }, (_, index) => (
+                    <SelectItem key={index + 1} value={index + 1} textValue={`${index + 1}`}>
+                      {index + 1}
+                    </SelectItem>
+                  ))}
+
+
+                </Select>
+
+                <div className="mb-8">
+                  <h4 className="mb-2">Points per answer</h4>
+                  <Input
+                    data-identifier="i2_ppa"
+                    type="number"
+                    data-type="number"
+                    step="50"
+                    min="50"
+                    className="w-1/12"
+                    value={editionData.imp2AnswerValue}
+                    onValueChange={updateField("imp2AnswerValue")}
+                  />
+                </div>
+
+                <hr className="block my-10 bg-gray-500"></hr>
+
+                <div className="answer_list ml-4" data-impossible="2">
+                  {Array.from({ length: editionData.imp2AnswerCount || 0 }).map((_, index) => (
+                    <div key={index}>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Answer {index + 1}</h4>
+                        <Tiptap
+                          key={`imp2-${index}`}
+                          state={editionData.imp2Answers[index] || ""}
+                          setState={(value) => updateArrayItem("imp2Answers", index, value)}
+                          identifier={`imp2a${index + 1}`}
+                          classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                        />
+                      </div>
+                      <div className="mb-4">
+                        <h4 className="mb-2">Answer {index + 1} GIF</h4>
+                        <Input
+                          data-identifier={`i2a${index + 1}_gif`}
+                          data-type="gif"
+                          type="text"
+                          className="w-1/2"
+                          value={editionData.imp2AnswerGifs[index] || ""}
+                          onValueChange={(newGif: string) => updateArrayItem("imp2AnswerGifs", index, newGif)}
+                        />
+                      </div>
+                      <hr className="block my-10 bg-gray-300" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Tab>
+
+
+          {/* ************ ROUND 3 ************ */}
+          <Tab key="round3" title="Round 3">
+            <h3 className="mb-8 text-2xl">Round 3</h3>
+            <div className="ml-4">
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block text-lg" htmlFor="r3_gif">
+                  Round 3 GIF:
+                </label>
+                <Input
+                  id="r3_gif"
+                  type="text"
+                  data-type="gif"
+                  data-identifier="r3_gif"
+                  value={editionData.r3Gif}
+                  onValueChange={updateField("r3Gif")}
+                />
+              </div>
+              {Array.from({ length: 5 }, (_, index) => (
+                <div key={`round3-question${index + 1}`}>
+                  <h3 className="mb-2">Question {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r3Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r3Questions", index, newVal)}
+                    identifier={`r3q${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">Song</h3>
+                  <Input
+                    data-identifier={`r3s${index + 1}`}
+                    type="text"
+                    data-type="song"
+                    className="w-1/2 mb-6"
+                    value={editionData.r3Songs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r3Songs", index, newVal)}
+                  />
+                  <h3 className="mb-2">Answer {index + 1}</h3>
+                  <Tiptap
+                    state={editionData.r3Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("r3Answers", index, newVal)}
+                    identifier={`r3a${index + 1}`}
+                    classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
+                  />
+                  <h3 className="mb-2">GIF</h3>
+                  <Input
+                    data-identifier={`r3g${index + 1}`}
+                    type="text"
+                    data-type="gif"
+                    className="w-1/2 mb-6"
+                    value={editionData.r3AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("r3AnswerGifs", index, newVal)}
+                  />
+                  <Divider className="my-4" />
+                  <hr className="block my-10 bg-gray-500"></hr>
+                </div>
+              ))}
+            </div>
+          </Tab>
+
+          {/* ************ WAGER ROUND ************ */}
+
+
+          <Tab key="wager" title="Wager">
+            <h3 className="mb-8 text-2xl">Wager</h3>
+            <div className="ml-5">
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block" htmlFor="wager_gif">
+                  Wager Intro GIF:
+                </label>
+                <Input
+                  id="wager_gif"
+                  type="text"
+                  data-type="gif"
+                  value={editionData.wagerIntroGif}
+                  onValueChange={updateField("wagerIntroGif")}
+                />
+              </div>
+
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block" htmlFor="final_category">
+                  Final Category:
+                </label>
+                <Input
+                  id="final_category"
+                  type="text"
+                  data-type="text"
+                  value={editionData.finalCategory}
+                  onValueChange={updateField("finalCategory")}
+                />
+              </div>
+
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block" htmlFor="final_cat_gif">
+                  Final Category GIF:
+                </label>
+                <Input
+                  id="final_cat_gif"
+                  type="text"
+                  data-type="gif"
+                  value={editionData.finalCategoryGif}
+                  onValueChange={updateField("finalCategoryGif")}
+                />
+              </div>
+
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block" htmlFor="wager_placing_gif">
+                  Wager Placing GIF:
+                </label>
+                <Input
+                  id="wager_placing_gif"
+                  type="text"
+                  data-type="gif"
+                  value={editionData.wagerPlacingGif}
+                  onValueChange={updateField("wagerPlacingGif")}
+                />
+              </div>
+
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block" htmlFor="wager_song">
+                  Wager Placing Song:
+                </label>
+                <Input
+                  id="wager_song"
+                  type="text"
+                  data-type="song"
+                  value={editionData.wagerSong}
+                  onValueChange={updateField("wagerSong")}
+                />
+              </div>
+
+            </div>
+          </Tab>
+
+          <Tab key="final" title="Final">
+            <h3 className="mb-8 text-2xl">Final Question</h3>
+
+            <div className="ml-5">
+
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block" htmlFor="final_intro_gif">
+                  Final Question Intro GIF:
+                </label>
+                <Input
+                  id="final_intro_gif"
+                  type="text"
+                  data-type="gif"
+                  value={editionData.finalIntroGif}
+                  onValueChange={updateField("finalIntroGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Question</h4>
+                <Tiptap state={editionData.finalQuestion || ""} setState={updateField("finalQuestion")} identifier="final_question" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Answer</h4>
+                <Tiptap state={editionData.finalAnswer || ""} setState={updateField("finalAnswer")} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Answer GIF:</h4>
+                <Input
+                  data-identifier="final_answer_gif"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={editionData.finalAnswerGif}
+                  onValueChange={updateField("finalAnswerGif")}
+                />
+              </div>
+
+              <div className="mb-8">
+                <h4 className="mb-2">Song:</h4>
+                <Input
+                  data-identifier="final_song"
+                  data-type="song"
+                  className="w-1/2"
+                  value={editionData.finalSong}
+                  onValueChange={updateField("finalSong")}
+                />
+              </div>
+
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block" htmlFor="edition_end_gif_1">
+                  End GIF 1:
+                </label>
+                <Input
+                  id="edition_end_gif_1"
+                  type="text"
+                  value={editionData.endGif1}
+                  onValueChange={updateField("endGif1")}
+                  data-type="gif"
+                />
+              </div>
+
+              <div className="mb-8 w-1/4">
+                <label className="mb-2 block" htmlFor="edition_end_gif_2">
+                  End GIF 2:
+                </label>
+                <Input
+                  id="edition_end_gif_2"
+                  type="text"
+                  value={editionData.endGif2}
+                  onValueChange={updateField("endGif2")}
+                  data-type="gif"
+                />
+              </div>
+            </div>
+          </Tab>
+        </Tabs>
+        <Button type="submit" onClick={handleCreateEdition} className="mt-6">
+          Create Edition
+        </Button>
+      </div>
     </div>
   );
 
