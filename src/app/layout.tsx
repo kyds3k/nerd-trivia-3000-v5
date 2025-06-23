@@ -6,6 +6,7 @@ import { Providers } from "./providers";
 import React from 'react';
 import { ToastContainer, Flip, Bounce } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Script from "next/script";
 
 
 const geistSans = localFont({
@@ -63,21 +64,23 @@ export default function RootLayout({
 			<head>
 				<link rel="stylesheet" type="text/css" href="/augmented-ui.min.css" />
 				{/* Define onSpotifyWebPlaybackSDKReady globally */}
-				<script
+				<Script
+					id="spotify-sdk-ready"
+					strategy="beforeInteractive"
 					dangerouslySetInnerHTML={{
 						__html: `
-            window.onSpotifyWebPlaybackSDKReady = function() {
-              console.log("Spotify Web Playback SDK is ready.");
-            };
-          `,
+      window.onSpotifyWebPlaybackSDKReady = function() {
+        console.log("Spotify Web Playback SDK is ready.");
+      };
+    `,
 					}}
-				></script>
-				{/* Add Spotify Web Playback SDK script */}
-				<script
+				/>
+
+				<Script
 					id="spotify-sdk"
 					src="https://sdk.scdn.co/spotify-player.js"
-					async
-				></script>
+					strategy="beforeInteractive"
+				/>
 			</head>
 			<body
 				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} ${linebeam.variable} font-sans antialiased grid-bg`}

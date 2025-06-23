@@ -8,6 +8,12 @@ import Pocketbase from 'pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";
 import Scoring from '@/components/Scoring';
 import ShallNotPass from '@/components/ShallNotPass';
+import DailyIframe from '@daily-co/daily-js';
+import { DailyProvider } from '@daily-co/daily-react';
+import AdminCallControls from '@/components/AdminCallControls';
+import type { DailyCall } from '@daily-co/daily-js';
+
+const ROOM_URL = 'https://nerdtrivia.daily.co/the-cantina';
 
 interface Message {
   message: string;
@@ -67,6 +73,9 @@ export default function Admin() {
     console.log("Selected Question:", question);
     // Perform actions with the selected round and question
   };
+
+  // Daily chat stuff
+  const [callObject, setCallObject] = useState<DailyCall | null>(null);
 
 
   // Handler for toggling a switch
@@ -260,7 +269,7 @@ export default function Admin() {
           setSwitchI1(true);
         } else if (key === 2) {
           setSwitchI2(true);
-        } 
+        }
         return;
       }
 
@@ -485,6 +494,13 @@ export default function Admin() {
     };
   }, []);
 
+  useEffect(() => {
+    const call = DailyIframe.createCallObject();
+    call.join({ url: ROOM_URL, audioSource: true, videoSource: false });
+    setCallObject(call);
+    return () => void call.leave();
+  }, []);
+
   return (
     <div className="admin p-4 pb-10 md:p-10">
       {!isAdmin ? (
@@ -556,7 +572,7 @@ export default function Admin() {
                                   </Button>
                                   <Switch
                                     className='overflow-hidden'
-                                    isSelected={switchStates[key]}
+                                    isSelected={switchStates[key as keyof SwitchStatesType]}
                                     onValueChange={(value) => handleToggle(key, value)}
                                   >
                                     Active
@@ -639,10 +655,13 @@ export default function Admin() {
 
               </div>
             </Tab>
-            <Tab key='miscellany' title='Miscellany'>
+            <Tab key='voicechat' title='Voice Chat'>
               <div className='p-4 pb-10 md:p-10'>
-                <h2 className='text-2xl'>Miscellany</h2>
-                <p>Other admin tasks.</p>
+                <h2 className='text-2xl'>Voice Chat</h2>
+                <DailyProvider callObject={callObject}>
+                  <h1>Admin View — Audio Only The Cantina</h1>
+                  <AdminCallControls />
+                </DailyProvider>
               </div>
             </Tab>
           </Tabs>

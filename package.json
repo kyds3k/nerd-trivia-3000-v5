@@ -18,7 +18,10 @@
     ]
   },
   "dependencies": {
+    "@daily-co/daily-js": "^0.80.0",
+    "@daily-co/daily-react": "^0.22.0",
     "@heroui/button": "^2.2.20",
+    "@heroui/card": "^2.2.21",
     "@heroui/react": "2.7.6",
     "@heroui/theme": "2.4.13",
     "@internationalized/date": "^3.6.0",
@@ -39,6 +42,7 @@
     "embla-carousel-react": "^8.5.1",
     "framer-motion": "11.14.3",
     "gsap": "^3.12.5",
+    "jotai": "^2.12.5",
     "lodash": "^4.17.21",
     "next": "15.3.1",
     "next-auth": "5.0.0-beta.25",

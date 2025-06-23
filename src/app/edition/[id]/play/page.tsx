@@ -6,7 +6,6 @@ import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
 import { Image, Form, Input, Button, Alert } from "@heroui/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
-import { set } from "lodash";
 import { sendMessage } from "@/app/utils/toolbox";
 import { send } from "process";
 
