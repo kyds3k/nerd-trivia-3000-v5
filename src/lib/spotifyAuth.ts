@@ -1,33 +1,7 @@
-// utils/apiUtils.ts
-import { signIn } from "next-auth/react"
-
-export const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
-  console.log("sendMessage called with:", { type, message, team });
-
-  try {
-    const response = await fetch('/api/notify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ type, message, team }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-
-    const json = await response.json();
-    console.log("Data sent successfully:", json);
-    return json; // Return the response JSON for further use if needed
-  } catch (error) {
-    console.error("Error sending data:", error);
-    throw error; // Re-throw the error to handle it in the calling function
-  }
-};
+import { signIn } from "next-auth/react";
 
 // Clear stored tokens helper function
-const clearStoredTokens = () => {
+export const clearStoredTokens = () => {
   localStorage.removeItem("spotifyAuthToken");
   localStorage.removeItem("spotifyRefreshTokenExpiry");
   localStorage.removeItem("spotifyRefreshToken");
@@ -35,19 +9,18 @@ const clearStoredTokens = () => {
   localStorage.removeItem("spotifyAuthTokenExpiry");
 };
 
-export const refreshSpotifyAuth = async (
+export const refreshSpotifyToken = async (
   setSpotifyToken: React.Dispatch<React.SetStateAction<string | null>>,
   retryCount: number = 0
 ) => {
   console.log("refreshSpotifyAuth called");
 
-  // Limit retries to avoid infinite recursion
   const MAX_RETRIES = 3;
 
   if (retryCount >= MAX_RETRIES) {
     console.error("Exceeded maximum retry attempts. Redirecting to sign-in.");
     clearStoredTokens();
-    signIn("spotify"); // Redirect to OAuth flow
+    signIn("spotify");
     return;
   }
 
@@ -55,10 +28,17 @@ export const refreshSpotifyAuth = async (
   const refreshTokenExpiry = localStorage.getItem("spotifyRefreshTokenExpiry");
   const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
+  console.log("Saved Token:", savedToken);
+  console.log("Refresh Token Expiry:", refreshTokenExpiry);
+  console.log("Saved Refresh Token:", savedRefreshToken);
+
+  // Check if we have all required tokens
   if (savedToken && refreshTokenExpiry && savedRefreshToken) {
     const expiry = parseInt(refreshTokenExpiry, 10) || 0;
     const now = Date.now();
 
+    console.log(`Token expiry: ${expiry}, Current time: ${now}`);
+    
     // Check if token is expired (with 5 minute buffer)
     if (expiry < (now + 5 * 60 * 1000)) {
       console.log("Token expired or expiring soon. Attempting to refresh...");
@@ -97,21 +77,11 @@ export const refreshSpotifyAuth = async (
             signIn("spotify");
             return;
           }
-          console.log("Retrying refreshSpotifyAuth...");
-          await refreshSpotifyAuth(setSpotifyToken, retryCount + 1);
+          await refreshSpotifyToken(setSpotifyToken, retryCount + 1);
         }
       } catch (error) {
         console.error("Error refreshing Spotify token:", error);
-
-        if (error?.toString().includes("revoked")) {
-          console.log("Token was revoked, clearing local storage");
-          clearStoredTokens();
-          signIn("spotify");
-          return;
-        }
-
-        console.log("Retrying refreshSpotifyAuth...");
-        await refreshSpotifyAuth(setSpotifyToken, retryCount + 1);
+        await refreshSpotifyToken(setSpotifyToken, retryCount + 1);
       }
     } else {
       console.log("Token is still valid");
@@ -120,6 +90,31 @@ export const refreshSpotifyAuth = async (
   } else {
     console.log("No valid token found. Redirecting to sign-in.");
     clearStoredTokens();
-    signIn("spotify"); // Redirect to OAuth flow
+    signIn("spotify");
   }
+};
+
+// Check if Spotify token is valid without refreshing
+export const isSpotifyTokenValid = (): boolean => {
+  const savedToken = localStorage.getItem("spotifyAuthToken");
+  const refreshTokenExpiry = localStorage.getItem("spotifyRefreshTokenExpiry");
+  const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
+
+  if (!savedToken || !refreshTokenExpiry || !savedRefreshToken) {
+    return false;
+  }
+
+  const expiry = parseInt(refreshTokenExpiry, 10) || 0;
+  const now = Date.now();
+  
+  // Check if token is expired (with 5 minute buffer)
+  return expiry > (now + 5 * 60 * 1000);
+};
+
+// Get current Spotify token if valid
+export const getSpotifyToken = (): string | null => {
+  if (isSpotifyTokenValid()) {
+    return localStorage.getItem("spotifyAuthToken");
+  }
+  return null;
 };

@@ -18,7 +18,7 @@ import Typed from "typed.js";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from '@/components/ShallNotPass';
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import { refreshSpotifyToken } from "@/lib/spotifyAuth";
 
 
 interface Question {
@@ -168,6 +168,11 @@ export default function Question() {
 
   // function to grab the album art, song name, and artist name from the Spotify API
   const getSongInfo = async (song: string) => {
+    if (!spotifyToken) {
+      console.log("No Spotify token available for song info");
+      return;
+    }
+
     const songId = song.split(":")[2];
     const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
       method: "GET",
@@ -183,6 +188,9 @@ export default function Question() {
       setSongArtist(data.artists[0].name);
       setSongTitle(data.name);
       setSongAlbumArt(data.album.images[0].url);
+    } else if (response.status === 401) {
+      console.log("Spotify token expired, refreshing...");
+      await refreshSpotifyToken(setSpotifyToken);
     } else {
       console.error("Failed to fetch song info:", await response.json());
     }

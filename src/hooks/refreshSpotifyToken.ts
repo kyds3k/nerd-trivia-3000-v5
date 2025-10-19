@@ -1,5 +1,13 @@
 import { signIn } from "next-auth/react";
-import { useSession } from "next-auth/react";
+
+// Clear stored tokens helper function
+const clearStoredTokens = () => {
+  localStorage.removeItem("spotifyAuthToken");
+  localStorage.removeItem("spotifyRefreshTokenExpiry");
+  localStorage.removeItem("spotifyRefreshToken");
+  localStorage.removeItem("spotifyAuthRefreshToken");
+  localStorage.removeItem("spotifyAuthTokenExpiry");
+};
 
 export const refreshSpotifyToken = async (
   setSpotifyToken: React.Dispatch<React.SetStateAction<string | null>>,
@@ -24,15 +32,17 @@ export const refreshSpotifyToken = async (
   console.log("Refresh Token Expiry:", refreshTokenExpiry);
   console.log("Saved Refresh Token:", savedRefreshToken);
 
+  // Check if we have all required tokens
   if (savedToken && refreshTokenExpiry && savedRefreshToken) {
     const expiry = parseInt(refreshTokenExpiry, 10) || 0;
     const now = Date.now();
 
     console.log(`Token expiry: ${expiry}, Current time: ${now}`);
-    if (expiry < now) {
-      console.log("Token expired. Attempting to refresh...");
+    
+    // Check if token is expired (with 5 minute buffer)
+    if (expiry < (now + 5 * 60 * 1000)) {
+      console.log("Token expired or expiring soon. Attempting to refresh...");
       try {
-        // set all the localstorage values to null
         const response = await fetch("https://accounts.spotify.com/api/token", {
           method: "POST",
           headers: {
@@ -61,6 +71,12 @@ export const refreshSpotifyToken = async (
         } else {
           const errorData = await response.json();
           console.error("Failed to refresh Spotify token:", errorData);
+          // If refresh token is invalid, clear tokens and redirect
+          if (response.status === 400) {
+            clearStoredTokens();
+            signIn("spotify");
+            return;
+          }
           await refreshSpotifyToken(setSpotifyToken, retryCount + 1);
         }
       } catch (error) {
@@ -73,15 +89,7 @@ export const refreshSpotifyToken = async (
     }
   } else {
     console.log("No valid token found. Redirecting to sign-in.");
-    localStorage.setItem("spotifyAuthToken", "");
-    localStorage.setItem("spotifyRefreshToken", "");
-    localStorage.setItem("spotifyRefreshTokenExpiry", "0");
-    await signIn("spotify");
+    clearStoredTokens();
+    signIn("spotify");
   }
-};
-
-const clearStoredTokens = () => {
-  localStorage.removeItem("spotifyAuthToken");
-  localStorage.removeItem("spotifyRefreshTokenExpiry");
-  localStorage.removeItem("spotifyRefreshToken");
 };

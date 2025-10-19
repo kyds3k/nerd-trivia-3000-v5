@@ -74,38 +74,49 @@ export default function Question() {
     }
   }, [emblaApi])
 
+  // Clear stored tokens helper function
+  const clearStoredTokens = () => {
+    localStorage.removeItem("spotifyAuthToken");
+    localStorage.removeItem("spotifyRefreshTokenExpiry");
+    localStorage.removeItem("spotifyRefreshToken");
+    localStorage.removeItem("spotifyAuthRefreshToken");
+    localStorage.removeItem("spotifyAuthTokenExpiry");
+  };
+
   const refreshSpotifyAuth = async () => {
     console.log("refreshSpotifyAuth called");
-    // Check if a valid token exists in localStorage
+    
     const savedToken = localStorage.getItem("spotifyAuthToken");
-    console.log("Saved token from localStorage:", savedToken);
+    const refreshTokenExpiry = localStorage.getItem("spotifyRefreshTokenExpiry");
+    const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
-    const savedTokenExpiry = localStorage.getItem("spotifyAuthTokenExpiry");
-    const savedRefreshToken = localStorage.getItem("spotifyAuthRefreshToken");
+    console.log("Saved Token:", savedToken);
+    console.log("Refresh Token Expiry:", refreshTokenExpiry);
+    console.log("Saved Refresh Token:", savedRefreshToken);
 
-    // if token is expired, refresh it
-    if (savedToken && savedTokenExpiry && savedRefreshToken) {
-      console.log('Token:', savedToken);
-      console.log('Expiry:', savedTokenExpiry);
-      console.log('Refresh Token:', savedRefreshToken);
-      const expiry = parseInt(savedTokenExpiry);
+    // Check if we have all required tokens
+    if (savedToken && refreshTokenExpiry && savedRefreshToken) {
+      const expiry = parseInt(refreshTokenExpiry, 10) || 0;
       const now = Date.now();
-      console.log('expiry:', expiry);
-      console.log('now:', now);
-      if (expiry < now) {
-        console.log('expiret! gotta refresh!')
+
+      console.log(`Token expiry: ${expiry}, Current time: ${now}`);
+      
+      // Check if token is expired (with 5 minute buffer)
+      if (expiry < (now + 5 * 60 * 1000)) {
+        console.log("Token expired or expiring soon. Attempting to refresh...");
         try {
           const response = await fetch("https://accounts.spotify.com/api/token", {
             method: "POST",
             headers: {
               "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${btoa(`${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`)}`,
-
+              Authorization: `Basic ${btoa(
+                `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`
+              )}`,
             },
             body: new URLSearchParams({
               grant_type: "refresh_token",
               refresh_token: savedRefreshToken,
-              client_id: `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}`
+              client_id: `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}`,
             }),
           });
 
@@ -113,21 +124,29 @@ export default function Question() {
             const data = await response.json();
             localStorage.setItem("spotifyAuthToken", data.access_token);
             setSpotifyToken(data.access_token);
-            localStorage.setItem("spotifyAuthTokenExpiry", (Date.now() + data.expires_in * 1000).toString());
-            localStorage.setItem("spotifyAuthRefreshToken", data.refresh_token);
+            localStorage.setItem(
+              "spotifyRefreshTokenExpiry",
+              (Date.now() + data.expires_in * 1000).toString()
+            );
+            localStorage.setItem("spotifyRefreshToken", data.refresh_token);
             console.log("Refreshed Spotify token successfully:", data.access_token);
           } else {
-            console.error("Failed to refresh Spotify token:", await response.json());
+            const errorData = await response.json();
+            console.error("Failed to refresh Spotify token:", errorData);
+            // If refresh token is invalid, clear tokens and redirect
+            if (response.status === 400) {
+              clearStoredTokens();
+              window.location.href = "/api/auth/signin";
+              return;
+            }
           }
         } catch (error) {
-          console.error("Failed to refresh Spotify token:", error);
-          // if error contains "revoked", clear the token and do the oAuth flow again
-          if (console.error.toString().includes("revoked")) {
+          console.error("Error refreshing Spotify token:", error);
+          if (error?.toString().includes("revoked")) {
             console.log("Token was revoked, clearing local storage");
-            localStorage.removeItem("spotifyAuthToken");
-            localStorage.removeItem("spotifyAuthTokenExpiry");
-            localStorage.removeItem("spotifyAuthRefreshToken");
-            refreshSpotifyAuth();
+            clearStoredTokens();
+            window.location.href = "/api/auth/signin";
+            return;
           }
         }
       } else {
@@ -135,31 +154,9 @@ export default function Question() {
         setSpotifyToken(savedToken);
       }
     } else {
-      // If no valid token, initiate OAuth
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        const authData = await pb.collection("users").authWithOAuth2({
-          requestKey: randomRequestKey,
-          provider: "spotify",
-          scopes: [
-            "streaming user-read-playback-state user-modify-playback-state user-read-currently-playing playlist-read-private playlist-modify-private user-read-playback-position user-read-email"
-          ],
-        });
-
-        console.log("authData", authData);
-
-        // Save token and user info in localStorage
-        if (authData.meta?.accessToken) {
-          localStorage.setItem("spotifyAuthToken", authData.meta.accessToken);
-          setSpotifyToken(authData.meta.accessToken);
-          localStorage.setItem("spotifyAuthRefreshToken", authData.meta.refreshToken);
-          localStorage.setItem("spotifyAuthTokenExpiry", authData.meta.expiry);
-          console.log("Authenticated with Spotify successfully:", authData.meta.name);
-        }
-
-      } catch (error) {
-        console.error("Failed to refresh Spotify auth state:", error);
-      }
+      console.log("No valid token found. Redirecting to sign-in.");
+      clearStoredTokens();
+      window.location.href = "/api/auth/signin";
     }
   }
 
