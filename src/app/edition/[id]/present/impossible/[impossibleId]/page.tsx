@@ -18,7 +18,7 @@ import { set } from 'lodash';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import { refreshSpotifyToken } from "@/lib/spotifyAuth";
 
 interface Impossible {
   edition_id: string;
@@ -53,7 +53,6 @@ export default function Impossible() {
   const [songAlbumArts, setSongAlbumArts] = useState<string[]>([]);
   const [isActive, setIsActive] = useState<boolean | null>(null);
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
-  const s = localStorage.getItem("spotifyAuthToken");
   const [loading, setLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
@@ -141,6 +140,9 @@ export default function Impossible() {
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setLoading(false);
+      
+      // Initialize Spotify token
+      refreshSpotifyToken(setSpotifyToken);
     };
 
     const fetchQuestion = async () => {
@@ -189,7 +191,7 @@ export default function Impossible() {
       const titles: string[] = [];
       const albumArts: string[] = [];
 
-      const token =  localStorage.getItem("spotifyRefreshToken");
+      const token = localStorage.getItem("spotifyAuthToken");
 
       console.log('token from local storage: ', token);
 
@@ -214,9 +216,28 @@ export default function Impossible() {
             artists.push(data.artists[0].name);
             titles.push(data.name);
             albumArts.push(data.album.images[0].url);
+          } else if (response.status === 401) {
+            console.log("Spotify token expired, refreshing...");
+            await refreshSpotifyToken(setSpotifyToken);
+            // Retry with refreshed token
+            const newToken = localStorage.getItem("spotifyAuthToken");
+            if (newToken) {
+              const retryResponse = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${newToken}`,
+                  "Content-Type": "application/json",
+                },
+              });
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                artists.push(retryData.artists[0].name);
+                titles.push(retryData.name);
+                albumArts.push(retryData.album.images[0].url);
+              }
+            }
           } else {
-            console.log("Failed to fetch song info - refreshing token", await response.json());
-            refreshSpotifyToken(setSpotifyToken);
+            console.log("Failed to fetch song info:", await response.json());
           }
         } catch (error) {
           console.log("Error fetching song info:", error);
@@ -235,7 +256,19 @@ export default function Impossible() {
       if (editionId) {
         await initializeApp();
         const songs = await fetchQuestion(); // Wait for fetchQuestion and get the songs
-        await getSongsInfo(songs); // Pass the songs directly to getSongsInfo
+        
+        // Only fetch song info if we have songs and a valid token
+        if (songs && songs.length > 0) {
+          // Wait a bit for Spotify token to be initialized
+          setTimeout(async () => {
+            const token = localStorage.getItem("spotifyAuthToken");
+            if (token) {
+              await getSongsInfo(songs);
+            } else {
+              console.log("No Spotify token available for song info");
+            }
+          }, 1000);
+        }
       }
     };
 
