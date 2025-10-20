@@ -129,9 +129,10 @@ export default function EditionPage() {
         sendMessage("team", `Team ${team.team_name} is back for more!`, team.id);
         // update current_edition field in team
         try {
-          team.current_edition = editionId;
-          team = await pb.collection('teams').update(team.id, team);
-          console.log("Team updated:", team);
+          const updatedTeam = await pb.collection('teams').update(team.id, {
+            current_edition: editionId
+          });
+          console.log("Team updated:", updatedTeam);
           setTimeout(() => {
             router.push(`/edition/${editionId}/play/${team.id}`);
           }, 3000);
