@@ -27,25 +27,36 @@ export default function RegularAnswerCard({
   );
   const [miscBonus, setMiscBonus] = useState(answer.misc_bonus || 0);
   const [excelsior, setExcelsior] = useState(answer.excelsior || false);
+  
+  // State for overlay
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  // Handler for Rescore button
+  const handleRescore = () => {
+    setShowOverlay(false);
+    // Submit the data when rescoring
+    const data = {
+      id: answer.id,
+      answer_correct: answerCorrect,
+      music_correct: musicCorrect,
+      bantha_answer_correct: banthaAnswerCorrect,
+      misc_bonus: miscBonus,
+      excelsior: excelsior,
+      team_identifier: answer.team_identifier,
+      team_id: answer.team_id,
+    };
+    console.log('data from card:', data);
+    onSubmit(data);
+  };
 
   return (
-    <Card className="bg-gray-600 w-1/3 max-w-80" key={answer.id}>
+    <div className="relative w-1/3 max-w-80">
+      <Card className="bg-gray-600" key={answer.id}>
       <Form
         id={answer.id}
         onSubmit={(e) => {
           e.preventDefault();
-          const data = {
-            id: answer.id,
-            answer_correct: answerCorrect,
-            music_correct: musicCorrect,
-            bantha_answer_correct: banthaAnswerCorrect,
-            misc_bonus: miscBonus,
-            excelsior: excelsior,
-            team_identifier: answer.team_identifier,
-            team_id: answer.team_id,
-          };
-          console.log('data from card:', data);
-          onSubmit(data);
+          setShowOverlay(true);
         }}
       >
         <CardHeader>
@@ -67,7 +78,7 @@ export default function RegularAnswerCard({
                 <strong>Answer:</strong>
               </p>
               <pre className="whitespace-pre-wrap">{answer.answer}</pre>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center mt-5">
                 <span className="text-md">Correct:</span>
                 <Switch
                   isSelected={answerCorrect}
@@ -135,5 +146,21 @@ export default function RegularAnswerCard({
         </CardFooter>
       </Form>
     </Card>
+    
+    {/* Overlay */}
+    {showOverlay && (
+      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+        <div className="bg-gray-600 p-6 rounded-lg shadow-lg text-center">
+          <div className="text-xl font-bold text-white mb-5">Submitted!</div>
+          <Button 
+            onClick={handleRescore}
+            className="bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Rescore
+          </Button>
+        </div>
+      </div>
+    )}
+    </div>
   );
 }
