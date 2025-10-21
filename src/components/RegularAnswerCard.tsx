@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Input, Form, Button, Divider, Switch, Image } from "@heroui/react";
+import SubmittedOverlay from "./SubmittedOverlay";
 
 interface RegularAnswerProps {
   answer: any; // Replace `any` with the correct `Answer` type
@@ -146,20 +147,7 @@ export default function RegularAnswerCard({
       </Form>
     </Card>
     
-    {/* Overlay */}
-    {showOverlay && (
-      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-        <div className="bg-gray-600 p-6 rounded-lg shadow-lg text-center">
-          <div className="text-xl font-bold text-white mb-5">Submitted!</div>
-          <Button 
-            onClick={handleRescore}
-            className="bg-blue-500 hover:bg-blue-600 text-white"
-          >
-            Rescore
-          </Button>
-        </div>
-      </div>
-    )}
+    <SubmittedOverlay show={showOverlay} onRescore={handleRescore} />
     </div>
   );
 }

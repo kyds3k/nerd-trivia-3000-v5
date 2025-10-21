@@ -322,7 +322,44 @@ export default function NewEditionPage() {
       const editionId = updatedEdition.id;
       console.log("Edition created:", updatedEdition);
 
-      // Step 1.5: Create the rounds in a loop of 3
+      // Step 1.5: Reset all active states for this edition
+      setLoadMessage("Resetting active states...");
+      
+      // Reset all questions to inactive
+      const allQuestions = await pb.collection("questions").getFullList({
+        filter: `edition_id="${editionId}"`
+      });
+      for (const question of allQuestions) {
+        await pb.collection("questions").update(question.id, { is_active: false });
+      }
+      
+      // Reset impossible rounds to inactive
+      const impossibleRounds = await pb.collection("impossible_rounds").getFullList({
+        filter: `edition_id="${editionId}"`
+      });
+      for (const impossible of impossibleRounds) {
+        await pb.collection("impossible_rounds").update(impossible.id, { is_active: false });
+      }
+      
+      // Reset wager round to inactive
+      const wagerRounds = await pb.collection("wager_rounds").getFullList({
+        filter: `edition_id="${editionId}"`
+      });
+      for (const wager of wagerRounds) {
+        await pb.collection("wager_rounds").update(wager.id, { is_active: false });
+      }
+      
+      // Reset final round to inactive
+      const finalRounds = await pb.collection("final_rounds").getFullList({
+        filter: `edition_id="${editionId}"`
+      });
+      for (const final of finalRounds) {
+        await pb.collection("final_rounds").update(final.id, { is_active: false });
+      }
+      
+      console.log("All active states reset!");
+
+      // Step 1.6: Create the rounds in a loop of 3
 
       for (let i = 1; i < 4; i++) {
         const roundGif = i === 1 ? r1Gif : i === 2 ? r2Gif : r3Gif;

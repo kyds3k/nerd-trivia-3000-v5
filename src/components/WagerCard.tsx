@@ -3,6 +3,7 @@
 import React, { useState} from "react";
 import { Card, CardHeader, CardBody, CardFooter } from "@heroui/card";
 import { Input, Form, Button, Divider, Switch } from "@heroui/react";
+import SubmittedOverlay from "./SubmittedOverlay";
 
 interface WagerProps {
   wager: any; // Replace `any` with the correct `Wager` type
@@ -11,21 +12,28 @@ interface WagerProps {
 
 export default function WagerCard({ wager, onSubmit }: WagerProps) {
   const [musicCorrect, setMusicCorrect] = useState(wager.music_correct || false);
+  const [showOverlay, setShowOverlay] = useState(false);
+
+  const handleRescore = () => {
+    setShowOverlay(false);
+  };
 
   return (
-    <Card className="bg-gray-600 w-1/3 max-w-80" key={wager.id}>
-      <Form
-        id={wager.id}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const data = {
-            id: wager.id,
-            music_correct: musicCorrect
-          }
-          onSubmit(data);
-          console.log('data from card:', data);
-        }}
-      >
+    <div className="relative w-1/3 max-w-80">
+      <Card className="bg-gray-600" key={wager.id}>
+        <Form
+          id={wager.id}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const data = {
+              id: wager.id,
+              music_correct: musicCorrect
+            }
+            onSubmit(data);
+            console.log('data from card:', data);
+            setShowOverlay(true);
+          }}
+        >
         <Input type="hidden" name="id" value={wager.id} />
         <CardHeader>
           <h3 className="text-lg font-bold">{wager.team_name}</h3>
@@ -60,6 +68,9 @@ export default function WagerCard({ wager, onSubmit }: WagerProps) {
           </Button>
         </CardFooter>
       </Form>
-    </Card >
+    </Card>
+
+    <SubmittedOverlay show={showOverlay} onRescore={handleRescore} />
+    </div>
   );
 }
