@@ -108,7 +108,7 @@ export default function Scoreboard() {
                       key={index}
                       className="fade-in-up"
                       style={{
-                        animationDelay: `${(scores.length - index - 1) * 3}s`, // Delay based on reverse index
+                        animationDelay: `${3 + (scores.length - index - 1) * 3}s`, // Base 3s delay + reverse index delay
                       }}
                     >
                       <TableCell className="text-2xl">{score.team_name}</TableCell>
