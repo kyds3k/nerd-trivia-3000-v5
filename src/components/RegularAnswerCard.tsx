@@ -34,19 +34,7 @@ export default function RegularAnswerCard({
   // Handler for Rescore button
   const handleRescore = () => {
     setShowOverlay(false);
-    // Submit the data when rescoring
-    const data = {
-      id: answer.id,
-      answer_correct: answerCorrect,
-      music_correct: musicCorrect,
-      bantha_answer_correct: banthaAnswerCorrect,
-      misc_bonus: miscBonus,
-      excelsior: excelsior,
-      team_identifier: answer.team_identifier,
-      team_id: answer.team_id,
-    };
-    console.log('data from card:', data);
-    onSubmit(data);
+    // Do not submit here; allow user to change fields and click Submit again
   };
 
   return (
@@ -56,6 +44,17 @@ export default function RegularAnswerCard({
         id={answer.id}
         onSubmit={(e) => {
           e.preventDefault();
+          const data = {
+            id: answer.id,
+            answer_correct: answerCorrect,
+            music_correct: musicCorrect,
+            bantha_answer_correct: banthaAnswerCorrect,
+            misc_bonus: miscBonus,
+            excelsior: excelsior,
+            team_identifier: answer.team_identifier,
+            team_id: answer.team_id,
+          };
+          onSubmit(data);
           setShowOverlay(true);
         }}
       >

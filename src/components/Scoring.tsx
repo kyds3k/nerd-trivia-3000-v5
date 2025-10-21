@@ -114,13 +114,17 @@ export default function Scoring() {
   const scoreSubmit = async (data: any) => {
     if (!roundType) return console.error("No round type selected.");
 
+    // We'll compute differential points (new - previous) and apply the delta to the team
+    // For impossible, fetch the point value once to use for both previous and new calculations
+    let impossiblePointValue: number | null = null;
     if (roundType === "impossible") {
       const impossibleNumber = parseInt(questionNumber || "1");
       try {
         const impossibleValue = await pb
           .collection("impossible_rounds")
           .getFirstListItem(`edition_id = "${editionId}" && impossible_number = ${impossibleNumber}`);
-        if (impossibleValue?.point_value) setScoreMultiplier(impossibleValue.point_value);
+        impossiblePointValue = impossibleValue?.point_value || null;
+        if (impossiblePointValue) setScoreMultiplier(impossiblePointValue);
       } catch {
         console.error("Impossible point value not found");
         return;
@@ -131,7 +135,9 @@ export default function Scoring() {
     const answer = regularAnswers.find((a) => a.id === answerId);
     if (!answer) return console.error("Answer not found");
 
-    const updatedAnswer = { ...answer, ...data };
+    // Fetch the original answer from database to get true previous state
+    const originalAnswer = await pb.collection("answers").getOne(answerId);
+    const updatedAnswer = { ...originalAnswer, ...data };
     updatedAnswer.edition_id = editionId;
     updatedAnswer.team_id= data.team_id;
     updatedAnswer.answer_correct = data.answer_correct;
@@ -146,57 +152,69 @@ export default function Scoring() {
 
     try {
       pb.autoCancellation(false);
-      await pb.collection("answers").update(updatedAnswer.id, updatedAnswer);
+      // Calculate previous points based on existing stored values (answer)
+      const calculateRegularPoints = (a: any): number => {
+        let p = 0;
+        // Calculate multiplier based on current round and question
+        // Round 3 has doubled point values
+        let multiplier = currentRound === "impossible" ? 100 : currentRound === "final" ? 1 : parseInt(questionNumber || "1") || 1;
+        if (currentRound === "3") multiplier *= 2; // Round 3 doubles all point values
+        if (a.answer_correct) p = 100 * multiplier;
+        if (a.bantha_used) p /= 2;
+        if (a.music_correct) p += 100;
+        if (a.music_2_correct) p += 100;
+        if (a.misc_bonus) p += parseInt(a.misc_bonus, 10);
+        if (a.excelsior) p += 25;
+        return p;
+      };
 
-      let points = 0;
+      const calculateImpossiblePoints = (a: any): number => {
+        const base = (impossiblePointValue || scoreMultiplier) * (a.impossible_correct_count || 0);
+        let p = base;
+        if (a.music_correct) p += 100;
+        if (a.music_2_correct) p += 100;
+        if (a.misc_bonus) p += parseInt(a.misc_bonus, 10);
+        if (a.excelsior) p += 25;
+        return p;
+      };
 
-      switch (roundType) {
-        case "impossible":
-          points = scoreMultiplier * (data.correct_answers || 0);
-          if (updatedAnswer.music_correct) points += 100;
-          if (updatedAnswer.music_2_correct) points += 100;
-          if (updatedAnswer.misc_bonus) points += parseInt(updatedAnswer.misc_bonus, 10);
-          if (updatedAnswer.excelsior) points += 25;
-          break;
+      const calculateFinalPoints = async (a: any): Promise<number> => {
+        const teamForWager = await pb.collection("teams").getFirstListItem(`id = "${a.team_id}"`);
+        const finalWager = teamForWager.wager || 0;
+        let p = a.answer_correct ? finalWager : -finalWager;
+        if (a.music_correct) p += 100;
+        return p;
+      };
 
-        case "final":
-          console.log("Team id:", updatedAnswer.team_id);
-          const team = await pb.collection("teams").getFirstListItem(`id = "${updatedAnswer.team_id}"`);
-          const finalWager = team.wager || 0; // Ensure finalWager has a default value
-          console.log("Final wager:", finalWager);
-          if (updatedAnswer.answer_correct) {
-            points = finalWager;
-          } else {
-            points = -finalWager;
-          }
-          if (updatedAnswer.music_correct) points += 100;
+      let prevPoints = 0;
+      let newPoints = 0;
 
-          console.log("Final points:", points);
-
-          break;
-
-        default:
-          if (updatedAnswer.answer_correct) points = 100 * scoreMultiplier;
-          if (updatedAnswer.bantha_used) points /= 2;
-          if (updatedAnswer.music_correct) points += 100;
-          if (updatedAnswer.music_2_correct) points += 100;
-          if (updatedAnswer.misc_bonus) points += parseInt(updatedAnswer.misc_bonus, 10);
-          if (updatedAnswer.excelsior) points += 25;
-          break;
+      if (roundType === "impossible") {
+        prevPoints = calculateImpossiblePoints(originalAnswer);
+        newPoints = calculateImpossiblePoints(updatedAnswer);
+      } else if (roundType === "final") {
+        prevPoints = await calculateFinalPoints(originalAnswer);
+        newPoints = await calculateFinalPoints(updatedAnswer);
+      } else {
+        prevPoints = calculateRegularPoints(originalAnswer);
+        newPoints = calculateRegularPoints(updatedAnswer);
       }
 
-      console.log("updated answer with points:", updatedAnswer);
+      const delta = newPoints - prevPoints;
+
+      // Persist the updated answer before adjusting team totals
+      await pb.collection("answers").update(updatedAnswer.id, updatedAnswer);
 
       const team = await pb.collection("teams").getFirstListItem(`id = "${updatedAnswer.team_id}"`);
       const newTeamData = {
-        points_for_game: team.points_for_game + points,
-        all_time_points: team.all_time_points + points,
+        points_for_game: team.points_for_game + delta,
+        all_time_points: team.all_time_points + delta,
         banthashit_used: updatedAnswer.bantha_used ? team.banthashit_used + 1 : team.banthashit_used,
         banthashit_card: updatedAnswer.bantha_answer_correct ? true : team.banthashit_card,
       };
 
       await pb.collection("teams").update(updatedAnswer.team_id, newTeamData);
-      console.log("Team score updated!");
+      console.log("Team score updated via delta:", { prevPoints, newPoints, delta });
     } catch (error) {
       console.error("Error updating answer or team score:", error);
     }
@@ -216,20 +234,22 @@ export default function Scoring() {
 
     try {
       pb.autoCancellation(false);
-      await pb.collection("wagers").update(`${updatedWager.id}`, updatedWager);
+      // differential points for wager music bonus (100 if correct)
+      const prevPoints = wager.music_correct ? 100 : 0;
+      const newPoints = updatedWager.music_correct ? 100 : 0;
+      const delta = newPoints - prevPoints;
 
-      let points = 0;
-      if (updatedWager.music_correct) points = 100;
+      await pb.collection("wagers").update(`${updatedWager.id}`, updatedWager);
 
       const team = await pb.collection("teams").getOne(updatedWager.team_id);
       const newTeamData = {
-        points_for_game: team.points_for_game + points,
-        all_time_points: team.all_time_points + points,
+        points_for_game: team.points_for_game + delta,
+        all_time_points: team.all_time_points + delta,
         wager: updatedWager.wager
       };
 
       await pb.collection("teams").update(updatedWager.team_id, newTeamData);
-      console.log("Team score updated!");
+      console.log("Team score updated via delta:", { prevPoints, newPoints, delta });
     } catch (error) {
       console.error("Error updating wager or team score:", error);
     }
