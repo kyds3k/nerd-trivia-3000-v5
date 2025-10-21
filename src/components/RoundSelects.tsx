@@ -36,12 +36,9 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
     e.preventDefault();
     onSubmit(firstSelectValue, secondSelectValue); // Pass selected round and question to parent
 
-    // Reset form
-    setFirstSelectValue("");
-    setSecondSelectValue("");
-    setSecondSelectOptions([]);
-    // enable the button
-    e.currentTarget.querySelector('button')?.removeAttribute('disabled');
+    // Reset form but keep dropdowns enabled for next selection
+    setSecondSelectValue(""); // Only reset the question selection
+    // Keep firstSelectValue and secondSelectOptions so dropdowns remain enabled
   };
 
   return (
