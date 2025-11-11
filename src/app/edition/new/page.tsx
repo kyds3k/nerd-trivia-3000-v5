@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import {
   Tabs,
@@ -23,9 +23,12 @@ import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useEditionDraft } from "../../../../src/hooks/useEditionDraft";
 import { useDateField } from "../../../../src/hooks/useDateField";
+import GifPicker from "gif-picker-react";
 
 
 export default function NewEditionPage() {
+  // Ref to collect all GifPicker search inputs
+  const gifInputsRef = useRef<HTMLInputElement[]>([]);
 
   const {
     editionData,
@@ -104,6 +107,25 @@ export default function NewEditionPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
+
+  // Lazy GIF Pickers toggle state
+  const [showEditionGifPicker, setShowEditionGifPicker] = useState(false);
+  const [showR1GifPicker, setShowR1GifPicker] = useState(false);
+  const [showR2GifPicker, setShowR2GifPicker] = useState(false);
+  const [showR3GifPicker, setShowR3GifPicker] = useState(false);
+  const [showWagerIntroGifPicker, setShowWagerIntroGifPicker] = useState(false);
+  const [showFinalCategoryGifPicker, setShowFinalCategoryGifPicker] = useState(false);
+  const [showWagerPlacingGifPicker, setShowWagerPlacingGifPicker] = useState(false);
+  const [showFinalIntroGifPicker, setShowFinalIntroGifPicker] = useState(false);
+  const [showFinalAnswerGifPicker, setShowFinalAnswerGifPicker] = useState(false);
+  const [showEndGif1Picker, setShowEndGif1Picker] = useState(false);
+  const [showEndGif2Picker, setShowEndGif2Picker] = useState(false);
+  // Impossible 1/2 theme gif pickers
+  const [showImp1ThemeGifPicker, setShowImp1ThemeGifPicker] = useState(false);
+  const [showImp2ThemeGifPicker, setShowImp2ThemeGifPicker] = useState(false);
+  // Impossible 1/2 intro gif pickers (lazy loaded)
+  const [showImp1IntroGifPicker, setShowImp1IntroGifPicker] = useState(false);
+  const [showImp2IntroGifPicker, setShowImp2IntroGifPicker] = useState(false);
 
 
 
@@ -519,12 +541,24 @@ export default function NewEditionPage() {
         ) : (
           <p className="my-4">{error}</p>
         )}
+        {/*
+          Tabs onChange: blur all collected GifPicker search inputs to prevent scroll jumps
+        */}
+        {/*
+          Clear gifInputsRef.current before each mount to avoid duplicates
+        */}
         <Tabs
           aria-label="Rounds"
           destroyInactiveTabPanel={true}
           size="lg"
           variant="bordered"
           classNames={{ tabList: "mb-4 sticky top-14" }}
+          scrollIntoView={false} // prevent auto-scroll on tab change
+          onChange={() => {
+            setTimeout(() => {
+              gifInputsRef.current.forEach(input => input?.blur());
+            }, 50);
+          }}
         >
           <Tab key="landing" title="Landing">
             <h3 className="mb-8 text-2xl">Landing Page</h3>
@@ -557,38 +591,46 @@ export default function NewEditionPage() {
                   data-identifier="edition_date"
                 />
               </div>
-              <div className="mb-4 w-1/4">
-                <label className="mb-2 block" htmlFor="edition_gif">
-                  Edition GIF:
-                </label>
-                <Input
-                  id="edition_gif"
-                  type="text"
-                  data-type="gif"
-                  data-identifier="edition_gif"
-                  value={editionData.editionGif}
-                  onValueChange={updateField("editionGif")}
-                />
-              </div>
-              <div className="mb-4 w-1/2">
-                <label className="mb-2 block" htmlFor="edition_blurb">
-                  Blurb
-                </label>
-                <Tiptap state={editionData.blurb || ""} setState={updateField("blurb")} identifier="edition_blurb" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
-              </div>
-              <div className="mb-4 w-1/4">
-                <label className="mb-2 block" htmlFor="edition_home_song">
-                  Home Song:
-                </label>
-                <Input
-                  id="edition_home_song"
-                  type="text"
-                  data-type="song"
-                  data-identifier="edition_home_song"
-                  value={editionData.homeSong}
-                  onValueChange={updateField("homeSong")}
-                  required
-                />
+              <div className="mb-4 w-full flex flex-col gap-8">
+                <div className="gif-input w-1/2">
+                  <label className="mb-2 block" htmlFor="edition_gif">
+                    Edition GIF:
+                  </label>
+                  <Input
+                    id="edition_gif"
+                    type="text"
+                    data-type="gif"
+                    data-identifier="edition_gif"
+                    value={editionData.editionGif}
+                    onValueChange={updateField("editionGif")}
+                  />  
+                  <Button
+                    className="mt-2"
+                    onClick={() => setShowEditionGifPicker((val) => !val)}
+                  >
+                    {showEditionGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                  </Button>
+                  {showEditionGifPicker && (
+                    <div className="gif-picker flex gap-4 mt-2">
+                      <GifPicker
+                        onGifClick={(gif) => updateField("editionGif")(gif.url)}
+                        width={300}
+                        height={300}
+                        tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                        theme="dark"
+                        autoFocus={false}
+                        ref={(el: any) => {
+                          if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                        }}
+                      />
+                      <img
+                        src={editionData.editionGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                        alt="Edition GIF"
+                        className="w-full max-w-[200px]"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Tab>
@@ -596,7 +638,7 @@ export default function NewEditionPage() {
           <Tab key="round1" title="Round 1">
             <h3 className="mb-8 text-2xl">Round 1</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-1/2">
                 <label className="mb-2 block text-lg" htmlFor="r1_gif">
                   Round 1 GIF:
                 </label>
@@ -608,6 +650,32 @@ export default function NewEditionPage() {
                   value={editionData.r1Gif}
                   onValueChange={updateField("r1Gif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowR1GifPicker((val) => !val)}
+                >
+                  {showR1GifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showR1GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("r1Gif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.r1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={`round1-question${index + 1}`}>
@@ -643,6 +711,14 @@ export default function NewEditionPage() {
                     value={editionData.r1AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r1AnswerGifs", index, newVal)}
                   />
+                  <GifAnswerPickerToggle
+                    show={editionData.r1AnswerGifs?.[index]}
+                    onToggle={(_show) => updateArrayItem("r1AnswerGifs", index, _show)}
+                    gifUrl={editionData.r1AnswerGifs?.[index]}
+                    onGifPick={(gif) => updateArrayItem("r1AnswerGifs", index, gif.url)}
+                    gifInputsRef={gifInputsRef}
+                    index={index}
+                  />  
                   {index == 2 && (
                     <div>
                       <h3 className="mb-2">Bantha Answer</h3>
@@ -658,8 +734,16 @@ export default function NewEditionPage() {
                         type="text"
                         data-type="gif"
                         className="w-1/2 mb-6"
-                        value={editionData.banthaAnswerGif} // Bind the value dynamically
+                        value={editionData.banthaAnswerGif}
                         onValueChange={updateField("banthaAnswerGif")}
+                      />
+                      <GifAnswerPickerToggle
+                        show={editionData.banthaAnswerGif}
+                        onToggle={(_show) => updateField("banthaAnswerGif")(_show)}
+                        gifUrl={editionData.banthaAnswerGif}
+                        onGifPick={(gif) => updateField("banthaAnswerGif")(gif.url)}
+                        gifInputsRef={gifInputsRef}
+                        index="bantha"
                       />
                     </div>
                   )}
@@ -674,17 +758,38 @@ export default function NewEditionPage() {
             <h3 className="mb-8 text-2xl">Impossible 1</h3>
             <div className="ml-4">
 
-              <div className="mb-8">
-                <h4 className="mb-2">Intro GIF</h4>
-                <Input
-                  data-identifier="i1_intro_gif"
-                  data-type="text"
-                  type="text"
-                  className="w-1/2"
-                  value={editionData.imp1IntroGif}
-                  onValueChange={updateField("imp1IntroGif")}
+            <div className="mb-8">
+            <h4 className="mb-2">Intro GIF</h4>
+            <Input
+              data-identifier="i1_intro_gif"
+              type="text"
+              data-type="gif"
+              className="w-1/2"
+              value={editionData.imp1IntroGif}
+              onValueChange={updateField("imp1IntroGif")}
+            />
+            <Button className="mt-2" onClick={() => setShowImp1IntroGifPicker(val => !val)}>
+              {showImp1IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+            </Button>
+            {showImp1IntroGifPicker && (
+              <div className="gif-picker flex gap-4 mt-2">
+                <GifPicker
+                  onGifClick={(gif) => updateField("imp1IntroGif")(gif.url)}
+                  width={300}
+                  height={300}
+                  tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                  theme="dark"
+                  autoFocus={false}
+                  ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
+                />
+                <img
+                  src={editionData.imp1IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                  alt="Selected GIF"
+                  className="w-full max-w-[200px] self-start"
                 />
               </div>
+            )}
+          </div>
 
               <div className="mb-8">
                 <h4 className="mb-2">Theme</h4>
@@ -708,6 +813,32 @@ export default function NewEditionPage() {
                   value={editionData.imp1ThemeGif}
                   onValueChange={updateField("imp1ThemeGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowImp1ThemeGifPicker((val) => !val)}
+                >
+                  {showImp1ThemeGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showImp1ThemeGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("imp1ThemeGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.imp1ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -822,6 +953,14 @@ export default function NewEditionPage() {
                           value={editionData.imp1AnswerGifs[index] || ""}
                           onValueChange={(newGif: string) => updateArrayItem("imp1AnswerGifs", index, newGif)}
                         />
+                        <GifAnswerPickerToggle
+                          show={editionData.imp1AnswerGifs[index]}
+                          onToggle={(_show) => updateArrayItem("imp1AnswerGifs", index, _show)}
+                          gifUrl={editionData.imp1AnswerGifs[index]}
+                          onGifPick={(gif) => updateArrayItem("imp1AnswerGifs", index, gif.url)}
+                          gifInputsRef={gifInputsRef}
+                          index={index}
+                        />
                       </div>
                       <hr className="block my-10 bg-gray-300" />
                     </div>
@@ -835,19 +974,40 @@ export default function NewEditionPage() {
           <Tab key="round2" title="Round 2">
             <h3 className="mb-8 text-2xl">Round 2</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/4">
-                <label className="mb-2 block text-lg" htmlFor="r2_gif">
-                  Round 2 GIF:
-                </label>
-                <Input
-                  id="r2_gif"
-                  type="text"
-                  data-type="gif"
-                  data-identifier="r2_gif"
-                  value={editionData.r2Gif}
-                  onValueChange={updateField("r2Gif")}
-                />
-              </div>
+            <div className="mb-8 w-1/2">
+              <label className="mb-2 block text-lg" htmlFor="r2_gif">
+                Round 2 GIF:
+              </label>
+              <Input
+                id="r2_gif"
+                type="text"
+                data-type="gif"
+                data-identifier="r2_gif"
+                value={editionData.r2Gif}
+                onValueChange={updateField("r2Gif")}
+              />
+              <Button className="mt-2" onClick={() => setShowR2GifPicker(val => !val)}>
+                {showR2GifPicker ? "Hide GIF Picker" : "Select GIF"}
+              </Button>
+              {showR2GifPicker && (
+                <div className="gif-picker flex gap-4 mt-2">
+                  <GifPicker
+                    onGifClick={(gif) => updateField("r2Gif")(gif.url)}
+                    width={300}
+                    height={300}
+                    tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                    theme="dark"
+                    autoFocus={false}
+                    ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
+                  />
+                  <img
+                    src={editionData.r2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                    alt="Selected GIF"
+                    className="w-full max-w-[200px] self-start"
+                  />
+                </div>
+              )}
+            </div>
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={`round2-question${index + 1}`}>
                   <h3 className="mb-2">Question {index + 1}</h3>
@@ -882,6 +1042,16 @@ export default function NewEditionPage() {
                     value={editionData.r2AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r2AnswerGifs", index, newVal)}
                   />
+                  <div className="gif-picker flex gap-4">
+                  <GifAnswerPickerToggle
+                    show={editionData.r2AnswerGifs?.[index]}
+                    onToggle={(_show) => updateArrayItem("r2AnswerGifs", index, _show)}
+                    gifUrl={editionData.r2AnswerGifs?.[index]}
+                    onGifPick={(gif) => updateArrayItem("r2AnswerGifs", index, gif.url)}
+                    gifInputsRef={gifInputsRef}
+                    index={index}
+                  />
+                  </div>
                   <Divider className="my-4" />
                   <hr className="block my-10 bg-gray-500"></hr>
                 </div>
@@ -895,17 +1065,38 @@ export default function NewEditionPage() {
             <h3 className="mb-8 text-2xl">Impossible 2</h3>
             <div className="ml-4">
 
-              <div className="mb-8">
-                <h4 className="mb-2">Intro GIF</h4>
-                <Input
-                  data-identifier="i2_intro_gif"
-                  data-type="text"
-                  type="text"
-                  className="w-1/2"
-                  value={editionData.imp2IntroGif}
-                  onValueChange={updateField("imp2IntroGif")}
-                />
-              </div>
+            <div className="mb-8">
+              <h4 className="mb-2">Intro GIF</h4>
+              <Input
+                data-identifier="i2_intro_gif"
+                type="text"
+                data-type="gif"
+                className="w-1/2"
+                value={editionData.imp2IntroGif}
+                onValueChange={updateField("imp2IntroGif")}
+              />
+              <Button className="mt-2" onClick={() => setShowImp2IntroGifPicker(val => !val)}>
+                {showImp2IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+              </Button>
+              {showImp2IntroGifPicker && (
+                <div className="gif-picker flex gap-4 mt-2">
+                  <GifPicker
+                    onGifClick={(gif) => updateField("imp2IntroGif")(gif.url)}
+                    width={300}
+                    height={300}
+                    tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                    theme="dark"
+                    autoFocus={false}
+                    ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
+                  />
+                  <img
+                    src={editionData.imp2IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                    alt="Selected GIF"
+                    className="w-full max-w-[200px] self-start"
+                  />
+                </div>
+              )}
+            </div>
 
               <div className="mb-8">
                 <h4 className="mb-2">Theme</h4>
@@ -929,6 +1120,32 @@ export default function NewEditionPage() {
                   value={editionData.imp2ThemeGif}
                   onValueChange={updateField("imp2ThemeGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowImp2ThemeGifPicker((val) => !val)}
+                >
+                  {showImp2ThemeGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showImp2ThemeGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("imp2ThemeGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.imp2ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1044,6 +1261,14 @@ export default function NewEditionPage() {
                           value={editionData.imp2AnswerGifs[index] || ""}
                           onValueChange={(newGif: string) => updateArrayItem("imp2AnswerGifs", index, newGif)}
                         />
+                        <GifAnswerPickerToggle
+                          show={editionData.imp2AnswerGifs[index]}
+                          onToggle={(_show) => updateArrayItem("imp2AnswerGifs", index, _show)}
+                          gifUrl={editionData.imp2AnswerGifs[index]}
+                          onGifPick={(gif) => updateArrayItem("imp2AnswerGifs", index, gif.url)}
+                          gifInputsRef={gifInputsRef}
+                          index={index}
+                        />
                       </div>
                       <hr className="block my-10 bg-gray-300" />
                     </div>
@@ -1058,7 +1283,7 @@ export default function NewEditionPage() {
           <Tab key="round3" title="Round 3">
             <h3 className="mb-8 text-2xl">Round 3</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-1/2">
                 <label className="mb-2 block text-lg" htmlFor="r3_gif">
                   Round 3 GIF:
                 </label>
@@ -1070,6 +1295,32 @@ export default function NewEditionPage() {
                   value={editionData.r3Gif}
                   onValueChange={updateField("r3Gif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowR3GifPicker((val) => !val)}
+                >
+                  {showR3GifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showR3GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("r3Gif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.r3Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={`round3-question${index + 1}`}>
@@ -1105,6 +1356,14 @@ export default function NewEditionPage() {
                     value={editionData.r3AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r3AnswerGifs", index, newVal)}
                   />
+                  <GifAnswerPickerToggle
+                    show={editionData.r3AnswerGifs?.[index]}
+                    onToggle={(_show) => updateArrayItem("r3AnswerGifs", index, _show)}
+                    gifUrl={editionData.r3AnswerGifs?.[index]}
+                    onGifPick={(gif) => updateArrayItem("r3AnswerGifs", index, gif.url)}
+                    gifInputsRef={gifInputsRef}
+                    index={index}
+                  />
                   <Divider className="my-4" />
                   <hr className="block my-10 bg-gray-500"></hr>
                 </div>
@@ -1129,6 +1388,32 @@ export default function NewEditionPage() {
                   value={editionData.wagerIntroGif}
                   onValueChange={updateField("wagerIntroGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowWagerIntroGifPicker((val) => !val)}
+                >
+                  {showWagerIntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showWagerIntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("wagerIntroGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.wagerIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1155,6 +1440,32 @@ export default function NewEditionPage() {
                   value={editionData.finalCategoryGif}
                   onValueChange={updateField("finalCategoryGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowFinalCategoryGifPicker((val) => !val)}
+                >
+                  {showFinalCategoryGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showFinalCategoryGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("finalCategoryGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.finalCategoryGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1168,6 +1479,32 @@ export default function NewEditionPage() {
                   value={editionData.wagerPlacingGif}
                   onValueChange={updateField("wagerPlacingGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowWagerPlacingGifPicker((val) => !val)}
+                >
+                  {showWagerPlacingGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showWagerPlacingGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("wagerPlacingGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.wagerPlacingGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1191,7 +1528,7 @@ export default function NewEditionPage() {
 
             <div className="ml-5">
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-1/2">
                 <label className="mb-2 block" htmlFor="final_intro_gif">
                   Final Question Intro GIF:
                 </label>
@@ -1202,6 +1539,32 @@ export default function NewEditionPage() {
                   value={editionData.finalIntroGif}
                   onValueChange={updateField("finalIntroGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowFinalIntroGifPicker((val) => !val)}
+                >
+                  {showFinalIntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showFinalIntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("finalIntroGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.finalIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1223,6 +1586,32 @@ export default function NewEditionPage() {
                   value={editionData.finalAnswerGif}
                   onValueChange={updateField("finalAnswerGif")}
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowFinalAnswerGifPicker((val) => !val)}
+                >
+                  {showFinalAnswerGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showFinalAnswerGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("finalAnswerGif")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.finalAnswerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1236,7 +1625,7 @@ export default function NewEditionPage() {
                 />
               </div>
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-1/2">
                 <label className="mb-2 block" htmlFor="edition_end_gif_1">
                   End GIF 1:
                 </label>
@@ -1247,9 +1636,35 @@ export default function NewEditionPage() {
                   onValueChange={updateField("endGif1")}
                   data-type="gif"
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowEndGif1Picker((val) => !val)}
+                >
+                  {showEndGif1Picker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showEndGif1Picker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("endGif1")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.endGif1 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-1/2">
                 <label className="mb-2 block" htmlFor="edition_end_gif_2">
                   End GIF 2:
                 </label>
@@ -1260,6 +1675,32 @@ export default function NewEditionPage() {
                   onValueChange={updateField("endGif2")}
                   data-type="gif"
                 />
+                <Button
+                  className="mt-2"
+                  onClick={() => setShowEndGif2Picker((val) => !val)}
+                >
+                  {showEndGif2Picker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showEndGif2Picker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("endGif2")(gif.url)}
+                      width={300}
+                      height={300}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme="dark"
+                      autoFocus={false}
+                      ref={(el: any) => {
+                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+                      }}
+                    />
+                    <img
+                      src={editionData.endGif2 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[200px] self-start"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </Tab>
@@ -1272,4 +1713,41 @@ export default function NewEditionPage() {
   );
 
 
+}
+
+// Helper component for GIF answer pickers with toggle
+function GifAnswerPickerToggle({ show, onToggle, gifUrl, onGifPick, gifInputsRef, index }: any) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <Button
+        className="mt-2"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? "Hide GIF Picker" : "Select GIF"}
+      </Button>
+      {open && (
+        <div className="gif-picker flex gap-4 mt-2">
+          <GifPicker
+            onGifClick={(gif: any) => {
+              onGifPick(gif);
+            }}
+            width={300}
+            height={300}
+            tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+            theme="dark"
+            autoFocus={false}
+            ref={(el: any) => {
+              if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
+            }}
+          />
+          <img
+            src={gifUrl || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+            alt="Selected GIF"
+            className="w-full max-w-[200px] self-start"
+          />
+        </div>
+      )}
+    </>
+  );
 }

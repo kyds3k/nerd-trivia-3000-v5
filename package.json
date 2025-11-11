@@ -38,6 +38,7 @@
     "embla-carousel-fade": "^8.5.1",
     "embla-carousel-react": "^8.5.1",
     "framer-motion": "11.14.3",
+    "gif-picker-react": "^1.4.0",
     "gsap": "^3.12.5",
     "lodash": "^4.17.21",
     "next": "15.3.1",

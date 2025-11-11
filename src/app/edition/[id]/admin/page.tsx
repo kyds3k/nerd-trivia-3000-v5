@@ -68,71 +68,6 @@ export default function Admin() {
     // Perform actions with the selected round and question
   };
 
-  const resetAllActiveStates = async () => {
-    try {
-      pb.autoCancellation(false);
-      
-      // Reset all questions to inactive
-      const allQuestions = await pb.collection("questions").getFullList({
-        filter: `edition_id="${editionId}"`
-      });
-      for (const question of allQuestions) {
-        await pb.collection("questions").update(question.id, { is_active: false });
-      }
-      
-      // Reset impossible rounds to inactive
-      const impossibleRounds = await pb.collection("impossible_rounds").getFullList({
-        filter: `edition_id="${editionId}"`
-      });
-      for (const impossible of impossibleRounds) {
-        await pb.collection("impossible_rounds").update(impossible.id, { is_active: false });
-      }
-      
-      // Reset wager round to inactive
-      const wagerRounds = await pb.collection("wager_rounds").getFullList({
-        filter: `edition_id="${editionId}"`
-      });
-      for (const wager of wagerRounds) {
-        await pb.collection("wager_rounds").update(wager.id, { is_active: false });
-      }
-      
-      // Reset final round to inactive
-      const finalRounds = await pb.collection("final_rounds").getFullList({
-        filter: `edition_id="${editionId}"`
-      });
-      for (const final of finalRounds) {
-        await pb.collection("final_rounds").update(final.id, { is_active: false });
-      }
-      
-      // Reset all switch states in the UI
-      setSwitchStates({
-        switchR1Q1: false,
-        switchR1Q2: false,
-        switchR1Q3: false,
-        switchR1Q4: false,
-        switchR1Q5: false,
-        switchR2Q1: false,
-        switchR2Q2: false,
-        switchR2Q3: false,
-        switchR2Q4: false,
-        switchR2Q5: false,
-        switchR3Q1: false,
-        switchR3Q2: false,
-        switchR3Q3: false,
-        switchR3Q4: false,
-        switchR3Q5: false,
-      });
-      setSwitchI1(false);
-      setSwitchI2(false);
-      setSwitchWager(false);
-      setSwitchFinal(false);
-      
-      console.log("All active states reset!");
-    } catch (error) {
-      console.error("Failed to reset active states:", error);
-    }
-  };
-
 
   // Handler for toggling a switch
   const handleToggle = (key: any, value: any) => {
@@ -558,16 +493,9 @@ export default function Admin() {
         </>
       ) : (
         <>
-          <div className="flex justify-between items-center mb-4">
-            <h1 className='text-4xl'><span className="font-linebeam text-5xl mr-3 text-glow-blue-400">NERD TRIVIA 3000</span> Admin - {editionTitle}</h1>
-            <Button 
-              color="danger" 
-              size="sm" 
-              onPress={resetAllActiveStates}
-              className="ml-4"
-            >
-              Reset All Active States
-            </Button>
+          <div className="flex w-full justify-between items-center">
+            <h1 className='text-4xl mb-4'><span className="font-linebeam text-5xl mr-3 text-glow-blue-400">NERD TRIVIA 3000</span> Admin - {editionTitle}</h1>
+            <Button as={Link} href="/dashboard">Return to Dashboard</Button>
           </div>
           <Tabs
             aria-label='Admin Tabs'
