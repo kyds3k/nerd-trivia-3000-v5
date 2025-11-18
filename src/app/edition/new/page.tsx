@@ -1,6 +1,55 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+// Helper: Spotify Track Info Fetcher
+const fetchSpotifyTrackInfo = async (uri: string, token: string) => {
+  // Accepts Spotify URI or URL, extracts track id, fetches metadata
+  if (!uri) return null;
+  let match = uri.match(/spotify:track:([a-zA-Z0-9]+)/);
+  if (!match) {
+    // Try URL
+    match = uri.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
+  }
+  const trackId = match ? match[1] : null;
+  if (!trackId) return null;
+  try {
+    const resp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return {
+      title: data.name,
+      artists: data.artists?.map((a: any) => a.name).join(", "),
+      albumImage: data.album?.images?.[2]?.url || data.album?.images?.[0]?.url || "",
+    };
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper: fetch Spotify client credentials token (public)
+const getSpotifyToken = async () => {
+  // Use env vars for client id/secret
+  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+  const clientSecret = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  const resp = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Authorization: "Basic " + (typeof window !== "undefined" && window.btoa
+        ? window.btoa(`${clientId}:${clientSecret}`)
+        : Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+      ),
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.access_token;
+};
+
 
 import {
   Tabs,
@@ -27,32 +76,36 @@ import GifPicker from "gif-picker-react";
 
 
 export default function NewEditionPage() {
-  // Ref to collect all GifPicker search inputs
-  const gifInputsRef = useRef<HTMLInputElement[]>([]);
-
-  const {
-    editionData,
-    updateField,
-    updateArrayItem,
-    addArrayItem,
-    removeArrayItem,
-    clearDraft,
-  } = useEditionDraft();
-
-  const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
-
-
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  // Initialize Pocketbase instance
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_PB_URL || "");
+  // --- All useState declarations for songs, GIFs, questions, answers, and other UI state ---
+  // Songs
+  const [homeSong, setHomeSong] = useState("");
+  const [round1Songs, setRound1Songs] = useState(Array(5).fill(""));
+  const [round2Songs, setRound2Songs] = useState(Array(5).fill(""));
+  const [round3Songs, setRound3Songs] = useState(Array(5).fill(""));
+  const [imp1Songs, setImp1Songs] = useState<{ [key: number]: string }>({});
+  const [imp2Songs, setImp2Songs] = useState<{ [key: number]: string }>({});
+  const [wagerSong, setWagerSong] = useState("");
+  const [finalSong, setFinalSong] = useState("");
+  // Spotify track info states
+  const [homeSongInfo, setHomeSongInfo] = useState<any>(null);
+  const [r1SongInfos, setR1SongInfos] = useState<any[]>(Array(5).fill(null));
+  const [r2SongInfos, setR2SongInfos] = useState<any[]>(Array(5).fill(null));
+  const [r3SongInfos, setR3SongInfos] = useState<any[]>(Array(5).fill(null));
+  const [imp1SongInfos, setImp1SongInfos] = useState<any[]>([]);
+  const [imp2SongInfos, setImp2SongInfos] = useState<any[]>([]);
+  const [wagerSongInfo, setWagerSongInfo] = useState<any>(null);
+  const [finalSongInfo, setFinalSongInfo] = useState<any>(null);
+  // Spotify token state
+  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  // All other UI state (questions, answers, gifs, etc)
   const [loading, setLoading] = useState<boolean>(false);
   const [loadMessage, setLoadMessage] = useState("Creating edition . . .");
   const [authData, setAuthData] = useState(null);
-
-
-
   const [date, setDate] = React.useState<any>(null);
   let formatter = useDateFormatter({ dateStyle: "full" });
   const [blurb, setBlurb] = useState("");
-  const [homeSong, setHomeSong] = useState("");
   const [editionGif, setEditionGif] = useState("");
   const [endGif1, setEndGif1] = useState("");
   const [endGif2, setEndGif2] = useState("");
@@ -65,15 +118,11 @@ export default function NewEditionPage() {
   const [round1Answers, setRound1Answers] = useState(Array(5).fill(""));
   const [round2Answers, setRound2Answers] = useState(Array(5).fill(""));
   const [round3Answers, setRound3Answers] = useState(Array(5).fill(""));
-  const [round1Songs, setRound1Songs] = useState(Array(5).fill(""));
-  const [round2Songs, setRound2Songs] = useState(Array(5).fill(""));
-  const [round3Songs, setRound3Songs] = useState(Array(5).fill(""));
   const [round1AnswerGifs, setRound1AnswerGifs] = useState(Array(5).fill(""));
   const [round2AnswerGifs, setRound2AnswerGifs] = useState(Array(5).fill(""));
   const [round3AnswerGifs, setRound3AnswerGifs] = useState(Array(5).fill(""));
   const [banthaAnswer, setBanthaAnswer] = useState("");
   const [banthaAnswerGif, setBanthaAnswerGif] = useState("");
-
   const [numImpossibleAnswers, setNumImpossibleAnswers] = useState<number>(1);
   const [numImpossibleAnswers2, setNumImpossibleAnswers2] = useState<number>(1);
   const [numImpossibleSongs, setNumImpossibleSongs] = useState<number>(1);
@@ -82,7 +131,6 @@ export default function NewEditionPage() {
   const [imp1Theme, setImp1Theme] = useState("");
   const [imp1Gif, setImp1Gif] = useState("");
   const [imp1Question, setImp1Question] = useState("");
-  const [imp1Songs, setImp1Songs] = useState<{ [key: number]: string }>({});
   const [imp1Answers, setImp1Answers] = useState<string[]>([]);
   const [imp1AnswerGifs, setImp1AnswerGifs] = useState<{ [key: number]: string }>({});
   const [imp1Ppa, setImp1Ppa] = useState("");
@@ -90,24 +138,20 @@ export default function NewEditionPage() {
   const [imp2Theme, setImp2Theme] = useState("");
   const [imp2Question, setImp2Question] = useState("");
   const [imp2Gif, setImp2Gif] = useState("");
-  const [imp2Songs, setImp2Songs] = useState<{ [key: number]: string }>({});
   const [imp2Answers, setImp2Answers] = useState<string[]>([]);
   const [imp2AnswerGifs, setImp2AnswerGifs] = useState<{ [key: number]: string }>({});
   const [imp2Ppa, setImp2Ppa] = useState("");
   const [wagerGif, setWagerGif] = useState("");
   const [wagerPlacingGif, setWagerPlacingGif] = useState("");
-  const [wagerSong, setWagerSong] = useState("");
   const [finalCat, setFinalCat] = useState("");
   const [finalCatGif, setFinalCatGif] = useState("");
   const [finalIntroGif, setFinalIntroGif] = useState("");
   const [finalQuestion, setFinalQuestion] = useState("");
   const [finalAnswer, setFinalAnswer] = useState("");
   const [finalAnswerGif, setFinalAnswerGif] = useState("");
-  const [finalSong, setFinalSong] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
-
   // Lazy GIF Pickers toggle state
   const [showEditionGifPicker, setShowEditionGifPicker] = useState(false);
   const [showR1GifPicker, setShowR1GifPicker] = useState(false);
@@ -126,6 +170,170 @@ export default function NewEditionPage() {
   // Impossible 1/2 intro gif pickers (lazy loaded)
   const [showImp1IntroGifPicker, setShowImp1IntroGifPicker] = useState(false);
   const [showImp2IntroGifPicker, setShowImp2IntroGifPicker] = useState(false);
+
+  // Ref to collect all GifPicker search inputs
+  const gifInputsRef = useRef<HTMLInputElement[]>([]);
+
+  // --- useEditionDraft must be before any useEffect that references editionData ---
+  const {
+    editionData,
+    updateField,
+    updateArrayItem,
+    addArrayItem,
+    removeArrayItem,
+    clearDraft,
+  } = useEditionDraft();
+
+  // --- useDateField depends on editionData ---
+  const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
+
+  // --- All useEffect hooks that depend on editionData or song states come after variable declarations ---
+  // Fetch and refresh Spotify token with caching in localStorage
+  useEffect(() => {
+    let ignore = false;
+    const TOKEN_KEY = "spotify_token";
+    const TIMESTAMP_KEY = "spotify_token_timestamp";
+    const MAX_AGE_MS = 55 * 60 * 1000; // 55 minutes
+    let intervalId: NodeJS.Timeout | number | null = null;
+
+    async function fetchAndCacheToken() {
+      const token = await getSpotifyToken();
+      if (token && !ignore) {
+        setSpotifyToken(token);
+        try {
+          localStorage.setItem(TOKEN_KEY, token);
+          localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    function getCachedToken() {
+      try {
+        const token = localStorage.getItem(TOKEN_KEY);
+        const timestamp = localStorage.getItem(TIMESTAMP_KEY);
+        if (token && timestamp) {
+          const age = Date.now() - parseInt(timestamp, 10);
+          if (!isNaN(age) && age < MAX_AGE_MS) {
+            return token;
+          }
+        }
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    // Initial check
+    const cachedToken = getCachedToken();
+    if (cachedToken) {
+      setSpotifyToken(cachedToken);
+    } else {
+      fetchAndCacheToken();
+    }
+
+    // Set up interval to refresh every 55 minutes
+    intervalId = setInterval(() => {
+      fetchAndCacheToken();
+    }, MAX_AGE_MS);
+
+    return () => {
+      ignore = true;
+      if (intervalId) clearInterval(intervalId as number);
+    };
+  }, []);
+
+  // --- Home Song Info ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!homeSong) { setHomeSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(homeSong, spotifyToken).then(info => {
+      if (!ignore) setHomeSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [homeSong, spotifyToken]);
+
+  // --- Round 1 Song Infos ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = editionData.r1Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR1SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [editionData.r1Songs, spotifyToken]);
+  // --- Round 2 Song Infos ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = editionData.r2Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR2SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [editionData.r2Songs, spotifyToken]);
+  // --- Round 3 Song Infos ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = editionData.r3Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR3SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [editionData.r3Songs, spotifyToken]);
+
+  // --- Impossible 1 Song Infos ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = editionData.imp1Songs || [];
+    Promise.all(
+      Array.from({ length: editionData.imp1SongCount || 0 }).map((_, idx) =>
+        editionData.imp1Songs?.[idx]
+          ? fetchSpotifyTrackInfo(editionData.imp1Songs[idx], spotifyToken)
+          : Promise.resolve(null)
+      )
+    ).then((infos) => { if (!ignore) setImp1SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [editionData.imp1Songs, editionData.imp1SongCount, spotifyToken]);
+
+  // --- Impossible 2 Song Infos ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = editionData.imp2Songs || [];
+    Promise.all(
+      Array.from({ length: editionData.imp2SongCount || 0 }).map((_, idx) =>
+        editionData.imp2Songs?.[idx]
+          ? fetchSpotifyTrackInfo(editionData.imp2Songs[idx], spotifyToken)
+          : Promise.resolve(null)
+      )
+    ).then((infos) => { if (!ignore) setImp2SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [editionData.imp2Songs, editionData.imp2SongCount, spotifyToken]);
+
+  // --- Wager Song Info ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!wagerSong) { setWagerSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(wagerSong, spotifyToken).then(info => {
+      if (!ignore) setWagerSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [wagerSong, spotifyToken]);
+
+  // --- Final Song Info ---
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!finalSong) { setFinalSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(finalSong, spotifyToken).then(info => {
+      if (!ignore) setFinalSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [finalSong, spotifyToken]);
+
 
 
 
@@ -626,8 +834,33 @@ export default function NewEditionPage() {
                       <img
                         src={editionData.editionGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                         alt="Edition GIF"
-                        className="w-full max-w-[200px]"
+                        className="w-full max-w-[300px] h-auto self-start"
                       />
+                    </div>
+                  )}
+                </div>
+                {/* Landing Page Song input */}
+                <div className="song-input w-1/2">
+                  <label className="mb-2 block" htmlFor="home_song">
+                    Landing Page Song
+                  </label>
+                  <Input
+                    id="home_song"
+                    data-identifier="home_song"
+                    type="text"
+                    data-type="song"
+                    value={homeSong}
+                    onValueChange={setHomeSong}
+                  />
+                  {homeSongInfo && (
+                    <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
+                      {homeSongInfo.albumImage && (
+                        <img src={homeSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{homeSongInfo.title}</div>
+                        <div style={{ color: "#888" }}>{homeSongInfo.artists}</div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -672,7 +905,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.r1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -691,10 +924,21 @@ export default function NewEditionPage() {
                     data-identifier={`r1s${index + 1}`}
                     type="text"
                     data-type="song"
-                    className="w-1/2 mb-6"
+                    className="w-1/2 mb-2"
                     value={editionData.r1Songs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r1Songs", index, newVal)}
                   />
+                  {r1SongInfos[index] && (
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+                      {r1SongInfos[index].albumImage && (
+                        <img src={r1SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{r1SongInfos[index].title}</div>
+                        <div style={{ color: "#888" }}>{r1SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r1Answers?.[index] || ""}
@@ -785,7 +1029,7 @@ export default function NewEditionPage() {
                 <img
                   src={editionData.imp1IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                   alt="Selected GIF"
-                  className="w-full max-w-[200px] self-start"
+                  className="w-full max-w-[300px] h-auto self-start"
                 />
               </div>
             )}
@@ -835,7 +1079,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.imp1ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -883,6 +1127,17 @@ export default function NewEditionPage() {
                           value={editionData.imp1Songs?.[index] || ""}
                           onValueChange={(newVal) => updateArrayItem("imp1Songs", index, newVal)}
                         />
+                        {imp1SongInfos[index] && (
+                          <div style={{ display: "flex", alignItems: "center", marginTop: 4 }}>
+                            {imp1SongInfos[index].albumImage && (
+                              <img src={imp1SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                            )}
+                            <div>
+                              <div style={{ fontWeight: 500 }}>{imp1SongInfos[index].title}</div>
+                              <div style={{ color: "#888" }}>{imp1SongInfos[index].artists}</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1003,7 +1258,7 @@ export default function NewEditionPage() {
                   <img
                     src={editionData.r2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                     alt="Selected GIF"
-                    className="w-full max-w-[200px] self-start"
+                    className="w-full max-w-[300px] h-auto self-start"
                   />
                 </div>
               )}
@@ -1092,7 +1347,7 @@ export default function NewEditionPage() {
                   <img
                     src={editionData.imp2IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                     alt="Selected GIF"
-                    className="w-full max-w-[200px] self-start"
+                    className="w-full max-w-[300px] h-auto self-start"
                   />
                 </div>
               )}
@@ -1142,7 +1397,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.imp2ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1317,7 +1572,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.r3Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1410,7 +1665,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.wagerIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1462,7 +1717,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.finalCategoryGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1501,7 +1756,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.wagerPlacingGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1561,7 +1816,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.finalIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1608,7 +1863,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.finalAnswerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1658,7 +1913,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.endGif1 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1697,7 +1952,7 @@ export default function NewEditionPage() {
                     <img
                       src={editionData.endGif2 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[200px] self-start"
+                      className="w-full max-w-[300px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1744,7 +1999,7 @@ function GifAnswerPickerToggle({ show, onToggle, gifUrl, onGifPick, gifInputsRef
           <img
             src={gifUrl || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
             alt="Selected GIF"
-            className="w-full max-w-[200px] self-start"
+            className="w-full max-w-[300px] h-auto self-start"
           />
         </div>
       )}
