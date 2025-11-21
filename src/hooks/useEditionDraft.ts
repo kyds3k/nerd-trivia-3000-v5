@@ -49,17 +49,26 @@ const defaultEditionData = {
 
 const STORAGE_KEY = "new_edition_draft";
 
+type EditionData = typeof defaultEditionData;
+
 export function useEditionDraft() {
-  const [editionData, setEditionData] = useState(() => {
+  const [editionData, setEditionData] = useState<EditionData>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultEditionData;
+      if (saved && saved !== "undefined") {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.error("Failed to parse edition draft:", e);
+          return defaultEditionData;
+        }
+      }
     }
     return defaultEditionData;
   });
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && editionData) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(editionData));
     }
   }, [editionData]);

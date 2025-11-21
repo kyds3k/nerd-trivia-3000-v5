@@ -75,9 +75,12 @@ import { useDateField } from "../../../../src/hooks/useDateField";
 import GifPicker from "gif-picker-react";
 
 
+
 export default function NewEditionPage() {
+
+  console.log("PB URL IS:", process.env.NEXT_PUBLIC_POCKETBASE_URL);
   // Initialize Pocketbase instance
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_PB_URL || "");
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL || "");
   // --- All useState declarations for songs, GIFs, questions, answers, and other UI state ---
   // Songs
   const [homeSong, setHomeSong] = useState("");
@@ -100,6 +103,7 @@ export default function NewEditionPage() {
   // Spotify token state
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   // All other UI state (questions, answers, gifs, etc)
+  const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadMessage, setLoadMessage] = useState("Creating edition . . .");
   const [authData, setAuthData] = useState(null);
@@ -524,6 +528,38 @@ export default function NewEditionPage() {
     return [updatedRound];
   };
 
+  const handleSaveProgress = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Get the data from local storage
+      const draftString = localStorage.getItem("new_edition_draft");
+      
+      if (!draftString) {
+        alert("No draft data found in local storage.");
+        return;
+      }
+  
+      // 2. Parse it to ensure it is valid JSON object before sending to PB
+      const draftJson = JSON.parse(draftString);
+  
+      // 3. Ensure Auth is valid
+      await refreshAuthState();
+  
+      // 4. Upload to Pocketbase
+      await pb.collection("wip_editions").create({
+        progress: draftJson,
+        // Optional: If you have a title in the draft, you might want to save it to a separate column for easier searching
+        // title: draftJson.title || "Untitled Draft" 
+      });
+  
+      alert("Progress saved successfully!");
+    } catch (err) {
+      console.error("Error saving progress:", err);
+      alert("Failed to save progress. Check console for details.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
 
   const handleCreateEdition = async () => {
@@ -729,7 +765,14 @@ export default function NewEditionPage() {
   return (
     <div>
       <div className="p-10">
-        <div className="absolute top-10 right-10">
+      <div className="absolute top-10 right-10 flex gap-4">
+          <Button 
+            color="secondary" // or "primary" to make it stand out
+            onPress={handleSaveProgress}
+            isLoading={isSaving}
+          >
+            Save Progress
+          </Button>
           <Button
             onPress={() => router.push("/dashboard")}>
             Return to Dashboard

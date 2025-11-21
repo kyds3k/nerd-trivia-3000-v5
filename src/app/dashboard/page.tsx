@@ -14,10 +14,16 @@ import { useSession } from "next-auth/react";
 import SpotifySignIn from "@/components/SpotifySignIn";
 import SpotifySignOut from "@/components/SpotifySignOut";
 
+// Create an intersection type to handle the UI flag
+type EditionWithFlags = Edition & { isWip?: boolean; progress?: any };
+
 export default function DashboardPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useRouter();
-  const [editions, setEditions] = useState<Edition[]>([]);
+
+  // Updated state to use the new type
+  const [editions, setEditions] = useState<EditionWithFlags[]>([]);
+
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
@@ -26,6 +32,7 @@ export default function DashboardPage() {
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
   const { data: session } = useSession();
   const [hasSession, setHasSession] = useState<boolean>(false);
+  const [wipEditions, setWipEditions] = useState<any[]>([]);
 
 
   interface GoogleData {
@@ -53,33 +60,34 @@ export default function DashboardPage() {
   const handleDelete = async (id: string) => {
     try {
       await refreshAuthState();
+      // Standard delete logic...
       const wagerTarget = await pb.collection("wager_rounds").getFullList({ filter: `edition_id = "${id}"` });
-      const deleteWager = await pb.collection("wager_rounds").delete(wagerTarget[0].id);
-      console.log("削除!", deleteWager);
+      if (wagerTarget.length > 0) {
+        await pb.collection("wager_rounds").delete(wagerTarget[0].id);
+      }
 
       const roundTargets = await pb.collection("rounds").getFullList({ filter: `edition_id = "${id}"` });
 
-      roundTargets.forEach(async (round) => {
-        const roundNumber = round.round;
+      for (const round of roundTargets) {
         await pb.collection("rounds").delete(round.id);
-        console.log(`Round ${roundNumber} - 削除!`);
-      });
+      }
 
       const roundQuestions = await pb.collection("questions").getFullList({ filter: `edition_id = "${id}"` });
-      roundQuestions.forEach(async (question) => {
+      for (const question of roundQuestions) {
         await pb.collection("questions").delete(question.id);
-        console.log(`Round ${question.round_number} Question ${question.question_number} - 削除!`);
-      });
+      }
 
       const impossibleRounds = await pb.collection("impossible_rounds").getFullList({ filter: `edition_id = "${id}"` });
-      impossibleRounds.forEach(async (impossible) => {
+      for (const impossible of impossibleRounds) {
         await pb.collection("impossible_rounds").delete(impossible.id);
-        console.log(`Impossible ${impossible.impossible_number} Impossible - 削除!`);
-      });
+      }
 
-      const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${id}"`);
-      await pb.collection("final_rounds").delete(finalRound.id);
-      console.log(`Final Round - 削除!`);
+      try {
+        const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${id}"`);
+        await pb.collection("final_rounds").delete(finalRound.id);
+      } catch (e) {
+        console.log("No final round found or delete failed");
+      }
 
       const edition = await pb.collection("editions").delete(id);
       console.log("Edition deleted:", edition);
@@ -90,7 +98,6 @@ export default function DashboardPage() {
 
     } catch (err) {
       console.error("Failed to delete edition:", err);
-      // setError("Failed to delete the edition. Please try again later.");
     }
   };
 
@@ -113,6 +120,24 @@ export default function DashboardPage() {
     }
   };
 
+  const handleEditWip = (edition: EditionWithFlags) => {
+    if (edition.progress) {
+      localStorage.setItem("new_edition_draft", JSON.stringify(edition.progress));
+    }
+  };
+
+  const handleDeleteWip = async (id: string) => {
+    try {
+      await refreshAuthState();
+      await pb.collection("wip_editions").delete(id);
+      // Update the editions state to remove the deleted item
+      setEditions((prevEditions) => prevEditions.filter((edition) => edition.id !== id));
+    } catch (error) {
+      console.error("Failed to delete wip edition:", error);
+      setError("Failed to delete wip edition. Please try again later.");
+    }
+  };
+
 
 
   useEffect(() => {
@@ -127,21 +152,12 @@ export default function DashboardPage() {
         console.log('is admin:', parsedAuth.record.is_admin);
         if (parsedAuth.record.is_admin === true) {
           setIsAdmin(true);
-          // Retrieve and parse the data from localStorage
           const googleData = localStorage.getItem("google_data");
-
-
-          //refreshSpotifyAuth();
 
           const fetchUser = async () => {
             try {
-              // Parse the JSON
               const parsedData = JSON.parse(authData);
-
-              // Access the `id`
               const id = parsedData.record.id;
-
-              // Fetch user data asynchronously
               pb.autoCancellation(false)
               const user = await pb.collection("users").getOne(id);
 
@@ -149,13 +165,9 @@ export default function DashboardPage() {
               if (user.is_admin)
                 setIsAdmin(true);
 
-              // You can set additional state here if needed
               if (googleData) {
                 try {
-                  // Parse the JSON and type it as GoogleData
                   const parsedGoogleData: GoogleData = JSON.parse(googleData);
-
-                  // Access properties safely
                   setGoogleUser(parsedGoogleData.meta.name);
                   setGoogleAvatar(parsedGoogleData.meta.avatarURL);
                 } catch (error) {
@@ -171,13 +183,14 @@ export default function DashboardPage() {
             }
           };
 
-          // Call the async function
           fetchUser();
           const randomRequestKey = Math.random().toString(36).substring(7);
+
+          // FETCH STANDARD EDITIONS
           pb.collection("editions")
             .getFullList({ requestKey: randomRequestKey, sort: "-created" })
             .then((data) => {
-              const transformedEditions: Edition[] = data.map((item) => ({
+              const transformedEditions: EditionWithFlags[] = data.map((item) => ({
                 id: item.id,
                 title: item.title,
                 date: item.date,
@@ -190,6 +203,7 @@ export default function DashboardPage() {
                 edition_gif: item.edition_gif,
                 end_gif_1: item.end_gif_1,
                 end_gif_2: item.end_gif_2,
+                isWip: false // <--- FLAGGED AS STANDARD
               }));
               setEditions(transformedEditions);
               setError(null);
@@ -207,7 +221,6 @@ export default function DashboardPage() {
         console.log("No pocketbase_auth data found in localStorage.");
       }
     }
-    // Dependencies (add necessary dependencies here, or an empty array if no dependencies)
   }, []);
 
   useEffect(() => {
@@ -217,12 +230,50 @@ export default function DashboardPage() {
       if (session) {
         localStorage.setItem("spotifyRefreshToken", session.refreshToken ?? "");
         localStorage.setItem("spotifyAuthToken", session.accessToken ?? "");
-        localStorage.setItem("spotifyRefreshTokenExpiry", String(session.expiresAt)); // Convert number to string
+        localStorage.setItem("spotifyRefreshTokenExpiry", String(session.expiresAt));
       }
     } else {
       console.log("No session found. Are cookies enabled?");
     }
   }, [session]);
+
+  useEffect(() => {
+    const fetchWipEditions = async () => {
+      try {
+        await refreshAuthState();
+        const resultList = await pb.collection('wip_editions').getFullList({
+          sort: '-created',
+        });
+
+        // FETCH WIP EDITIONS
+        const transformedWipEditions: EditionWithFlags[] = resultList.map((item) => ({
+          id: item.id,
+          title: item.progress.title,
+          date: item.progress.date,
+          teams: [],
+          winner_team: "",
+          blurb: "",
+          home_song: "",
+          created: item.created || "",
+          updated: item.updated || "",
+          edition_gif: "",
+          end_gif_1: "",
+          end_gif_2: "",
+          isWip: true, // <--- FLAGGED AS WIP
+          progress: item.progress // <--- ADD PROGRESS DATA
+        }));
+
+        // Combine editions and wipEditions
+        setEditions((prevEditions) => [...prevEditions, ...transformedWipEditions]);
+
+      } catch (error) {
+        console.error("Failed to fetch wip editions:", error);
+        setError("Failed to fetch wip editions. Please try again later.");
+      }
+    };
+
+    fetchWipEditions();
+  }, []);
 
 
   if (loading) {
@@ -265,10 +316,31 @@ export default function DashboardPage() {
                   <strong>{edition.title}</strong> -{" "}
                   {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
                   <div className="my-4 flex gap-2">
-                    <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
-                    <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
-                    <Button as={Link} href={`edition/${edition.id}/edit`}>Edit</Button>
-                    <Button className="mx-6" color="danger" onPress={() => handleDelete(edition.id)}>Delete!</Button>
+                    {!edition.isWip && (
+                      <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
+                    )}
+
+                    {/* ONLY SHOW ADMIN BUTTON IF NOT WIP */}
+                    {!edition.isWip && (
+                      <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
+                    )}
+
+                    <Button
+                      as={Link}
+                      href={edition.id && !edition.isWip ? `edition/${edition.id}/edit` : `/edition/new`}
+                      onClick={() => edition.isWip ? handleEditWip(edition) : null}
+                    >
+                      Edit
+                    </Button>
+
+                    {/* CONDITIONALLY CALL THE CORRECT DELETE FUNCTION */}
+                    <Button
+                      className="mx-6"
+                      color="danger"
+                      onClick={() => edition.isWip ? handleDeleteWip(edition.id) : handleDelete(edition.id)}
+                    >
+                      Delete!
+                    </Button>
                   </div>
                 </li>
               ))}
