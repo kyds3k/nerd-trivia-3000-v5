@@ -59,7 +59,7 @@ export default function RootLayout({
 
 
 	return (
-		<html lang="en" className="dark">
+		<html lang="en" className="dark" suppressHydrationWarning>
 			<head>
 				<link rel="stylesheet" type="text/css" href="/augmented-ui.min.css" />
 				{/* Define onSpotifyWebPlaybackSDKReady globally */}

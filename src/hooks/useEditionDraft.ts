@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 
 const defaultEditionData = {
+  id: null as string | null,
   title: "",
   date: null as string | null,
   blurb: "",
@@ -45,6 +46,21 @@ const defaultEditionData = {
   imp2SongCount: 0,
   imp2Songs: [] as string[],
   imp2AnswerGifs: [] as string[],
+  // Wager Round
+  wagerSong: "",
+  wagerIntroGif: "",
+  wagerPlacingGif: "",
+  finalCategory: "",
+  finalCategoryGif: "",
+  // Final Round
+  finalSong: "",
+  finalIntroGif: "",
+  finalQuestion: "",
+  finalAnswer: "",
+  finalAnswerGif: "",
+  // Counts
+  imp1AnswerCount: 0,
+  imp2AnswerCount: 0,
 };
 
 const STORAGE_KEY = "new_edition_draft";
@@ -79,7 +95,7 @@ export function useEditionDraft() {
 
   const updateArrayItem = (field: keyof typeof editionData, index: number, value: any) => {
     setEditionData(prev => {
-      const updated = Array.isArray(prev[field]) ? [...(prev[field] as any[])] : [];
+      const updated = Array.isArray(prev[field]) ? [...(prev[field] as any[])] : Object.assign([], prev[field]);
       updated[index] = value;
       return { ...prev, [field]: updated };
     });

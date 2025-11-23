@@ -122,7 +122,8 @@ export default function DashboardPage() {
 
   const handleEditWip = (edition: EditionWithFlags) => {
     if (edition.progress) {
-      localStorage.setItem("new_edition_draft", JSON.stringify(edition.progress));
+      const draftWithId = { ...edition.progress, id: edition.id };
+      localStorage.setItem("new_edition_draft", JSON.stringify(draftWithId));
     }
   };
 

@@ -72,7 +72,7 @@ import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useEditionDraft } from "../../../../src/hooks/useEditionDraft";
 import { useDateField } from "../../../../src/hooks/useDateField";
-import GifPicker from "gif-picker-react";
+import GifPicker, { Theme } from "gif-picker-react";
 
 
 
@@ -83,14 +83,8 @@ export default function NewEditionPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL || "");
   // --- All useState declarations for songs, GIFs, questions, answers, and other UI state ---
   // Songs
-  const [homeSong, setHomeSong] = useState("");
-  const [round1Songs, setRound1Songs] = useState(Array(5).fill(""));
-  const [round2Songs, setRound2Songs] = useState(Array(5).fill(""));
-  const [round3Songs, setRound3Songs] = useState(Array(5).fill(""));
-  const [imp1Songs, setImp1Songs] = useState<{ [key: number]: string }>({});
-  const [imp2Songs, setImp2Songs] = useState<{ [key: number]: string }>({});
-  const [wagerSong, setWagerSong] = useState("");
-  const [finalSong, setFinalSong] = useState("");
+  // Removed redundant local state for songs. Using editionData directly.
+
   // Spotify track info states
   const [homeSongInfo, setHomeSongInfo] = useState<any>(null);
   const [r1SongInfos, setR1SongInfos] = useState<any[]>(Array(5).fill(null));
@@ -109,51 +103,8 @@ export default function NewEditionPage() {
   const [authData, setAuthData] = useState(null);
   const [date, setDate] = React.useState<any>(null);
   let formatter = useDateFormatter({ dateStyle: "full" });
-  const [blurb, setBlurb] = useState("");
-  const [editionGif, setEditionGif] = useState("");
-  const [endGif1, setEndGif1] = useState("");
-  const [endGif2, setEndGif2] = useState("");
-  const [r1Gif, setR1Gif] = useState("");
-  const [r2Gif, setR2Gif] = useState("");
-  const [r3Gif, setR3Gif] = useState("");
-  const [round1Questions, setRound1Questions] = useState(Array(5).fill(""));
-  const [round2Questions, setRound2Questions] = useState(Array(5).fill(""));
-  const [round3Questions, setRound3Questions] = useState(Array(5).fill(""));
-  const [round1Answers, setRound1Answers] = useState(Array(5).fill(""));
-  const [round2Answers, setRound2Answers] = useState(Array(5).fill(""));
-  const [round3Answers, setRound3Answers] = useState(Array(5).fill(""));
-  const [round1AnswerGifs, setRound1AnswerGifs] = useState(Array(5).fill(""));
-  const [round2AnswerGifs, setRound2AnswerGifs] = useState(Array(5).fill(""));
-  const [round3AnswerGifs, setRound3AnswerGifs] = useState(Array(5).fill(""));
-  const [banthaAnswer, setBanthaAnswer] = useState("");
-  const [banthaAnswerGif, setBanthaAnswerGif] = useState("");
-  const [numImpossibleAnswers, setNumImpossibleAnswers] = useState<number>(1);
-  const [numImpossibleAnswers2, setNumImpossibleAnswers2] = useState<number>(1);
-  const [numImpossibleSongs, setNumImpossibleSongs] = useState<number>(1);
-  const [numImpossibleSongs2, setNumImpossibleSongs2] = useState<number>(1);
-  const [imp1IntroGif, setImp1IntroGif] = useState("");
-  const [imp1Theme, setImp1Theme] = useState("");
-  const [imp1Gif, setImp1Gif] = useState("");
-  const [imp1Question, setImp1Question] = useState("");
-  const [imp1Answers, setImp1Answers] = useState<string[]>([]);
-  const [imp1AnswerGifs, setImp1AnswerGifs] = useState<{ [key: number]: string }>({});
-  const [imp1Ppa, setImp1Ppa] = useState("");
-  const [imp2IntroGif, setImp2IntroGif] = useState("");
-  const [imp2Theme, setImp2Theme] = useState("");
-  const [imp2Question, setImp2Question] = useState("");
-  const [imp2Gif, setImp2Gif] = useState("");
-  const [imp2Answers, setImp2Answers] = useState<string[]>([]);
-  const [imp2AnswerGifs, setImp2AnswerGifs] = useState<{ [key: number]: string }>({});
-  const [imp2Ppa, setImp2Ppa] = useState("");
-  const [wagerGif, setWagerGif] = useState("");
-  const [wagerPlacingGif, setWagerPlacingGif] = useState("");
-  const [finalCat, setFinalCat] = useState("");
-  const [finalCatGif, setFinalCatGif] = useState("");
-  const [finalIntroGif, setFinalIntroGif] = useState("");
-  const [finalQuestion, setFinalQuestion] = useState("");
-  const [finalAnswer, setFinalAnswer] = useState("");
-  const [finalAnswerGif, setFinalAnswerGif] = useState("");
   const [error, setError] = useState<string | null>(null);
+
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
   // Lazy GIF Pickers toggle state
@@ -245,15 +196,16 @@ export default function NewEditionPage() {
   }, []);
 
   // --- Home Song Info ---
+  // --- Home Song Info ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
-    if (!homeSong) { setHomeSongInfo(null); return; }
+    if (!editionData.homeSong) { setHomeSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(homeSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.homeSong, spotifyToken).then(info => {
       if (!ignore) setHomeSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [homeSong, spotifyToken]);
+  }, [editionData.homeSong, spotifyToken]);
 
   // --- Round 1 Song Infos ---
   useEffect(() => {
@@ -301,6 +253,18 @@ export default function NewEditionPage() {
     return () => { ignore = true; };
   }, [editionData.imp1Songs, editionData.imp1SongCount, spotifyToken]);
 
+  // --- Sync Song Counts on Mount (Migration Helper) ---
+  useEffect(() => {
+    if (editionData.imp1SongCount === 0 && editionData.imp1Songs) {
+      const count = Array.isArray(editionData.imp1Songs) ? editionData.imp1Songs.length : Object.keys(editionData.imp1Songs).length;
+      if (count > 0) updateField("imp1SongCount")(count);
+    }
+    if (editionData.imp2SongCount === 0 && editionData.imp2Songs) {
+      const count = Array.isArray(editionData.imp2Songs) ? editionData.imp2Songs.length : Object.keys(editionData.imp2Songs).length;
+      if (count > 0) updateField("imp2SongCount")(count);
+    }
+  }, []); // Run once on mount
+
   // --- Impossible 2 Song Infos ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
@@ -317,26 +281,28 @@ export default function NewEditionPage() {
   }, [editionData.imp2Songs, editionData.imp2SongCount, spotifyToken]);
 
   // --- Wager Song Info ---
+  // --- Wager Song Info ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
-    if (!wagerSong) { setWagerSongInfo(null); return; }
+    if (!editionData.wagerSong) { setWagerSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(wagerSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.wagerSong, spotifyToken).then(info => {
       if (!ignore) setWagerSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [wagerSong, spotifyToken]);
+  }, [editionData.wagerSong, spotifyToken]);
 
+  // --- Final Song Info ---
   // --- Final Song Info ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
-    if (!finalSong) { setFinalSongInfo(null); return; }
+    if (!editionData.finalSong) { setFinalSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(finalSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.finalSong, spotifyToken).then(info => {
       if (!ignore) setFinalSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [finalSong, spotifyToken]);
+  }, [editionData.finalSong, spotifyToken]);
 
 
 
@@ -380,53 +346,30 @@ export default function NewEditionPage() {
   ) => void;
 
   const updateQuestion: UpdateQuestionFunction = (round, index, value) => {
-    const setters: Record<
-      1 | 2 | 3,
-      React.Dispatch<React.SetStateAction<string[]>>
-    > = {
-      1: setRound1Questions,
-      2: setRound2Questions,
-      3: setRound3Questions
+    const fieldMap: Record<1 | 2 | 3, keyof typeof editionData> = {
+      1: "r1Questions",
+      2: "r2Questions",
+      3: "r3Questions"
     };
-
-    setters[round]((prev) => {
-      const updated = [...prev];
-      updated[index] = value;
-      return updated;
-    });
+    updateArrayItem(fieldMap[round], index, value);
   };
-
   const updateAnswer: UpdateAnswerFunction = (round, index, value) => {
-    const setters: Record<
-      1 | 2 | 3 | "imp1" | "imp2",
-      React.Dispatch<React.SetStateAction<string[]>>
-    > = {
-      1: setRound1Answers,
-      2: setRound2Answers,
-      3: setRound3Answers,
-      imp1: setImp1Answers,
-      imp2: setImp2Answers, // Add setter for imp2Answers
+    const fieldMap: Record<1 | 2 | 3 | "imp1" | "imp2", keyof typeof editionData> = {
+      1: "r1Answers",
+      2: "r2Answers",
+      3: "r3Answers",
+      imp1: "imp1Answers",
+      imp2: "imp2Answers",
     };
-
-    setters[round]((prev) => {
-      const updated = [...prev];
-      updated[index] = value;
-      return updated;
-    });
+    updateArrayItem(fieldMap[round], index, value);
   };
 
   const handleImp1Songs = (index: number, value: string) => {
-    setImp1Songs((prevSongs) => ({
-      ...prevSongs,
-      [index]: value,
-    }));
+    updateArrayItem("imp1Songs", index, value);
   };
 
   const handleImp2Songs = (index: number, value: string) => {
-    setImp2Songs((prevSongs) => ({
-      ...prevSongs,
-      [index]: value,
-    }));
+    updateArrayItem("imp2Songs", index, value);
   };
 
 
@@ -455,8 +398,8 @@ export default function NewEditionPage() {
               song: roundSongs[roundIndex][questionIndex],
               answer: roundAnswers[roundIndex][questionIndex],
               answer_gif: roundAnswerGifs[roundIndex][questionIndex],
-              bantha_answer: round === 1 && questionIndex === 2 ? banthaAnswer : '',
-              bantha_answer_gif: round === 1 && questionIndex === 2 ? banthaAnswerGif : '',
+              bantha_answer: round === 1 && questionIndex === 2 ? editionData.banthaAnswer : '',
+              bantha_answer_gif: round === 1 && questionIndex === 2 ? editionData.banthaAnswerGif : '',
               round_number: round,
               question_number: questionIndex + 1,
               edition_id: editionId,
@@ -500,22 +443,22 @@ export default function NewEditionPage() {
   ): Promise<any[]> => {
     const round = roundNumber;
     const roundData = roundNumber === 1 ? {
-      intro_gif: imp1IntroGif,
-      theme: imp1Theme,
-      theme_gif: imp1Gif,
-      question_text: imp1Question,
-      point_value: imp1Ppa,
+      intro_gif: editionData.imp1IntroGif,
+      theme: editionData.imp1Theme,
+      theme_gif: editionData.imp1ThemeGif,
+      question_text: editionData.imp1Question,
+      point_value: editionData.imp1AnswerValue,
       spotify_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
       edition_id: editionId,
       impossible_number: 1
     } : {
-      intro_gif: imp2IntroGif,
-      theme: imp2Theme,
-      theme_gif: imp2Gif,
-      question_text: imp2Question,
-      point_value: imp2Ppa,
+      intro_gif: editionData.imp2IntroGif,
+      theme: editionData.imp2Theme,
+      theme_gif: editionData.imp2ThemeGif,
+      question_text: editionData.imp2Question,
+      point_value: editionData.imp2AnswerValue,
       spotify_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
@@ -533,25 +476,38 @@ export default function NewEditionPage() {
     try {
       // 1. Get the data from local storage
       const draftString = localStorage.getItem("new_edition_draft");
-      
+
       if (!draftString) {
         alert("No draft data found in local storage.");
         return;
       }
-  
+
       // 2. Parse it to ensure it is valid JSON object before sending to PB
       const draftJson = JSON.parse(draftString);
-  
+
       // 3. Ensure Auth is valid
       await refreshAuthState();
-  
+
       // 4. Upload to Pocketbase
-      await pb.collection("wip_editions").create({
-        progress: draftJson,
-        // Optional: If you have a title in the draft, you might want to save it to a separate column for easier searching
-        // title: draftJson.title || "Untitled Draft" 
-      });
-  
+      if (editionData.id) {
+        // Update existing
+        await pb.collection("wip_editions").update(editionData.id, {
+          progress: draftJson,
+        });
+        console.log("Updated existing draft:", editionData.id);
+      } else {
+        // Create new
+        const record = await pb.collection("wip_editions").create({
+          progress: draftJson,
+        });
+        // Update local state with the new ID so subsequent saves update this record
+        updateField("id")(record.id);
+        // Also update localStorage so a reload keeps the ID
+        const updatedDraft = { ...draftJson, id: record.id };
+        localStorage.setItem("new_edition_draft", JSON.stringify(updatedDraft));
+        console.log("Created new draft:", record.id);
+      }
+
       alert("Progress saved successfully!");
     } catch (err) {
       console.error("Error saving progress:", err);
@@ -579,10 +535,10 @@ export default function NewEditionPage() {
         title: editionData.title,
         date: formattedDate, // Ensure `date` is formatted correctly
         edition_gif: editionData.editionGif,
-        blurb: blurb,
-        home_song: homeSong,
-        end_gif_1: endGif1,
-        end_gif_2: endGif2,
+        blurb: editionData.blurb,
+        home_song: editionData.homeSong,
+        end_gif_1: editionData.endGif1,
+        end_gif_2: editionData.endGif2,
       });
 
       const editionId = updatedEdition.id;
@@ -590,7 +546,7 @@ export default function NewEditionPage() {
 
       // Step 1.5: Reset all active states for this edition
       setLoadMessage("Resetting active states...");
-      
+
       // Reset all questions to inactive
       const allQuestions = await pb.collection("questions").getFullList({
         filter: `edition_id="${editionId}"`
@@ -598,7 +554,7 @@ export default function NewEditionPage() {
       for (const question of allQuestions) {
         await pb.collection("questions").update(question.id, { is_active: false });
       }
-      
+
       // Reset impossible rounds to inactive
       const impossibleRounds = await pb.collection("impossible_rounds").getFullList({
         filter: `edition_id="${editionId}"`
@@ -606,7 +562,7 @@ export default function NewEditionPage() {
       for (const impossible of impossibleRounds) {
         await pb.collection("impossible_rounds").update(impossible.id, { is_active: false });
       }
-      
+
       // Reset wager round to inactive
       const wagerRounds = await pb.collection("wager_rounds").getFullList({
         filter: `edition_id="${editionId}"`
@@ -614,7 +570,7 @@ export default function NewEditionPage() {
       for (const wager of wagerRounds) {
         await pb.collection("wager_rounds").update(wager.id, { is_active: false });
       }
-      
+
       // Reset final round to inactive
       const finalRounds = await pb.collection("final_rounds").getFullList({
         filter: `edition_id="${editionId}"`
@@ -622,13 +578,13 @@ export default function NewEditionPage() {
       for (const final of finalRounds) {
         await pb.collection("final_rounds").update(final.id, { is_active: false });
       }
-      
+
       console.log("All active states reset!");
 
       // Step 1.6: Create the rounds in a loop of 3
 
       for (let i = 1; i < 4; i++) {
-        const roundGif = i === 1 ? r1Gif : i === 2 ? r2Gif : r3Gif;
+        const roundGif = i === 1 ? editionData.r1Gif : i === 2 ? editionData.r2Gif : editionData.r3Gif;
         await pb.collection("rounds").create({
           //console.log({        
           edition_id: editionId,
@@ -643,11 +599,11 @@ export default function NewEditionPage() {
       setLoadMessage("Rounds created!")
 
       // Step 2: Update the Questions
-      const roundQuestions = [round1Questions, round2Questions, round3Questions];
-      const roundSongs = [round1Songs, round2Songs, round3Songs];
-      const roundAnswers = [round1Answers, round2Answers, round3Answers];
-      const roundAnswerGifs = [round1AnswerGifs, round2AnswerGifs, round3AnswerGifs];
-      const roundGifs = [r1Gif, r2Gif, r3Gif];
+      const roundQuestions = [editionData.r1Questions, editionData.r2Questions, editionData.r3Questions];
+      const roundSongs = [editionData.r1Songs, editionData.r2Songs, editionData.r3Songs];
+      const roundAnswers = [editionData.r1Answers, editionData.r2Answers, editionData.r3Answers];
+      const roundAnswerGifs = [editionData.r1AnswerGifs, editionData.r2AnswerGifs, editionData.r3AnswerGifs];
+      const roundGifs = [editionData.r1Gif, editionData.r2Gif, editionData.r3Gif];
 
       const updatedQuestions = await updateQuestions(
         editionId, // Now guaranteed to be a string
@@ -662,12 +618,12 @@ export default function NewEditionPage() {
       // Step 3: Update the Impossible Rounds
       const updatedRounds = await updateImpossibleRounds(
         editionId,
-        imp1Songs,
-        imp1Answers,
-        imp1AnswerGifs,
-        imp2Songs,
-        imp2Answers,
-        imp2AnswerGifs
+        editionData.imp1Songs,
+        editionData.imp1Answers,
+        editionData.imp1AnswerGifs,
+        editionData.imp2Songs,
+        editionData.imp2Answers,
+        editionData.imp2AnswerGifs
       );
 
       console.log("Impossible Rounds created!");
@@ -677,11 +633,11 @@ export default function NewEditionPage() {
       setLoadMessage("Creating wager round . . .");
 
       const updatedWagerRound = await pb.collection("wager_rounds").create({
-        wager_intro_gif: wagerGif,
-        final_cat: finalCat,
-        final_cat_gif: finalCatGif,
-        wager_placing_gif: wagerPlacingGif,
-        wager_song: wagerSong,
+        wager_intro_gif: editionData.wagerIntroGif,
+        final_cat: editionData.finalCategory,
+        final_cat_gif: editionData.finalCategoryGif,
+        wager_placing_gif: editionData.wagerPlacingGif,
+        wager_song: editionData.wagerSong,
         edition_id: editionId,
       });
 
@@ -691,11 +647,11 @@ export default function NewEditionPage() {
       setLoadMessage("Creating final round!");
 
       const updatedFinalRound = await pb.collection("final_rounds").create({
-        final_intro_gif: finalIntroGif,
-        question_text: finalQuestion,
-        answer: finalAnswer,
-        final_answer_gif: finalAnswerGif,
-        final_song: finalSong,
+        final_intro_gif: editionData.finalIntroGif,
+        question_text: editionData.finalQuestion,
+        answer: editionData.finalAnswer,
+        final_answer_gif: editionData.finalAnswerGif,
+        final_song: editionData.finalSong,
         edition_id: editionId,
       });
 
@@ -765,8 +721,8 @@ export default function NewEditionPage() {
   return (
     <div>
       <div className="p-10">
-      <div className="absolute top-10 right-10 flex gap-4">
-          <Button 
+        <div className="absolute top-10 right-10 flex gap-4">
+          <Button
             color="secondary" // or "primary" to make it stand out
             onPress={handleSaveProgress}
             isLoading={isSaving}
@@ -804,7 +760,6 @@ export default function NewEditionPage() {
           size="lg"
           variant="bordered"
           classNames={{ tabList: "mb-4 sticky top-14" }}
-          scrollIntoView={false} // prevent auto-scroll on tab change
           onChange={() => {
             setTimeout(() => {
               gifInputsRef.current.forEach(input => input?.blur());
@@ -854,7 +809,7 @@ export default function NewEditionPage() {
                     data-identifier="edition_gif"
                     value={editionData.editionGif}
                     onValueChange={updateField("editionGif")}
-                  />  
+                  />
                   <Button
                     className="mt-2"
                     onClick={() => setShowEditionGifPicker((val) => !val)}
@@ -865,19 +820,17 @@ export default function NewEditionPage() {
                     <div className="gif-picker flex gap-4 mt-2">
                       <GifPicker
                         onGifClick={(gif) => updateField("editionGif")(gif.url)}
-                        width={300}
-                        height={300}
+                        width={500}
+                        height={500}
                         tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                        theme="dark"
-                        autoFocus={false}
-                        ref={(el: any) => {
-                          if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                        }}
+                        theme={Theme.DARK}
+
+
                       />
                       <img
                         src={editionData.editionGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                         alt="Edition GIF"
-                        className="w-full max-w-[300px] h-auto self-start"
+                        className="w-full max-w-[500px] h-auto self-start"
                       />
                     </div>
                   )}
@@ -892,8 +845,8 @@ export default function NewEditionPage() {
                     data-identifier="home_song"
                     type="text"
                     data-type="song"
-                    value={homeSong}
-                    onValueChange={setHomeSong}
+                    value={editionData.homeSong}
+                    onValueChange={updateField("homeSong")}
                   />
                   {homeSongInfo && (
                     <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
@@ -936,19 +889,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("r1Gif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.r1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1005,7 +955,7 @@ export default function NewEditionPage() {
                     onGifPick={(gif) => updateArrayItem("r1AnswerGifs", index, gif.url)}
                     gifInputsRef={gifInputsRef}
                     index={index}
-                  />  
+                  />
                   {index == 2 && (
                     <div>
                       <h3 className="mb-2">Bantha Answer</h3>
@@ -1045,38 +995,37 @@ export default function NewEditionPage() {
             <h3 className="mb-8 text-2xl">Impossible 1</h3>
             <div className="ml-4">
 
-            <div className="mb-8">
-            <h4 className="mb-2">Intro GIF</h4>
-            <Input
-              data-identifier="i1_intro_gif"
-              type="text"
-              data-type="gif"
-              className="w-1/2"
-              value={editionData.imp1IntroGif}
-              onValueChange={updateField("imp1IntroGif")}
-            />
-            <Button className="mt-2" onClick={() => setShowImp1IntroGifPicker(val => !val)}>
-              {showImp1IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
-            </Button>
-            {showImp1IntroGifPicker && (
-              <div className="gif-picker flex gap-4 mt-2">
-                <GifPicker
-                  onGifClick={(gif) => updateField("imp1IntroGif")(gif.url)}
-                  width={300}
-                  height={300}
-                  tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                  theme="dark"
-                  autoFocus={false}
-                  ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
+              <div className="mb-8">
+                <h4 className="mb-2">Intro GIF</h4>
+                <Input
+                  data-identifier="i1_intro_gif"
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={editionData.imp1IntroGif}
+                  onValueChange={updateField("imp1IntroGif")}
                 />
-                <img
-                  src={editionData.imp1IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
-                  alt="Selected GIF"
-                  className="w-full max-w-[300px] h-auto self-start"
-                />
+                <Button className="mt-2" onClick={() => setShowImp1IntroGifPicker(val => !val)}>
+                  {showImp1IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showImp1IntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("imp1IntroGif")(gif.url)}
+                      width={500}
+                      height={500}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme={Theme.DARK}
+
+                    />
+                    <img
+                      src={editionData.imp1IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
               <div className="mb-8">
                 <h4 className="mb-2">Theme</h4>
@@ -1110,19 +1059,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp1ThemeGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.imp1ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1272,40 +1218,38 @@ export default function NewEditionPage() {
           <Tab key="round2" title="Round 2">
             <h3 className="mb-8 text-2xl">Round 2</h3>
             <div className="ml-4">
-            <div className="mb-8 w-1/2">
-              <label className="mb-2 block text-lg" htmlFor="r2_gif">
-                Round 2 GIF:
-              </label>
-              <Input
-                id="r2_gif"
-                type="text"
-                data-type="gif"
-                data-identifier="r2_gif"
-                value={editionData.r2Gif}
-                onValueChange={updateField("r2Gif")}
-              />
-              <Button className="mt-2" onClick={() => setShowR2GifPicker(val => !val)}>
-                {showR2GifPicker ? "Hide GIF Picker" : "Select GIF"}
-              </Button>
-              {showR2GifPicker && (
-                <div className="gif-picker flex gap-4 mt-2">
-                  <GifPicker
-                    onGifClick={(gif) => updateField("r2Gif")(gif.url)}
-                    width={300}
-                    height={300}
-                    tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                    theme="dark"
-                    autoFocus={false}
-                    ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
-                  />
-                  <img
-                    src={editionData.r2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
-                    alt="Selected GIF"
-                    className="w-full max-w-[300px] h-auto self-start"
-                  />
-                </div>
-              )}
-            </div>
+              <div className="mb-8 w-1/2">
+                <label className="mb-2 block text-lg" htmlFor="r2_gif">
+                  Round 2 GIF:
+                </label>
+                <Input
+                  id="r2_gif"
+                  type="text"
+                  data-type="gif"
+                  data-identifier="r2_gif"
+                  value={editionData.r2Gif}
+                  onValueChange={updateField("r2Gif")}
+                />
+                <Button className="mt-2" onClick={() => setShowR2GifPicker(val => !val)}>
+                  {showR2GifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showR2GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("r2Gif")(gif.url)}
+                      width={500}
+                      height={500}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={editionData.r2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
+              </div>
               {Array.from({ length: 5 }, (_, index) => (
                 <div key={`round2-question${index + 1}`}>
                   <h3 className="mb-2">Question {index + 1}</h3>
@@ -1341,14 +1285,14 @@ export default function NewEditionPage() {
                     onValueChange={(newVal) => updateArrayItem("r2AnswerGifs", index, newVal)}
                   />
                   <div className="gif-picker flex gap-4">
-                  <GifAnswerPickerToggle
-                    show={editionData.r2AnswerGifs?.[index]}
-                    onToggle={(_show) => updateArrayItem("r2AnswerGifs", index, _show)}
-                    gifUrl={editionData.r2AnswerGifs?.[index]}
-                    onGifPick={(gif) => updateArrayItem("r2AnswerGifs", index, gif.url)}
-                    gifInputsRef={gifInputsRef}
-                    index={index}
-                  />
+                    <GifAnswerPickerToggle
+                      show={editionData.r2AnswerGifs?.[index]}
+                      onToggle={(_show) => updateArrayItem("r2AnswerGifs", index, _show)}
+                      gifUrl={editionData.r2AnswerGifs?.[index]}
+                      onGifPick={(gif) => updateArrayItem("r2AnswerGifs", index, gif.url)}
+                      gifInputsRef={gifInputsRef}
+                      index={index}
+                    />
                   </div>
                   <Divider className="my-4" />
                   <hr className="block my-10 bg-gray-500"></hr>
@@ -1363,38 +1307,37 @@ export default function NewEditionPage() {
             <h3 className="mb-8 text-2xl">Impossible 2</h3>
             <div className="ml-4">
 
-            <div className="mb-8">
-              <h4 className="mb-2">Intro GIF</h4>
-              <Input
-                data-identifier="i2_intro_gif"
-                type="text"
-                data-type="gif"
-                className="w-1/2"
-                value={editionData.imp2IntroGif}
-                onValueChange={updateField("imp2IntroGif")}
-              />
-              <Button className="mt-2" onClick={() => setShowImp2IntroGifPicker(val => !val)}>
-                {showImp2IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
-              </Button>
-              {showImp2IntroGifPicker && (
-                <div className="gif-picker flex gap-4 mt-2">
-                  <GifPicker
-                    onGifClick={(gif) => updateField("imp2IntroGif")(gif.url)}
-                    width={300}
-                    height={300}
-                    tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                    theme="dark"
-                    autoFocus={false}
-                    ref={(el: any) => { if (el?.searchInput) gifInputsRef.current.push(el.searchInput); }}
-                  />
-                  <img
-                    src={editionData.imp2IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
-                    alt="Selected GIF"
-                    className="w-full max-w-[300px] h-auto self-start"
-                  />
-                </div>
-              )}
-            </div>
+              <div className="mb-8">
+                <h4 className="mb-2">Intro GIF</h4>
+                <Input
+                  data-identifier="i2_intro_gif"
+                  type="text"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={editionData.imp2IntroGif}
+                  onValueChange={updateField("imp2IntroGif")}
+                />
+                <Button className="mt-2" onClick={() => setShowImp2IntroGifPicker(val => !val)}>
+                  {showImp2IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
+                </Button>
+                {showImp2IntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      onGifClick={(gif) => updateField("imp2IntroGif")(gif.url)}
+                      width={500}
+                      height={500}
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      theme={Theme.DARK}
+
+                    />
+                    <img
+                      src={editionData.imp2IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Selected GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
+              </div>
 
               <div className="mb-8">
                 <h4 className="mb-2">Theme</h4>
@@ -1428,19 +1371,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp2ThemeGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.imp2ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1603,19 +1543,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("r3Gif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.r3Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1696,19 +1633,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("wagerIntroGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.wagerIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1748,19 +1682,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("finalCategoryGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.finalCategoryGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1787,19 +1718,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("wagerPlacingGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.wagerPlacingGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1847,19 +1775,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("finalIntroGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.finalIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1894,19 +1819,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("finalAnswerGif")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.finalAnswerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1944,19 +1866,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("endGif1")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.endGif1 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -1983,19 +1902,16 @@ export default function NewEditionPage() {
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("endGif2")(gif.url)}
-                      width={300}
-                      height={300}
+                      width={500}
+                      height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-                      theme="dark"
-                      autoFocus={false}
-                      ref={(el: any) => {
-                        if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-                      }}
+                      theme={Theme.DARK}
+
                     />
                     <img
                       src={editionData.endGif2 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
-                      className="w-full max-w-[300px] h-auto self-start"
+                      className="w-full max-w-[500px] h-auto self-start"
                     />
                   </div>
                 )}
@@ -2030,19 +1946,16 @@ function GifAnswerPickerToggle({ show, onToggle, gifUrl, onGifPick, gifInputsRef
             onGifClick={(gif: any) => {
               onGifPick(gif);
             }}
-            width={300}
-            height={300}
+            width={500}
+            height={500}
             tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
-            theme="dark"
-            autoFocus={false}
-            ref={(el: any) => {
-              if (el?.searchInput) gifInputsRef.current.push(el.searchInput);
-            }}
+            theme={Theme.DARK}
+
           />
           <img
             src={gifUrl || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
             alt="Selected GIF"
-            className="w-full max-w-[300px] h-auto self-start"
+            className="w-full max-w-[500px] h-auto self-start"
           />
         </div>
       )}
