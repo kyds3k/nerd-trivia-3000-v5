@@ -905,6 +905,19 @@ export default function NewEditionPage() {
                   data-identifier="edition_date"
                 />
               </div>
+              <div className="mb-4 w-1/2">
+                <label className="mb-2 block" htmlFor="edition_blurb">
+                  Blurb:
+                </label>
+                <Input
+                  id="edition_blurb"
+                  type="text"
+                  data-identifier="edition_blurb"
+                  data-type="blurb"
+                  value={editionData.blurb}
+                  onValueChange={updateField("blurb")}
+                />
+              </div>
               <div className="mb-4 w-full flex flex-col gap-8">
                 <div className="gif-input w-1/2">
                   <label className="mb-2 block" htmlFor="edition_gif">
