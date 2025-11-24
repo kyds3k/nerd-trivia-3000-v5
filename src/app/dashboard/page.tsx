@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import Pocketbase from "pocketbase";
 import { Edition } from "../../types/pocketbase";
 import { Button } from "@heroui/button";
-import { Progress } from "@heroui/react";
+import { Progress, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import ShallNotPass from "../../components/ShallNotPass";
 import { set } from "lodash";
@@ -16,6 +16,9 @@ import SpotifySignOut from "@/components/SpotifySignOut";
 
 // Create an intersection type to handle the UI flag
 type EditionWithFlags = Edition & { isWip?: boolean; progress?: any };
+
+// Helper: Sleep function to add delays between requests
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function DashboardPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
@@ -33,6 +36,9 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [hasSession, setHasSession] = useState<boolean>(false);
   const [wipEditions, setWipEditions] = useState<any[]>([]);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteComplete, setDeleteComplete] = useState<boolean>(false);
 
 
   interface GoogleData {
@@ -58,6 +64,10 @@ export default function DashboardPage() {
 
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    setDeleteComplete(false);
+    onOpen();
+
     try {
       await refreshAuthState();
       // Standard delete logic...
@@ -66,21 +76,32 @@ export default function DashboardPage() {
         await pb.collection("wager_rounds").delete(wagerTarget[0].id);
       }
 
+      await sleep(300);
+
       const roundTargets = await pb.collection("rounds").getFullList({ filter: `edition_id = "${id}"` });
 
       for (const round of roundTargets) {
         await pb.collection("rounds").delete(round.id);
+        await sleep(200);
       }
+
+      await sleep(300);
 
       const roundQuestions = await pb.collection("questions").getFullList({ filter: `edition_id = "${id}"` });
       for (const question of roundQuestions) {
         await pb.collection("questions").delete(question.id);
+        await sleep(200);
       }
+
+      await sleep(300);
 
       const impossibleRounds = await pb.collection("impossible_rounds").getFullList({ filter: `edition_id = "${id}"` });
       for (const impossible of impossibleRounds) {
         await pb.collection("impossible_rounds").delete(impossible.id);
+        await sleep(200);
       }
+
+      await sleep(300);
 
       try {
         const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${id}"`);
@@ -89,6 +110,8 @@ export default function DashboardPage() {
         console.log("No final round found or delete failed");
       }
 
+      await sleep(300);
+
       const edition = await pb.collection("editions").delete(id);
       console.log("Edition deleted:", edition);
 
@@ -96,8 +119,13 @@ export default function DashboardPage() {
       const updatedEditions = editions.filter((edition) => edition.id !== id);
       setEditions(updatedEditions);
 
+      setIsDeleting(false);
+      setDeleteComplete(true);
+
     } catch (err) {
       console.error("Failed to delete edition:", err);
+      setIsDeleting(false);
+      setDeleteComplete(true);
     }
   };
 
@@ -295,77 +323,117 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="p-10 w-full">
-      <h1 className="text-5xl mb-10 text-center">Welcome to the <span className="font-linebeam text-5xl uppercase text-glow-blue-400">Nerd Trivia 3000</span> Admin Terminal</h1>
-      <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt mb-10">
-        <h2 className="text-2xl mb-8">Editions</h2>
-        <div className="ml-4">
-          {loading ? (
-            <>
-              <p className="mb-3">Loading editions . . .</p>
-              <Progress
-                size="md"
-                isIndeterminate
-                aria-label="Loading editions"
-                className="max-w-md"
-              />
-            </>
-          ) : (
-            <ul>
-              {editions.map((edition) => (
-                <li key={edition.id} className="mb-8">
-                  <strong>{edition.title}</strong> -{" "}
-                  {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
-                  <div className="my-4 flex gap-2">
-                    {!edition.isWip && (
-                      <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
-                    )}
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => {
+          if (deleteComplete) {
+            onClose();
+            setDeleteComplete(false);
+          }
+        }}
+        isDismissable={deleteComplete}
+        hideCloseButton={!deleteComplete}
+        size="lg"
+      >
+        <ModalContent>
+          <ModalBody className="flex flex-col items-center justify-center py-10">
+            <h2 className="text-2xl font-bold mb-6">
+              {isDeleting ? "Deleting edition . . ." : "Done!"}
+            </h2>
+            <img
+              src="https://media1.tenor.com/m/o6BRGGiCWWEAAAAC/shizuka-kuze-takopi%27s-original-sin.gif"
+              alt="Deleting animation"
+              className="max-w-full h-auto"
+            />
+            {deleteComplete && (
+              <Button
+                color="primary"
+                onPress={() => {
+                  onClose();
+                  setDeleteComplete(false);
+                }}
+                className="mt-6"
+              >
+                Close
+              </Button>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
 
-                    {/* ONLY SHOW ADMIN BUTTON IF NOT WIP */}
-                    {!edition.isWip && (
-                      <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
-                    )}
+      <div className="p-10 w-full">
+        <h1 className="text-5xl mb-10 text-center">Welcome to the <span className="font-linebeam text-5xl uppercase text-glow-blue-400">Nerd Trivia 3000</span> Admin Terminal</h1>
+        <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt mb-10">
+          <h2 className="text-2xl mb-8">Editions</h2>
+          <div className="ml-4">
+            {loading ? (
+              <>
+                <p className="mb-3">Loading editions . . .</p>
+                <Progress
+                  size="md"
+                  isIndeterminate
+                  aria-label="Loading editions"
+                  className="max-w-md"
+                />
+              </>
+            ) : (
+              <ul>
+                {editions.map((edition) => (
+                  <li key={edition.id} className="mb-8">
+                    <strong>{edition.title}</strong> -{" "}
+                    {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
+                    <div className="my-4 flex gap-2">
+                      {!edition.isWip && (
+                        <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
+                      )}
 
-                    <Button
-                      as={Link}
-                      href={edition.id && !edition.isWip ? `edition/${edition.id}/edit` : `/edition/new`}
-                      onClick={() => edition.isWip ? handleEditWip(edition) : null}
-                    >
-                      Edit
-                    </Button>
+                      {/* ONLY SHOW ADMIN BUTTON IF NOT WIP */}
+                      {!edition.isWip && (
+                        <Button as={Link} href={`/edition/${edition.id}/admin`}>Admin</Button>
+                      )}
 
-                    {/* CONDITIONALLY CALL THE CORRECT DELETE FUNCTION */}
-                    <Button
-                      className="mx-6"
-                      color="danger"
-                      onClick={() => edition.isWip ? handleDeleteWip(edition.id) : handleDelete(edition.id)}
-                    >
-                      Delete!
-                    </Button>
-                  </div>
-                </li>
-              ))}
-              <li><Button className="mt-6 w-fit" as={Link} href="/edition/new">Create New Edition</Button></li>
-            </ul>
+                      <Button
+                        as={Link}
+                        href={edition.id && !edition.isWip ? `edition/${edition.id}/edit` : `/edition/new`}
+                        onClick={() => edition.isWip ? handleEditWip(edition) : null}
+                      >
+                        Edit
+                      </Button>
 
-          )}
+                      {/* CONDITIONALLY CALL THE CORRECT DELETE FUNCTION */}
+                      <Button
+                        className="mx-6"
+                        color="danger"
+                        onClick={() => edition.isWip ? handleDeleteWip(edition.id) : handleDelete(edition.id)}
+                      >
+                        Delete!
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+                <li><Button className="mt-6 w-fit" as={Link} href="/edition/new">Create New Edition</Button></li>
+              </ul>
+
+            )}
+          </div>
+        </div>
+        <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt">
+          <h2 className="text-2xl mb-8">I/O</h2>
+          <div className="flex flex-col gap-4">
+            {!hasSession ? (
+              <div className="flex flex-col gap-4">
+                <p>You must sign in to Spotify before presenting an edition</p>
+                <SpotifySignIn />
+              </div>
+
+            ) : (
+              <SpotifySignOut />
+            )}
+            <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
+          </div>
         </div>
       </div>
-      <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt">
-        <h2 className="text-2xl mb-8">I/O</h2>
-        <div className="flex flex-col gap-4">
-          {!hasSession ? (
-            <div className="flex flex-col gap-4">
-              <p>You must sign in to Spotify before presenting an edition</p>
-              <SpotifySignIn />
-            </div>
-
-          ) : (
-            <SpotifySignOut />
-          )}
-          <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

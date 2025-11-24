@@ -46,6 +46,9 @@ const fetchSpotifyTrackInfo = async (uri: string, token: string, refreshToken?: 
   }
 };
 
+// Helper: Sleep function to add delays between requests
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper: fetch Spotify client credentials token (public)
 const getSpotifyToken = async () => {
   // Use env vars for client id/secret
@@ -417,29 +420,37 @@ export default function NewEditionPage() {
 
         setLoadMessage(`Creating questions for round ${round}...`);
 
-        // Update each question in the round
-        const updatedRoundQuestions = await Promise.all(
-          questions.map(async (questionText, questionIndex) => {
-            // const questionId = fetchedRoundQuestions[questionIndex].id;
+        // Update each question in the round sequentially with delays
+        const updatedRoundQuestions = [];
+        for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
+          const questionText = questions[questionIndex];
 
-            // Update the question with its corresponding data
-            const updatedQuestion = await pb.collection("questions").create({
-              question_text: questionText,
-              song: roundSongs[roundIndex][questionIndex],
-              answer: roundAnswers[roundIndex][questionIndex],
-              answer_gif: roundAnswerGifs[roundIndex][questionIndex],
-              bantha_answer: round === 1 && questionIndex === 2 ? editionData.banthaAnswer : '',
-              bantha_answer_gif: round === 1 && questionIndex === 2 ? editionData.banthaAnswerGif : '',
-              round_number: round,
-              question_number: questionIndex + 1,
-              edition_id: editionId,
-            });
+          // Update the question with its corresponding data
+          const updatedQuestion = await pb.collection("questions").create({
+            question_text: questionText,
+            song: roundSongs[roundIndex][questionIndex],
+            answer: roundAnswers[roundIndex][questionIndex],
+            answer_gif: roundAnswerGifs[roundIndex][questionIndex],
+            bantha_answer: round === 1 && questionIndex === 2 ? editionData.banthaAnswer : '',
+            bantha_answer_gif: round === 1 && questionIndex === 2 ? editionData.banthaAnswerGif : '',
+            round_number: round,
+            question_number: questionIndex + 1,
+            edition_id: editionId,
+          });
 
-            setLoadMessage(`Round ${round} Question ${questionIndex + 1} created . . .`);
-            return updatedQuestion;
-          })
-        );
+          setLoadMessage(`Round ${round} Question ${questionIndex + 1} created . . .`);
+          updatedRoundQuestions.push(updatedQuestion);
 
+          // Add delay between questions to avoid rate limiting
+          if (questionIndex < questions.length - 1) {
+            await sleep(200);
+          }
+        }
+
+        // Add delay between rounds
+        if (roundIndex < roundQuestions.length - 1) {
+          await sleep(300);
+        }
 
         return updatedRoundQuestions;
       })
@@ -558,8 +569,15 @@ export default function NewEditionPage() {
       // // Wait for authentication to complete
       await refreshAuthState();
 
-      // Step 1: Update the Edition
-      const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
+      // Step 1: Validate that a date is selected
+      if (!parsedDate) {
+        setError("Please select a date for the edition.");
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Update the Edition
+      const formattedDate = `${parsedDate.year}-${String(parsedDate.month).padStart(2, '0')}-${String(parsedDate.day).padStart(2, '0')} 12:00:00`;
 
       const updatedEdition = await pb.collection("editions").create({
         title: editionData.title,
@@ -622,11 +640,18 @@ export default function NewEditionPage() {
           type: "regular",
           round_gif: roundGif
         });
+        // Add delay between round creations
+        if (i < 3) {
+          await sleep(200);
+        }
       }
 
       console.log("Rounds created!");
 
       setLoadMessage("Rounds created!")
+
+      // Add delay before creating questions
+      await sleep(500);
 
       // Step 2: Update the Questions
       const roundQuestions = [editionData.r1Questions, editionData.r2Questions, editionData.r3Questions];
@@ -645,6 +670,9 @@ export default function NewEditionPage() {
 
       console.log("Questions created!");
 
+      // Add delay before creating impossible rounds
+      await sleep(500);
+
       // Step 3: Update the Impossible Rounds
       const updatedRounds = await updateImpossibleRounds(
         editionId,
@@ -657,6 +685,9 @@ export default function NewEditionPage() {
       );
 
       console.log("Impossible Rounds created!");
+
+      // Add delay before creating wager round
+      await sleep(500);
 
       // Step 4: Update the Wager Round
       // Grab the wager_round item whose edition_id equals editionId, grab its id, and put it into a const WagerRoundId
@@ -673,24 +704,43 @@ export default function NewEditionPage() {
 
       console.log("Wager round created!");
 
+      // Add delay before creating final round
+      await sleep(500);
+
       //Step 5: Update the Final Round
       setLoadMessage("Creating final round!");
 
-      const updatedFinalRound = await pb.collection("final_rounds").create({
+      const finalRoundData = {
         final_intro_gif: editionData.finalIntroGif,
         question_text: editionData.finalQuestion,
         answer: editionData.finalAnswer,
         final_answer_gif: editionData.finalAnswerGif,
         final_song: editionData.finalSong,
         edition_id: editionId,
-      });
+      };
+
+      console.log("Creating final round with data:", finalRoundData);
+
+      const updatedFinalRound = await pb.collection("final_rounds").create(finalRoundData);
 
       console.log("Final round created!");
 
       setError("Edition created successfully!");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create edition:", err);
-      setError("Failed to create the edition. Please try again later.");
+      console.error("Error details:", err?.data);
+      console.error("Error response:", err?.response);
+
+      let errorMessage = "Failed to create the edition. ";
+      if (err?.data?.message) {
+        errorMessage += err.data.message;
+      } else if (err?.message) {
+        errorMessage += err.message;
+      } else {
+        errorMessage += "Please try again later.";
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -779,6 +829,13 @@ export default function NewEditionPage() {
             isLoading={isSaving}
           >
             Save Progress
+          </Button>
+          <Button
+            color="primary"
+            onPress={handleCreateEdition}
+            isLoading={loading}
+          >
+            Create Edition
           </Button>
           <Button
             onPress={() => router.push("/dashboard")}>
@@ -1817,6 +1874,17 @@ export default function NewEditionPage() {
                   value={editionData.wagerSong}
                   onValueChange={updateField("wagerSong")}
                 />
+                {wagerSongInfo && (
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
+                    {wagerSongInfo.albumImage && (
+                      <img src={wagerSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{wagerSongInfo.title}</div>
+                      <div style={{ color: "#888" }}>{wagerSongInfo.artists}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -1916,6 +1984,17 @@ export default function NewEditionPage() {
                   value={editionData.finalSong}
                   onValueChange={updateField("finalSong")}
                 />
+                {finalSongInfo && (
+                  <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
+                    {finalSongInfo.albumImage && (
+                      <img src={finalSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{finalSongInfo.title}</div>
+                      <div style={{ color: "#888" }}>{finalSongInfo.artists}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1992,9 +2071,7 @@ export default function NewEditionPage() {
             </div>
           </Tab>
         </Tabs>
-        <Button type="submit" onClick={handleCreateEdition} className="mt-6">
-          Create Edition
-        </Button>
+
       </div>
     </div>
   );
