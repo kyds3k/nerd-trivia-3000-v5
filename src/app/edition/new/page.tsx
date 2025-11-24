@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 // Helper: Spotify Track Info Fetcher
-const fetchSpotifyTrackInfo = async (uri: string, token: string) => {
+const fetchSpotifyTrackInfo = async (uri: string, token: string, refreshToken?: () => Promise<string | null>) => {
   // Accepts Spotify URI or URL, extracts track id, fetches metadata
   if (!uri) return null;
   let match = uri.match(/spotify:track:([a-zA-Z0-9]+)/);
@@ -16,6 +16,24 @@ const fetchSpotifyTrackInfo = async (uri: string, token: string) => {
     const resp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+
+    // If 401 and we have a refresh callback, try to get a new token and retry
+    if (resp.status === 401 && refreshToken) {
+      const newToken = await refreshToken();
+      if (newToken) {
+        const retryResp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+          headers: { Authorization: `Bearer ${newToken}` },
+        });
+        if (!retryResp.ok) return null;
+        const retryData = await retryResp.json();
+        return {
+          title: retryData.name,
+          artists: retryData.artists?.map((a: any) => a.name).join(", "),
+          albumImage: retryData.album?.images?.[2]?.url || retryData.album?.images?.[0]?.url || "",
+        };
+      }
+    }
+
     if (!resp.ok) return null;
     const data = await resp.json();
     return {
@@ -67,7 +85,6 @@ import Pocketbase from "pocketbase";
 import { parseDate, CalendarDate, DateValue } from "@internationalized/date";
 import { useDateFormatter } from "@react-aria/i18n";
 import { useParams } from "next/navigation";
-import { useCallback } from 'react';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useEditionDraft } from "../../../../src/hooks/useEditionDraft";
@@ -142,6 +159,19 @@ export default function NewEditionPage() {
   // --- useDateField depends on editionData ---
   const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
 
+  // Token refresh callback for Spotify API retry logic
+  const refreshSpotifyToken = useCallback(async () => {
+    const newToken = await getSpotifyToken();
+    if (newToken) {
+      setSpotifyToken(newToken);
+      try {
+        localStorage.setItem("spotify_token", newToken);
+        localStorage.setItem("spotify_token_timestamp", Date.now().toString());
+      } catch (e) { /* ignore */ }
+    }
+    return newToken;
+  }, []);
+
   // --- All useEffect hooks that depend on editionData or song states come after variable declarations ---
   // Fetch and refresh Spotify token with caching in localStorage
   useEffect(() => {
@@ -201,11 +231,11 @@ export default function NewEditionPage() {
     if (!spotifyToken || spotifyToken === "") return;
     if (!editionData.homeSong) { setHomeSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(editionData.homeSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.homeSong, spotifyToken, refreshSpotifyToken).then(info => {
       if (!ignore) setHomeSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [editionData.homeSong, spotifyToken]);
+  }, [editionData.homeSong, spotifyToken, refreshSpotifyToken]);
 
   // --- Round 1 Song Infos ---
   useEffect(() => {
@@ -213,30 +243,30 @@ export default function NewEditionPage() {
     let ignore = false;
     const songUris = editionData.r1Songs || [];
     Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
     )).then((infos) => { if (!ignore) setR1SongInfos(infos); });
     return () => { ignore = true; };
-  }, [editionData.r1Songs, spotifyToken]);
+  }, [editionData.r1Songs, spotifyToken, refreshSpotifyToken]);
   // --- Round 2 Song Infos ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
     let ignore = false;
     const songUris = editionData.r2Songs || [];
     Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
     )).then((infos) => { if (!ignore) setR2SongInfos(infos); });
     return () => { ignore = true; };
-  }, [editionData.r2Songs, spotifyToken]);
+  }, [editionData.r2Songs, spotifyToken, refreshSpotifyToken]);
   // --- Round 3 Song Infos ---
   useEffect(() => {
     if (!spotifyToken || spotifyToken === "") return;
     let ignore = false;
     const songUris = editionData.r3Songs || [];
     Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken) : Promise.resolve(null)
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
     )).then((infos) => { if (!ignore) setR3SongInfos(infos); });
     return () => { ignore = true; };
-  }, [editionData.r3Songs, spotifyToken]);
+  }, [editionData.r3Songs, spotifyToken, refreshSpotifyToken]);
 
   // --- Impossible 1 Song Infos ---
   useEffect(() => {
@@ -246,12 +276,12 @@ export default function NewEditionPage() {
     Promise.all(
       Array.from({ length: editionData.imp1SongCount || 0 }).map((_, idx) =>
         editionData.imp1Songs?.[idx]
-          ? fetchSpotifyTrackInfo(editionData.imp1Songs[idx], spotifyToken)
+          ? fetchSpotifyTrackInfo(editionData.imp1Songs[idx], spotifyToken, refreshSpotifyToken)
           : Promise.resolve(null)
       )
     ).then((infos) => { if (!ignore) setImp1SongInfos(infos); });
     return () => { ignore = true; };
-  }, [editionData.imp1Songs, editionData.imp1SongCount, spotifyToken]);
+  }, [editionData.imp1Songs, editionData.imp1SongCount, spotifyToken, refreshSpotifyToken]);
 
   // --- Sync Song Counts on Mount (Migration Helper) ---
   useEffect(() => {
@@ -273,12 +303,12 @@ export default function NewEditionPage() {
     Promise.all(
       Array.from({ length: editionData.imp2SongCount || 0 }).map((_, idx) =>
         editionData.imp2Songs?.[idx]
-          ? fetchSpotifyTrackInfo(editionData.imp2Songs[idx], spotifyToken)
+          ? fetchSpotifyTrackInfo(editionData.imp2Songs[idx], spotifyToken, refreshSpotifyToken)
           : Promise.resolve(null)
       )
     ).then((infos) => { if (!ignore) setImp2SongInfos(infos); });
     return () => { ignore = true; };
-  }, [editionData.imp2Songs, editionData.imp2SongCount, spotifyToken]);
+  }, [editionData.imp2Songs, editionData.imp2SongCount, spotifyToken, refreshSpotifyToken]);
 
   // --- Wager Song Info ---
   // --- Wager Song Info ---
@@ -286,11 +316,11 @@ export default function NewEditionPage() {
     if (!spotifyToken || spotifyToken === "") return;
     if (!editionData.wagerSong) { setWagerSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(editionData.wagerSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.wagerSong, spotifyToken, refreshSpotifyToken).then(info => {
       if (!ignore) setWagerSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [editionData.wagerSong, spotifyToken]);
+  }, [editionData.wagerSong, spotifyToken, refreshSpotifyToken]);
 
   // --- Final Song Info ---
   // --- Final Song Info ---
@@ -298,11 +328,11 @@ export default function NewEditionPage() {
     if (!spotifyToken || spotifyToken === "") return;
     if (!editionData.finalSong) { setFinalSongInfo(null); return; }
     let ignore = false;
-    fetchSpotifyTrackInfo(editionData.finalSong, spotifyToken).then(info => {
+    fetchSpotifyTrackInfo(editionData.finalSong, spotifyToken, refreshSpotifyToken).then(info => {
       if (!ignore) setFinalSongInfo(info);
     });
     return () => { ignore = true; };
-  }, [editionData.finalSong, spotifyToken]);
+  }, [editionData.finalSong, spotifyToken, refreshSpotifyToken]);
 
 
 
@@ -718,8 +748,29 @@ export default function NewEditionPage() {
     refreshAuthState();
   }, []);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div>
+      {/* Back to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className="fixed bottom-8 right-8 z-50 bg-secondary text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105"
+        aria-label="Back to top"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+        </svg>
+      </button>
       <div className="p-10">
         <div className="absolute top-10 right-10 flex gap-4">
           <Button
@@ -867,7 +918,7 @@ export default function NewEditionPage() {
           <Tab key="round1" title="Round 1">
             <h3 className="mb-8 text-2xl">Round 1</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/2">
+              <div className="mb-8">
                 <label className="mb-2 block text-lg" htmlFor="r1_gif">
                   Round 1 GIF:
                 </label>
@@ -1218,7 +1269,7 @@ export default function NewEditionPage() {
           <Tab key="round2" title="Round 2">
             <h3 className="mb-8 text-2xl">Round 2</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/2">
+              <div className="mb-8">
                 <label className="mb-2 block text-lg" htmlFor="r2_gif">
                   Round 2 GIF:
                 </label>
@@ -1268,6 +1319,17 @@ export default function NewEditionPage() {
                     value={editionData.r2Songs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r2Songs", index, newVal)}
                   />
+                  {r2SongInfos[index] && (
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+                      {r2SongInfos[index].albumImage && (
+                        <img src={r2SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{r2SongInfos[index].title}</div>
+                        <div style={{ color: "#888" }}>{r2SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r2Answers?.[index] || ""}
@@ -1521,7 +1583,7 @@ export default function NewEditionPage() {
           <Tab key="round3" title="Round 3">
             <h3 className="mb-8 text-2xl">Round 3</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/2">
+              <div className="mb-8">
                 <label className="mb-2 block text-lg" htmlFor="r3_gif">
                   Round 3 GIF:
                 </label>
@@ -1575,6 +1637,17 @@ export default function NewEditionPage() {
                     value={editionData.r3Songs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("r3Songs", index, newVal)}
                   />
+                  {r3SongInfos[index] && (
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+                      {r3SongInfos[index].albumImage && (
+                        <img src={r3SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{r3SongInfos[index].title}</div>
+                        <div style={{ color: "#888" }}>{r3SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r3Answers?.[index] || ""}
@@ -1800,7 +1873,7 @@ export default function NewEditionPage() {
                 <Tiptap state={editionData.finalAnswer || ""} setState={updateField("finalAnswer")} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 w-1/2">
                 <h4 className="mb-2">Answer GIF:</h4>
                 <Input
                   data-identifier="final_answer_gif"
