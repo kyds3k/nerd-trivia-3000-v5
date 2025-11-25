@@ -56,7 +56,7 @@ export default function Scoreboard() {
       } else if (origin === "final") {
         router.push(`/edition/${editionId}/present/closing`);
       } else if (origin === "2")
-        router.push(`/edition/${editionId}/present/round/3/question/1`);
+        router.push(`/edition/${editionId}/present/round/3`);
     },
     [origin]
   );
