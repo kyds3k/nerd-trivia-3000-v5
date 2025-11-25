@@ -77,7 +77,11 @@ import {
   SelectItem,
   Divider,
   DatePicker,
-  Progress
+  Progress,
+  Modal,
+  ModalContent,
+  ModalBody,
+  useDisclosure
 } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import Pocketbase from "pocketbase";
@@ -92,7 +96,7 @@ import GifPicker, { Theme } from "gif-picker-react";
 
 export default function EditEditionPage() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
   const [loadMessage, setLoadMessage] = useState("Loading edition . . .");
   const [authData, setAuthData] = useState(null);
   const [title, setTitle] = useState("");
@@ -155,6 +159,14 @@ export default function EditEditionPage() {
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
 
+  // Update Modal State
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateComplete, setUpdateComplete] = useState(false);
+
+  // Helper: Sleep function
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
   // Spotify states
   const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [homeSongInfo, setHomeSongInfo] = useState<any>(null);
@@ -163,6 +175,23 @@ export default function EditEditionPage() {
   const [r3SongInfos, setR3SongInfos] = useState<any[]>(Array(5).fill(null));
   const [wagerSongInfo, setWagerSongInfo] = useState<any>(null);
   const [finalSongInfo, setFinalSongInfo] = useState<any>(null);
+
+  // GIF Picker toggle states
+  const [showEditionGifPicker, setShowEditionGifPicker] = useState(false);
+  const [showR1GifPicker, setShowR1GifPicker] = useState(false);
+  const [showR2GifPicker, setShowR2GifPicker] = useState(false);
+  const [showR3GifPicker, setShowR3GifPicker] = useState(false);
+  const [showWagerIntroGifPicker, setShowWagerIntroGifPicker] = useState(false);
+  const [showFinalCategoryGifPicker, setShowFinalCategoryGifPicker] = useState(false);
+  const [showWagerPlacingGifPicker, setShowWagerPlacingGifPicker] = useState(false);
+  const [showFinalIntroGifPicker, setShowFinalIntroGifPicker] = useState(false);
+  const [showFinalAnswerGifPicker, setShowFinalAnswerGifPicker] = useState(false);
+  const [showEndGif1Picker, setShowEndGif1Picker] = useState(false);
+  const [showEndGif2Picker, setShowEndGif2Picker] = useState(false);
+  const [showImp1ThemeGifPicker, setShowImp1ThemeGifPicker] = useState(false);
+  const [showImp2ThemeGifPicker, setShowImp2ThemeGifPicker] = useState(false);
+  const [showImp1IntroGifPicker, setShowImp1IntroGifPicker] = useState(false);
+  const [showImp2IntroGifPicker, setShowImp2IntroGifPicker] = useState(false);
 
 
   pb.autoCancellation(false);
@@ -316,7 +345,7 @@ export default function EditEditionPage() {
         const roundAnswers = getQuestions.filter((question) => question.round_number === index + 1);
         const answerTexts = roundAnswers.map((question) => question.answer);
         setter(answerTexts);
-        if (index == 0 && roundAnswers[2].bantha_answer != undefined) {
+        if (index == 0 && roundAnswers.length > 2 && roundAnswers[2]?.bantha_answer != undefined) {
           setBanthaAnswer(roundAnswers[2].bantha_answer);
           setBanthaAnswerGif(roundAnswers[2].bantha_answer_gif);
         }
@@ -544,13 +573,18 @@ export default function EditEditionPage() {
   const handleUpdateEdition = async () => {
     // scroll the page to the top smoothly
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setLoading(true);
+
+    // Start Update Process
+    onOpen();
+    setIsUpdating(true);
+    setUpdateComplete(false);
     setLoadMessage("Updating edition . . .");
     console.log('edition id: ', editionEditId);
 
     try {
       // // Wait for authentication to complete
       await refreshAuthState();
+      await sleep(800);
 
       // Step 1: Update the Edition
       const formattedDate = `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')} 12:00:00`;
@@ -566,8 +600,10 @@ export default function EditEditionPage() {
       });
 
       console.log("Edition updated:", updatedEdition);
+      await sleep(800);
 
       // Step 2: Update the Questions
+      setLoadMessage("Updating questions . . .");
       const roundQuestions = [round1Questions, round2Questions, round3Questions];
       const roundSongs = [round1Songs, round2Songs, round3Songs];
       const roundAnswers = [round1Answers, round2Answers, round3Answers];
@@ -581,8 +617,10 @@ export default function EditEditionPage() {
         roundAnswers,
         roundAnswerGifs
       );
+      await sleep(800);
 
       // Step 3: Update the Impossible Rounds
+      setLoadMessage("Updating impossible rounds . . .");
       const updatedRounds = await updateImpossibleRounds(
         editionEditId,
         imp1Songs,
@@ -592,6 +630,7 @@ export default function EditEditionPage() {
         imp2Answers,
         imp2AnswerGifs
       );
+      await sleep(800);
 
       // Step 4: Update the Wager Round
       // Grab the wager_round item whose edition_id equals editionEditId, grab its id, and put it into a const WagerRoundId
@@ -607,6 +646,7 @@ export default function EditEditionPage() {
         wager_placing_gif: wagerPlacingGif,
         wager_song: wagerSong,
       });
+      await sleep(800);
 
       //Step 5: Update the Final Round
       setLoadMessage("Updating final round!");
@@ -620,13 +660,16 @@ export default function EditEditionPage() {
         final_answer_gif: finalAnswerGif,
         final_song: finalSong,
       });
+      await sleep(800);
 
+      setUpdateComplete(true);
       setError("Edition updated successfully!");
     } catch (err) {
       console.error("Failed to update edition:", err);
       setError("Failed to update the edition. Please try again later.");
+      setIsUpdating(false); // Close modal on error if desired, or keep open with error state
     } finally {
-      setLoading(false);
+      setIsUpdating(false);
     }
   };
 
@@ -671,6 +714,123 @@ export default function EditEditionPage() {
     });
   }, [numImpossibleAnswers2]);
 
+  // Fetch and refresh Spotify token with caching in localStorage
+  useEffect(() => {
+    let ignore = false;
+    const TOKEN_KEY = "spotify_token";
+    const TIMESTAMP_KEY = "spotify_token_timestamp";
+    const MAX_AGE_MS = 55 * 60 * 1000; // 55 minutes
+    let intervalId: NodeJS.Timeout | number | null = null;
+
+    async function fetchAndCacheToken() {
+      const token = await getSpotifyToken();
+      if (token && !ignore) {
+        setSpotifyToken(token);
+        try {
+          localStorage.setItem(TOKEN_KEY, token);
+          localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    function getCachedToken() {
+      try {
+        const token = localStorage.getItem(TOKEN_KEY);
+        const timestamp = localStorage.getItem(TIMESTAMP_KEY);
+        if (token && timestamp) {
+          const age = Date.now() - parseInt(timestamp, 10);
+          if (!isNaN(age) && age < MAX_AGE_MS) {
+            return token;
+          }
+        }
+      } catch (e) { /* ignore */ }
+      return null;
+    }
+
+    // Initial check
+    const cachedToken = getCachedToken();
+    if (cachedToken) {
+      setSpotifyToken(cachedToken);
+    } else {
+      fetchAndCacheToken();
+    }
+
+    // Set up interval to refresh every 55 minutes
+    intervalId = setInterval(() => {
+      fetchAndCacheToken();
+    }, MAX_AGE_MS);
+
+    return () => {
+      ignore = true;
+      if (intervalId) clearInterval(intervalId as number);
+    };
+  }, []);
+
+  // Home Song Info
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!homeSong) { setHomeSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(homeSong, spotifyToken, refreshSpotifyToken).then(info => {
+      if (!ignore) setHomeSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [homeSong, spotifyToken, refreshSpotifyToken]);
+
+  // Round 1 Song Infos
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = round1Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR1SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [round1Songs, spotifyToken, refreshSpotifyToken]);
+
+  // Round 2 Song Infos
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = round2Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR2SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [round2Songs, spotifyToken, refreshSpotifyToken]);
+
+  // Round 3 Song Infos
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    let ignore = false;
+    const songUris = round3Songs || [];
+    Promise.all(songUris.map((uri: string) =>
+      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
+    )).then((infos) => { if (!ignore) setR3SongInfos(infos); });
+    return () => { ignore = true; };
+  }, [round3Songs, spotifyToken, refreshSpotifyToken]);
+
+  // Wager Song Info
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!wagerSong) { setWagerSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(wagerSong, spotifyToken, refreshSpotifyToken).then(info => {
+      if (!ignore) setWagerSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [wagerSong, spotifyToken, refreshSpotifyToken]);
+
+  // Final Song Info
+  useEffect(() => {
+    if (!spotifyToken || spotifyToken === "") return;
+    if (!finalSong) { setFinalSongInfo(null); return; }
+    let ignore = false;
+    fetchSpotifyTrackInfo(finalSong, spotifyToken, refreshSpotifyToken).then(info => {
+      if (!ignore) setFinalSongInfo(info);
+    });
+    return () => { ignore = true; };
+  }, [finalSong, spotifyToken, refreshSpotifyToken]);
 
   useEffect(() => {
     //refreshAuthState();
@@ -768,18 +928,44 @@ export default function EditEditionPage() {
                   className="max-w-[284px]"
                 />
               </div>
-              <div className="mb-4 w-1/4">
-                <label className="mb-2 block" htmlFor="edition_gif">
-                  Edition GIF:
-                </label>
-                <Input
-                  id="edition_gif"
-                  type="text"
-                  data-type="gif"
-                  data-identifier="edition_gif"
-                  value={editionGif}
-                  onValueChange={setEditionGif}
-                />
+              <div className="mb-4 w-full flex flex-col gap-8">
+                <div className="gif-input w-1/2">
+                  <label className="mb-2 block" htmlFor="edition_gif">
+                    Edition GIF:
+                  </label>
+                  <Input
+                    id="edition_gif"
+                    type="text"
+                    data-type="gif"
+                    data-identifier="edition_gif"
+                    value={editionGif}
+                    onValueChange={setEditionGif}
+                  />
+                  <Button
+                    className="mt-2"
+                    size="sm"
+                    onPress={() => setShowEditionGifPicker(!showEditionGifPicker)}
+                  >
+                    {showEditionGifPicker ? "Hide" : "Show"} GIF Picker
+                  </Button>
+                  {showEditionGifPicker && (
+                    <div className="gif-picker flex gap-4 mt-2">
+                      <GifPicker
+                        tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                        onGifClick={(gif) => {
+                          setEditionGif(gif.url);
+                          setShowEditionGifPicker(false);
+                        }}
+                        theme={Theme.DARK}
+                      />
+                      <img
+                        src={editionGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                        alt="Edition GIF"
+                        className="w-full max-w-[500px] h-auto self-start"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="mb-4 w-1/2">
                 <label className="mb-2 block" htmlFor="edition_blurb">
@@ -787,7 +973,7 @@ export default function EditEditionPage() {
                 </label>
                 <Tiptap state={blurb} setState={setBlurb} identifier="edition_blurb" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
               </div>
-              <div className="mb-4 w-1/4">
+              <div className="mb-4 w-1/2">
                 <label className="mb-2 block" htmlFor="edition_home_song">
                   Home Song:
                 </label>
@@ -800,13 +986,28 @@ export default function EditEditionPage() {
                   onValueChange={setHomeSong}
                   required
                 />
+                {homeSongInfo && (
+                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
+                    {homeSongInfo.albumImage && (
+                      <img
+                        src={homeSongInfo.albumImage}
+                        alt="Album cover"
+                        className="w-12 h-12"
+                      />
+                    )}
+                    <div>
+                      <div className="font-semibold">{homeSongInfo.title}</div>
+                      <div className="text-sm text-gray-400">{homeSongInfo.artists}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </Tab>
           <Tab key="round1" title="Round 1">
             <h3 className="mb-8 text-2xl">Round 1</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block text-lg" htmlFor="r1_gif">
                   Round 1 GIF:
                 </label>
@@ -817,7 +1018,32 @@ export default function EditEditionPage() {
                   data-identifier="r1_gif"
                   value={r1Gif}
                   onValueChange={setR1Gif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowR1GifPicker(!showR1GifPicker)}
+                >
+                  {showR1GifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showR1GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setR1Gif(gif.url);
+                        setShowR1GifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={r1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Round 1 GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               {Array.from({ length: 5 }, (_, index) => (
@@ -834,7 +1060,7 @@ export default function EditEditionPage() {
                     data-identifier={`r1s${index + 1}`}
                     type="text"
                     data-type="song"
-                    className="w-1/2 mb-6"
+                    className="w-1/2"
                     value={round1Songs[index]} // Bind the value dynamically
                     onChange={(e) => {
                       const updatedSongs = [...round1Songs];
@@ -842,6 +1068,21 @@ export default function EditEditionPage() {
                       setRound1Songs(updatedSongs); // Update the specific song in the array
                     }}
                   />
+                  {r1SongInfos[index] && (
+                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
+                      {r1SongInfos[index].albumImage && (
+                        <img
+                          src={r1SongInfos[index].albumImage}
+                          alt="Album cover"
+                          className="w-12 h-12"
+                        />
+                      )}
+                      <div>
+                        <div className="font-semibold">{r1SongInfos[index].title}</div>
+                        <div className="text-sm text-gray-400">{r1SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round1Answers[index]}
@@ -892,7 +1133,7 @@ export default function EditEditionPage() {
             <h3 className="mb-8 text-2xl">Impossible 1</h3>
             <div className="ml-4">
 
-              <div className="mb-8">
+              <div className="mb-8 w-full">
                 <h4 className="mb-2">Intro GIF</h4>
                 <Input
                   data-identifier="i1_intro_gif"
@@ -902,6 +1143,30 @@ export default function EditEditionPage() {
                   value={imp1IntroGif}
                   onValueChange={setImp1IntroGif}
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowImp1IntroGifPicker(!showImp1IntroGifPicker)}
+                >
+                  {showImp1IntroGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showImp1IntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setImp1IntroGif(gif.url);
+                        setShowImp1IntroGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={imp1IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Impossible 1 Intro GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -916,7 +1181,7 @@ export default function EditEditionPage() {
                 />
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 w-full">
                 <h4 className="mb-2">Theme GIF</h4>
                 <Input
                   data-identifier="i1_gif"
@@ -926,6 +1191,30 @@ export default function EditEditionPage() {
                   value={imp1Gif}
                   onValueChange={setImp1Gif}
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowImp1ThemeGifPicker(!showImp1ThemeGifPicker)}
+                >
+                  {showImp1ThemeGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showImp1ThemeGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setImp1Gif(gif.url);
+                        setShowImp1ThemeGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={imp1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Impossible 1 Theme GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1061,7 +1350,7 @@ export default function EditEditionPage() {
             <h3 className="mb-8 text-2xl">Round 2</h3>
             <div className="ml-4">
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block text-lg" htmlFor="r2_gif">
                   Round 2 GIF:
                 </label>
@@ -1072,7 +1361,32 @@ export default function EditEditionPage() {
                   data-identifier="r2_gif"
                   value={r2Gif}
                   onValueChange={setR2Gif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowR2GifPicker(!showR2GifPicker)}
+                >
+                  {showR2GifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showR2GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setR2Gif(gif.url);
+                        setShowR2GifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={r2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Round 2 GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               {Array.from({ length: 5 }, (_, index) => (
@@ -1089,7 +1403,7 @@ export default function EditEditionPage() {
                     data-identifier={`r2s${index + 1}`}
                     type="text"
                     data-type="song"
-                    className="w-1/2 mb-6"
+                    className="w-1/2"
                     value={round2Songs[index]} // Bind the value dynamically
                     onChange={(e) => {
                       const updatedSongs = [...round2Songs];
@@ -1097,6 +1411,21 @@ export default function EditEditionPage() {
                       setRound2Songs(updatedSongs); // Update the specific song in the array
                     }}
                   />
+                  {r2SongInfos[index] && (
+                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
+                      {r2SongInfos[index].albumImage && (
+                        <img
+                          src={r2SongInfos[index].albumImage}
+                          alt="Album cover"
+                          className="w-12 h-12"
+                        />
+                      )}
+                      <div>
+                        <div className="font-semibold">{r2SongInfos[index].title}</div>
+                        <div className="text-sm text-gray-400">{r2SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round2Answers[index]}
@@ -1128,7 +1457,7 @@ export default function EditEditionPage() {
           <Tab key="impossible2" title="Impossible 2">
             <h3 className="mb-8 text-2xl">Impossible 2</h3>
             <div className="ml-4">
-              <div className="mb-8">
+              <div className="mb-8 w-full">
                 <h4 className="mb-2">Intro GIF</h4>
                 <Input
                   data-identifier="i2_intro_gif"
@@ -1138,6 +1467,30 @@ export default function EditEditionPage() {
                   value={imp2IntroGif}
                   onValueChange={setImp2IntroGif}
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowImp2IntroGifPicker(!showImp2IntroGifPicker)}
+                >
+                  {showImp2IntroGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showImp2IntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setImp2IntroGif(gif.url);
+                        setShowImp2IntroGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={imp2IntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Impossible 2 Intro GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1152,7 +1505,7 @@ export default function EditEditionPage() {
                 />
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 w-full">
                 <h4 className="mb-2">Theme GIF</h4>
                 <Input
                   data-identifier="i2_gif"
@@ -1162,6 +1515,30 @@ export default function EditEditionPage() {
                   value={imp2Gif}
                   onValueChange={setImp2Gif}
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowImp2ThemeGifPicker(!showImp2ThemeGifPicker)}
+                >
+                  {showImp2ThemeGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showImp2ThemeGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setImp2Gif(gif.url);
+                        setShowImp2ThemeGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={imp2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Impossible 2 Theme GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
@@ -1302,7 +1679,7 @@ export default function EditEditionPage() {
           <Tab key="round3" title="Round 3">
             <h3 className="mb-8 text-2xl">Round 3</h3>
             <div className="ml-4">
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block text-lg" htmlFor="r3_gif">
                   Round 3 GIF:
                 </label>
@@ -1313,7 +1690,32 @@ export default function EditEditionPage() {
                   data-identifier="r3_gif"
                   value={r3Gif}
                   onValueChange={setR3Gif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowR3GifPicker(!showR3GifPicker)}
+                >
+                  {showR3GifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showR3GifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setR3Gif(gif.url);
+                        setShowR3GifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={r3Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Round 3 GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               {Array.from({ length: 5 }, (_, index) => (
@@ -1330,7 +1732,7 @@ export default function EditEditionPage() {
                     data-identifier={`r3s${index + 1}`}
                     type="text"
                     data-type="song"
-                    className="w-1/2 mb-6"
+                    className="w-1/2"
                     value={round3Songs[index]} // Bind the value dynamically
                     onChange={(e) => {
                       const updatedSongs = [...round3Songs];
@@ -1338,6 +1740,21 @@ export default function EditEditionPage() {
                       setRound3Songs(updatedSongs); // Update the specific song in the array
                     }}
                   />
+                  {r3SongInfos[index] && (
+                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
+                      {r3SongInfos[index].albumImage && (
+                        <img
+                          src={r3SongInfos[index].albumImage}
+                          alt="Album cover"
+                          className="w-12 h-12"
+                        />
+                      )}
+                      <div>
+                        <div className="font-semibold">{r3SongInfos[index].title}</div>
+                        <div className="text-sm text-gray-400">{r3SongInfos[index].artists}</div>
+                      </div>
+                    </div>
+                  )}
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round3Answers[index]}
@@ -1369,7 +1786,7 @@ export default function EditEditionPage() {
           <Tab key="wager" title="Wager">
             <h3 className="mb-8 text-2xl">Wager</h3>
             <div className="ml-5">
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block" htmlFor="wager_gif">
                   Wager Intro GIF:
                 </label>
@@ -1379,7 +1796,32 @@ export default function EditEditionPage() {
                   data-type="gif"
                   value={wagerGif}
                   onValueChange={setWagerGif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowWagerIntroGifPicker(!showWagerIntroGifPicker)}
+                >
+                  {showWagerIntroGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showWagerIntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setWagerGif(gif.url);
+                        setShowWagerIntroGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={wagerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Wager Intro GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1395,7 +1837,7 @@ export default function EditEditionPage() {
                 />
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block" htmlFor="final_cat_gif">
                   Final Category GIF:
                 </label>
@@ -1404,11 +1846,36 @@ export default function EditEditionPage() {
                   type="text"
                   data-type="gif"
                   value={finalCatGif}
-                  onBlur={(e) => setFinalCatGif(e.target.getAttribute("value") ?? "")}
+                  onValueChange={setFinalCatGif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowFinalCategoryGifPicker(!showFinalCategoryGifPicker)}
+                >
+                  {showFinalCategoryGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showFinalCategoryGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setFinalCatGif(gif.url);
+                        setShowFinalCategoryGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={finalCatGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Final Category GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block" htmlFor="wager_placing_gif">
                   Wager Placing GIF:
                 </label>
@@ -1418,7 +1885,32 @@ export default function EditEditionPage() {
                   data-type="gif"
                   value={wagerPlacingGif}
                   onValueChange={setWagerPlacingGif}
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowWagerPlacingGifPicker(!showWagerPlacingGifPicker)}
+                >
+                  {showWagerPlacingGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showWagerPlacingGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setWagerPlacingGif(gif.url);
+                        setShowWagerPlacingGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={wagerPlacingGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Wager Placing GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="mb-8 w-1/2">
@@ -1432,6 +1924,21 @@ export default function EditEditionPage() {
                   value={wagerSong}
                   onValueChange={setWagerSong}
                 />
+                {wagerSongInfo && (
+                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
+                    {wagerSongInfo.albumImage && (
+                      <img
+                        src={wagerSongInfo.albumImage}
+                        alt="Album cover"
+                        className="w-12 h-12"
+                      />
+                    )}
+                    <div>
+                      <div className="font-semibold">{wagerSongInfo.title}</div>
+                      <div className="text-sm text-gray-400">{wagerSongInfo.artists}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
             </div>
@@ -1465,7 +1972,42 @@ export default function EditEditionPage() {
                 <Tiptap state={finalAnswer} setState={setFinalAnswer} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 w-full">
+                <h4 className="mb-2">Final Intro GIF</h4>
+                <Input
+                  data-identifier="final_intro_gif"
+                  data-type="gif"
+                  className="w-1/2"
+                  value={finalIntroGif}
+                  onValueChange={setFinalIntroGif}
+                />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowFinalIntroGifPicker(!showFinalIntroGifPicker)}
+                >
+                  {showFinalIntroGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showFinalIntroGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setFinalIntroGif(gif.url);
+                        setShowFinalIntroGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={finalIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Final Intro GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-8 w-full">
                 <h4 className="mb-2">Answer GIF:</h4>
                 <Input
                   data-identifier="final_answer_gif"
@@ -1474,20 +2016,58 @@ export default function EditEditionPage() {
                   value={finalAnswerGif}
                   onValueChange={setFinalAnswerGif}
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowFinalAnswerGifPicker(!showFinalAnswerGifPicker)}
+                >
+                  {showFinalAnswerGifPicker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showFinalAnswerGifPicker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setFinalAnswerGif(gif.url);
+                        setShowFinalAnswerGifPicker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={finalAnswerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="Final Answer GIF"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="mb-8">
+              <div className="mb-8 w-1/2">
                 <h4 className="mb-2">Song:</h4>
                 <Input
                   data-identifier="final_song"
                   data-type="song"
-                  className="w-1/2"
                   value={finalSong}
                   onValueChange={setFinalSong}
                 />
+                {finalSongInfo && (
+                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
+                    {finalSongInfo.albumImage && (
+                      <img
+                        src={finalSongInfo.albumImage}
+                        alt="Album cover"
+                        className="w-12 h-12"
+                      />
+                    )}
+                    <div>
+                      <div className="font-semibold">{finalSongInfo.title}</div>
+                      <div className="text-sm text-gray-400">{finalSongInfo.artists}</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block" htmlFor="edition_end_gif_1">
                   End GIF 1:
                 </label>
@@ -1497,10 +2077,35 @@ export default function EditEditionPage() {
                   value={endGif1}
                   onValueChange={setEndGif1}
                   data-type="gif"
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowEndGif1Picker(!showEndGif1Picker)}
+                >
+                  {showEndGif1Picker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showEndGif1Picker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setEndGif1(gif.url);
+                        setShowEndGif1Picker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={endGif1 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="End GIF 1"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
 
-              <div className="mb-8 w-1/4">
+              <div className="mb-8 w-full">
                 <label className="mb-2 block" htmlFor="edition_end_gif_2">
                   End GIF 2:
                 </label>
@@ -1510,7 +2115,32 @@ export default function EditEditionPage() {
                   value={endGif2}
                   onValueChange={setEndGif2}
                   data-type="gif"
+                  className="w-1/2"
                 />
+                <Button
+                  className="mt-2"
+                  size="sm"
+                  onPress={() => setShowEndGif2Picker(!showEndGif2Picker)}
+                >
+                  {showEndGif2Picker ? "Hide" : "Show"} GIF Picker
+                </Button>
+                {showEndGif2Picker && (
+                  <div className="gif-picker flex gap-4 mt-2">
+                    <GifPicker
+                      tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                      onGifClick={(gif) => {
+                        setEndGif2(gif.url);
+                        setShowEndGif2Picker(false);
+                      }}
+                      theme={Theme.DARK}
+                    />
+                    <img
+                      src={endGif2 || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      alt="End GIF 2"
+                      className="w-full max-w-[500px] h-auto self-start"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </Tab>
@@ -1520,6 +2150,49 @@ export default function EditEditionPage() {
         </Button>
       </div>
 
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        isDismissable={false}
+        hideCloseButton={!updateComplete}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalBody className="flex flex-col items-center justify-center p-8">
+                {!updateComplete ? (
+                  <>
+                    <h2 className="text-2xl font-bold mb-4">Updating Edition...</h2>
+                    <img
+                      src="https://media.tenor.com/ITc1hNBSH_wAAAAM/coding-typing.gif"
+                      alt="Coding GIF"
+                      className="w-64 h-auto rounded-lg mb-6"
+                    />
+                    <p className="text-lg text-default-500 animate-pulse">
+                      {loadMessage}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold mb-4 text-success">Success!</h2>
+                    <p className="text-lg text-default-500 mb-6">
+                      Edition updated successfully!
+                    </p>
+                    <Button
+                      color="success"
+                      variant="flat"
+                      onPress={onClose}
+                      className="w-full"
+                    >
+                      Close
+                    </Button>
+                  </>
+                )}
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 

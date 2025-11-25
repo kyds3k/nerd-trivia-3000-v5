@@ -653,11 +653,36 @@ export default function NewEditionPage() {
       // Add delay before creating questions
       await sleep(500);
 
+      // Helper to pad arrays
+      const padArray = (arr: any[], length: number, fillValue: any = "") => {
+        const newArr = [...(arr || [])];
+        while (newArr.length < length) {
+          newArr.push(fillValue);
+        }
+        return newArr.slice(0, length);
+      };
+
       // Step 2: Update the Questions
-      const roundQuestions = [editionData.r1Questions, editionData.r2Questions, editionData.r3Questions];
-      const roundSongs = [editionData.r1Songs, editionData.r2Songs, editionData.r3Songs];
-      const roundAnswers = [editionData.r1Answers, editionData.r2Answers, editionData.r3Answers];
-      const roundAnswerGifs = [editionData.r1AnswerGifs, editionData.r2AnswerGifs, editionData.r3AnswerGifs];
+      const roundQuestions = [
+        padArray(editionData.r1Questions, 5),
+        padArray(editionData.r2Questions, 5),
+        padArray(editionData.r3Questions, 5)
+      ];
+      const roundSongs = [
+        padArray(editionData.r1Songs, 5),
+        padArray(editionData.r2Songs, 5),
+        padArray(editionData.r3Songs, 5)
+      ];
+      const roundAnswers = [
+        padArray(editionData.r1Answers, 5),
+        padArray(editionData.r2Answers, 5),
+        padArray(editionData.r3Answers, 5)
+      ];
+      const roundAnswerGifs = [
+        padArray(editionData.r1AnswerGifs, 5),
+        padArray(editionData.r2AnswerGifs, 5),
+        padArray(editionData.r3AnswerGifs, 5)
+      ];
       const roundGifs = [editionData.r1Gif, editionData.r2Gif, editionData.r3Gif];
 
       const updatedQuestions = await updateQuestions(
