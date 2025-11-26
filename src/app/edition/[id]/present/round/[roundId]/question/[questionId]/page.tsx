@@ -251,20 +251,27 @@ export default function Question() {
       setBonusAnswers(response.bonus_answers);
       setIsActive(response.is_active);
 
+      const fixColor = (text: string) => {
+        return text.replace(/style="color:\s+brown"/g, 'style="color: #7A5901"');
+      };
+
       // Sanitize and set HTML content
       if (response.question_text) {
-        const sanitizedQuestion = DOMPurify.sanitize(response.question_text); // Clean the HTML
+        const fixedText = fixColor(response.question_text);
+        const sanitizedQuestion = DOMPurify.sanitize(fixedText); // Clean the HTML
         setQuestionText(sanitizedQuestion);
         setQuestionActive(response.is_active);
       }
 
       if (response.answer) {
-        const sanitizedAnswer = DOMPurify.sanitize(response.answer); // Clean the HTML
+        const fixedText = fixColor(response.answer);
+        const sanitizedAnswer = DOMPurify.sanitize(fixedText); // Clean the HTML
         setAnswer(sanitizedAnswer);
       }
 
       if (response.bantha_answer) {
-        const sanitizedBanthaAnswer = DOMPurify.sanitize(response.bantha_answer); // Clean the HTML
+        const fixedText = fixColor(response.bantha_answer);
+        const sanitizedBanthaAnswer = DOMPurify.sanitize(fixedText); // Clean the HTML
         setBanthaAnswer(sanitizedBanthaAnswer);
       }
 
