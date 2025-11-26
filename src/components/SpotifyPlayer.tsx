@@ -31,6 +31,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   const [timerExpiry, setTimerExpiry] = useState<Date>(new Date()); // Timer state for SpotTimer
   const [timerStarted, setTimerStarted] = useState<boolean>(false);
 
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+
   useHotkeys("ctrl+p", () => playSong());
   useHotkeys("ctrl+t", () => togglePlayback());
 
@@ -89,7 +91,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
       if (!spotifyUris || spotifyUris.length === 0) {
         throw new Error("No Spotify URIs provided.");
       }
-  
+
       const totalDuration = await Promise.all(
         spotifyUris.map(async (uri) => {
           // const trackId is everything after "track/" in the URI
@@ -100,13 +102,13 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
                 Authorization: `Bearer ${token}`,
               },
             });
-  
+
             console.log('response: ', response);
 
             if (!response.ok) {
               throw new Error(`Spotify API error: ${response.status} - ${response.statusText}`);
             }
-  
+
             const data = await response.json();
             return data.duration_ms; // Return duration in milliseconds
           } catch (error) {
@@ -115,7 +117,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
           }
         })
       );
-  
+
       // Combine all durations into a single total
       const combinedDuration = totalDuration.reduce((acc, duration) => acc + duration, 0);
       return combinedDuration;
@@ -124,8 +126,8 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
       return 0;
     }
   };
-  
-  
+
+
 
   const playSong = async () => {
     if (playerRef.current && isPlayerReady && (song || songs)) {
@@ -151,6 +153,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
             newExpiry.setMilliseconds(newExpiry.getMilliseconds() + songDuration);
             setTimerExpiry(newExpiry); // Update the timer expiry
             setTimerStarted(true); // Start the timer
+            setIsPaused(false); // Reset paused state
           }
           console.log("Playing song...");
         } else {
@@ -169,6 +172,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
     if (playerRef.current && isPlayerReady) {
       try {
         await playerRef.current.togglePlay();
+        setIsPaused((prev) => !prev); // Toggle paused state
         console.log("Toggled playback.");
       } catch (error) {
         console.error("Error toggling playback:", error);
@@ -227,7 +231,7 @@ const SpotifyPlayer: React.FC<SpotifyPlayerProps> = ({ token, song, songs }) => 
   return (
     <div className="text-xl">
       {/* Pass the updated expiry timestamp to SpotTimer */}
-      <SpotTimer expiryTimestamp={timerExpiry} timerStarted={timerStarted} />
+      <SpotTimer expiryTimestamp={timerExpiry} timerStarted={timerStarted} paused={isPaused} />
       <div className="hidden">
         <Button
           className="mx-4"

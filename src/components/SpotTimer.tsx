@@ -4,10 +4,11 @@ import { useTimer } from "react-timer-hook";
 interface SpotTimerProps {
   expiryTimestamp: Date;
   timerStarted: boolean;
+  paused: boolean;
 }
 
-const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted }) => {
-  const { seconds, minutes, restart } = useTimer({
+const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted, paused }) => {
+  const { seconds, minutes, restart, pause, resume } = useTimer({
     expiryTimestamp,
     onExpire: () => console.log("Timer expired!"),
   });
@@ -16,6 +17,15 @@ const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted }) 
   useEffect(() => {
     restart(expiryTimestamp);
   }, [expiryTimestamp, restart]);
+
+  // Pause or resume the timer based on the paused prop
+  useEffect(() => {
+    if (paused) {
+      pause();
+    } else {
+      resume();
+    }
+  }, [paused, pause, resume]);
 
   // Calculate total time remaining in seconds
   const totalSecondsRemaining = minutes * 60 + seconds;
@@ -33,7 +43,7 @@ const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted }) 
       </p>
     </div>
   );
-  
+
 };
 
 export default SpotTimer;
