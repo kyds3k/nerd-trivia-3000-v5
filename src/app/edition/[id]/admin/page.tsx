@@ -260,7 +260,7 @@ export default function Admin() {
           setSwitchI1(true);
         } else if (key === 2) {
           setSwitchI2(true);
-        } 
+        }
         return;
       }
 
@@ -473,9 +473,22 @@ export default function Admin() {
     const pusher = getPusherClient(); // Call the function to get the Pusher instance
     const channel = pusher.subscribe("directives");
 
-    channel.bind("evt::direct", (data: Message) => {
+    channel.bind("evt::direct", (data: any) => {
       console.log("Received event:", data);
-      // Handle the message here
+
+      const { type, round, question } = data;
+
+      if (type === 'round_jump' && round) {
+        setActiveButton(`round_${round}`);
+      } else if (type === 'question_jump' && round && question) {
+        setActiveButton(`question_jump_${round}${question}`);
+      } else if (type === 'impossible_jump' && round) {
+        setActiveButton(`impossible_jump_${round}`);
+      } else if (type === 'wager_jump') {
+        setActiveButton('wager');
+      } else if (type === 'final_jump') {
+        setActiveButton('final');
+      }
     });
 
     return () => {

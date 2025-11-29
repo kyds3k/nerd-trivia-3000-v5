@@ -21,7 +21,7 @@ export const searchAppleMusic = async (query: string, limit: number = 10): Promi
 
   try {
     const encodedQuery = encodeURIComponent(query);
-    const response = await fetch(`https://itunes.apple.com/search?term=${encodedQuery}&media=music&entity=song&limit=${limit}`);
+    const response = await fetch(`/api/apple-music?term=${encodedQuery}&limit=${limit}`);
 
     if (!response.ok) {
       throw new Error(`iTunes API error: ${response.status}`);
@@ -53,7 +53,7 @@ export const getAppleMusicTrack = async (id: string): Promise<AppleMusicTrack | 
   if (!id) return null;
 
   try {
-    const response = await fetch(`https://itunes.apple.com/lookup?id=${id}`);
+    const response = await fetch(`/api/apple-music?id=${id}`);
 
     if (!response.ok) {
       throw new Error(`iTunes API error: ${response.status}`);

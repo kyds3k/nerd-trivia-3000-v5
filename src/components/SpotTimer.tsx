@@ -34,7 +34,11 @@ const SpotTimer: React.FC<SpotTimerProps> = ({ expiryTimestamp, timerStarted, pa
     <div>
       <p
         className={
-          totalSecondsRemaining <= 30 ? "text-2xl text-red-700" : "text-2xl"
+          totalSecondsRemaining <= 10
+            ? "text-2xl text-red-700 animate-pulse"
+            : totalSecondsRemaining <= 31
+              ? "text-2xl text-red-700"
+              : "text-2xl"
         }
       >
         {totalSecondsRemaining === 0

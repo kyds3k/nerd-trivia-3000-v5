@@ -32,11 +32,32 @@ export default function Scoreboard() {
     const scoreList = await pb.collection("teams").getFullList({
       filter: `current_edition = "${editionId}"`,
       sort: "-points_for_game",
-      fields: "team_name, points_for_game",
+      fields: "id, team_name, points_for_game, team_identifier",
     });
     console.log(scoreList);
     setScores(scoreList);
   };
+
+  // Record the winner if this is the final scoreboard
+  useEffect(() => {
+    const recordWinner = async () => {
+      if (origin === "final" && scores.length > 0 && editionId) {
+        const winner = scores[0];
+        console.log("Recording winner:", winner);
+        try {
+          await pb.collection("editions").update(editionId, {
+            winning_team: winner.team_name,
+            winning_team_identifier: winner.team_identifier,
+            winning_team_id: winner.id,
+          });
+          console.log("Winner recorded successfully.");
+        } catch (err) {
+          console.error("Failed to record winner:", err);
+        }
+      }
+    };
+    recordWinner();
+  }, [scores, origin, editionId]);
 
   // Fetch localStorage data on the client side
   useEffect(() => {

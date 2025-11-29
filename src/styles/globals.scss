@@ -267,3 +267,18 @@ body {
     opacity: 0;
   }
 }
+
+/* React Toastify Overrides */
+.Toastify__toast {
+  font-family: var(--font-dos), monospace !important;
+}
+
+.Toastify__toast-body {
+  text-align: left !important;
+}
+
+.presentation-toast {
+  width: 600px !important;
+  max-width: 90vw !important;
+  margin: 0 auto;
+}

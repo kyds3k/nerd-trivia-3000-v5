@@ -291,6 +291,7 @@ export default function NewEditionPage() {
             answer_gif: roundAnswerGifs[roundIndex][questionIndex],
             bantha_answer: round === 1 && questionIndex === 2 ? editionData.banthaAnswer : '',
             bantha_answer_gif: round === 1 && questionIndex === 2 ? editionData.banthaAnswerGif : '',
+            is_banthashit_question: round === 1 && questionIndex === 2,
             round_number: round,
             question_number: questionIndex + 1,
             edition_id: editionId,

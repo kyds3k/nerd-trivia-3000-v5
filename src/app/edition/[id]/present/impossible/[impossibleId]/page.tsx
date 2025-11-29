@@ -275,7 +275,7 @@ export default function Impossible() {
           </div>
           {answers.map((answer, index) => (
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4" key={index}>
-              <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
+              <h3 className="text-6xl flex justify-items-center leading-[1.3]" dangerouslySetInnerHTML={{ __html: answer }}></h3>
               <div className="flex items-center justify-center w-full grow relative">
                 {answerGifs[index] ? (
                   <Image src={answerGifs[index]} className="h-full w-auto object-contain" alt="Answer GIF" fill={true} unoptimized={true} />
@@ -296,7 +296,7 @@ export default function Impossible() {
                       <span className="text-gray-400">No Artwork</span>
                     </div>
                   )}
-                  <h3 className="text-3xl">"{songTitles[index]}" by {songArtists[index]}</h3>
+                  <h3 className="text-3xl max-w-[600px] text-center">"{songTitles[index]}" by {songArtists[index]}</h3>
                 </div>
               ))
             ) : (

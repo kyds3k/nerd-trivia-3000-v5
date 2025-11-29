@@ -18,7 +18,7 @@ export default function Round() {
   const params = useParams();
   const editionId = params?.id as string;
   const roundId = parseInt(params?.roundId as string);
-  const teamId = params?.teamId as string;  
+  const teamId = params?.teamId as string;
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
 
   const [roundGif, setRoundGif] = useState<string | null>(null);
@@ -51,8 +51,8 @@ export default function Round() {
         <Spinner size="lg" />
       ) : (
         <div className="roundContainer w-screen flex flex-col gap-4 items-center justify-items-center">
-          <h1 className="text-8xl">Round {roundId}</h1>
-          <Image src={roundGif} radius='none' removeWrapper width="auto" className='w-4/5 h-auto my-auto block' alt="Round Gif" />
+          <h1 className="text-4xl md:text-8xl">Round {roundId}</h1>
+          <img src={roundGif} alt="Round Gif" style={{ maxHeight: '80vh', width: 'auto', objectFit: 'contain' }} />
         </div>
       )}
     </div>

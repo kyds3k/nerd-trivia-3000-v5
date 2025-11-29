@@ -161,9 +161,9 @@ export default function Question() {
     try {
       const track = await getAppleMusicTrack(songId);
       if (track) {
-        setSongArtist(track.artists);
+        setSongArtist(track.artist);
         setSongTitle(track.title);
-        setSongAlbumArt(track.albumImage);
+        setSongAlbumArt(track.artworkUrl);
       }
     } catch (error) {
       console.error("Failed to fetch song info:", error);

@@ -47,6 +47,18 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
           if (data) {
             tracks.push(data);
             totalDur += (data.durationMs / 1000); // Convert to seconds
+          } else {
+            // Push placeholder to keep indices aligned
+            tracks.push({
+              id: id,
+              title: "Unknown Title",
+              artist: "Unknown Artist",
+              album: "Unknown Album",
+              artworkUrl: "",
+              previewUrl: "",
+              durationMs: 0,
+              url: ""
+            });
           }
         }
         setAllTracksMetadata(tracks);
@@ -81,6 +93,15 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
   // Ref to trigger playback after index change
   const autoPlayNextRef = React.useRef(false);
 
+  // Ref to track if pause was manual
+  const isManuallyPaused = React.useRef(false);
+  const [hasFinished, setHasFinished] = useState(false);
+
+  // Reset local position when track changes
+  useEffect(() => {
+    setLocalPosition(0);
+  }, [currentTrackIndex]);
+
   // Check bridge status and poll now playing
   // Defined FIRST so handlers can call it
   const checkBridge = useCallback(async () => {
@@ -93,7 +114,10 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
 
         if (data.name) {
           setNowPlaying(data);
-          setLocalPosition(data.position); // Sync local timer
+          // Only sync if playing or if we just loaded
+          if (data.isPlaying) {
+            setLocalPosition(data.position);
+          }
         }
 
         setIsPlaying(data.isPlaying);
@@ -114,8 +138,23 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
     return () => clearInterval(interval);
   }, [checkBridge]);
 
+  // Detect auto-finish
+  useEffect(() => {
+    if (!isPlaying && !isManuallyPaused.current && trackIds && currentTrackIndex >= trackIds.length - 1) {
+      // If we stopped playing, weren't manually paused, and are on the last track... we finished.
+      // We also check if we have actually started playing at some point (to avoid triggering on load)
+      if (nowPlaying?.position > 0) {
+        setHasFinished(true);
+      }
+    }
+  }, [isPlaying, trackIds, currentTrackIndex, nowPlaying]);
+
+
   // Playback controls
   const handlePlay = useCallback(async () => {
+    isManuallyPaused.current = false;
+    setHasFinished(false);
+
     if (!bridgeOnline) {
       console.warn("handlePlay ignored: Bridge Offline");
       return;
@@ -156,6 +195,7 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
   }, [bridgeOnline, isPlaying, nowPlaying, allTracksMetadata, currentTrackIndex, effectiveTrackId]);
 
   const handlePause = useCallback(async () => {
+    isManuallyPaused.current = true;
     if (!bridgeOnline) return;
     try {
       await fetch(`${BRIDGE_URL}/pause`, { method: "POST" });
@@ -166,6 +206,8 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
   }, [bridgeOnline, checkBridge]);
 
   const handleNext = useCallback(async () => {
+    isManuallyPaused.current = false;
+    setHasFinished(false);
     if (!bridgeOnline) return;
 
     if (trackIds && trackIds.length > 0) {
@@ -185,6 +227,8 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
   }, [bridgeOnline, trackIds, currentTrackIndex, checkBridge]);
 
   const handlePrevious = useCallback(async () => {
+    isManuallyPaused.current = false;
+    setHasFinished(false);
     if (!bridgeOnline) return;
 
     if (trackIds && trackIds.length > 0) {
@@ -314,9 +358,9 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
       const seconds = Math.floor(globalRemaining % 60);
       const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
-      const isLowTime = globalRemaining <= 20;
-      const isCriticalTime = globalRemaining <= 5;
-      const isFinished = globalRemaining === 0;
+      const isLowTime = globalRemaining <= 31;
+      const isCriticalTime = globalRemaining <= 10;
+      const isFinished = globalRemaining === 0 || hasFinished;
 
       let timerClass = "fixed top-4 right-4 text-xl font-mono p-2 rounded z-50 ";
 
@@ -347,9 +391,9 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
     const formatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
     // Styling logic
-    const isLowTime = remaining <= 20;
-    const isCriticalTime = remaining <= 5;
-    const isFinished = remaining === 0;
+    const isLowTime = remaining <= 31;
+    const isCriticalTime = remaining <= 10;
+    const isFinished = remaining === 0 || hasFinished;
 
     // Smaller font (text-xl), no background
     let timerClass = "fixed top-4 right-4 text-xl font-mono p-2 rounded z-50 ";

@@ -338,7 +338,7 @@ export default function Question() {
     <div className="h-screen overflow-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">
-          Question {questionId} - <span className={roundId === "3" ? "font-linebeam text-4xl text-cyan-400" : ""}>
+          Round {roundId} - Question {questionId} - <span className={roundId === "3" ? "font-linebeam text-4xl text-cyan-400" : ""}>
             {(() => {
               const qNum = parseInt(questionId || "0", 10);
               const rNum = parseInt(roundId || "0", 10);
@@ -376,7 +376,7 @@ export default function Question() {
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
               <h3
-                className="text-6xl flex justify-items-center"
+                className="text-6xl flex justify-items-center leading-[1.3]"
                 dangerouslySetInnerHTML={{ __html: answer }}
               ></h3>
             </div>
@@ -399,7 +399,7 @@ export default function Question() {
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
               <div className="p-8 flex items-center justify-center">
                 <h3
-                  className="text-6xl flex justify-center"
+                  className="text-6xl flex justify-center leading-[1.3]"
                   dangerouslySetInnerHTML={{ __html: banthaAnswer }}
                 ></h3>
               </div>

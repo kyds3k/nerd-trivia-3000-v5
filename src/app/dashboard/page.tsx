@@ -165,6 +165,33 @@ export default function DashboardPage() {
     }
   };
 
+  const handlePresent = async (id: string) => {
+    try {
+      await refreshAuthState();
+      // 1. Get all active editions
+      const activeEditions = await pb.collection("editions").getFullList({ filter: "is_active = true" });
+
+      // 2. Set them to inactive
+      for (const edition of activeEditions) {
+        if (edition.id !== id) {
+          await pb.collection("editions").update(edition.id, { is_active: false });
+        }
+      }
+
+      // 3. Set the selected edition to active
+      await pb.collection("editions").update(id, { is_active: true });
+
+      // 4. Navigate to the present page
+      router.push(`/edition/${id}/present`);
+
+    } catch (error) {
+      console.error("Failed to set active edition:", error);
+      // Proceed to navigate anyway, or show error?
+      // For now, let's try to navigate anyway so the user isn't stuck
+      router.push(`/edition/${id}/present`);
+    }
+  };
+
 
 
   useEffect(() => {
@@ -371,7 +398,7 @@ export default function DashboardPage() {
                     {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
                     <div className="my-4 flex gap-2">
                       {!edition.isWip && (
-                        <Button as={Link} href={`/edition/${edition.id}/present`}>Present</Button>
+                        <Button onPress={() => handlePresent(edition.id)}>Present</Button>
                       )}
 
                       {/* ONLY SHOW ADMIN BUTTON IF NOT WIP */}

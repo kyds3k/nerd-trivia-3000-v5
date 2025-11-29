@@ -126,8 +126,8 @@ export default function Round() {
         <Spinner size="lg" />
       ) : (
         <div className="roundContainer flex flex-col gap-4 items-center">
-          <h1 className="text-8xl">Round {roundId}</h1>
-          <Image src={roundGif} alt="Round Gif" height={500} />
+          <h1 className="text-4xl md:text-8xl">Round {roundId}</h1>
+          <img src={roundGif} alt="Round Gif" className="max-h-[70vh] w-auto object-contain" />
         </div>
       )}
     </div>

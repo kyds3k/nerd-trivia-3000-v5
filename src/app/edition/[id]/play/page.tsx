@@ -246,7 +246,7 @@ export default function EditionPage() {
               input: "placeholder-gray-400 text-white focus-visible:outline-none",
             }}
             radius="none" // Removes rounded edges
-            variant="bordered"            
+            variant="bordered"
           />
 
           <input type="hidden" name="user_email" value={userEmail} />
@@ -258,7 +258,7 @@ export default function EditionPage() {
               color="primary"
               type="submit"
               data-augmented-ui="both"
-              className="w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse"
+              className="w-full border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse justify-center"
             >
               Submit
             </Button>
@@ -310,14 +310,14 @@ export default function EditionPage() {
               input: "placeholder-gray-400 text-white focus-visible:outline-none",
             }}
             radius="none" // Removes rounded edges
-            variant="bordered"            
+            variant="bordered"
           />
           <div className="flex gap-2">
             <Button
               color="primary"
               type="submit"
               data-augmented-ui="both"
-              className="w-fit border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse"
+              className="w-full border-none rounded-none text-white bg-black nerd-aug bluebutton motion-safe:animate-pulse justify-center"
             >
               Submit
             </Button>

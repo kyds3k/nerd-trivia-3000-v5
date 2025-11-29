@@ -82,9 +82,9 @@ export default function Question() {
     try {
       const track = await getAppleMusicTrack(songId);
       if (track) {
-        setSongArtist(track.artists);
+        setSongArtist(track.artist);
         setSongTitle(track.title);
-        setSongAlbumArt(track.albumImage);
+        setSongAlbumArt(track.artworkUrl);
       }
     } catch (error) {
       console.error("Failed to fetch song info:", error);
@@ -106,8 +106,8 @@ export default function Question() {
 
         setSong(response.final_song_apple);
 
-        setEndGif1(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_1}`);
-        setEndGif2(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_2}`);
+        setEndGif1(pb.files.getUrl(response, response.end_gif_1));
+        setEndGif2(pb.files.getUrl(response, response.end_gif_2));
 
 
       } catch (error) {
@@ -135,7 +135,7 @@ export default function Question() {
         <h1 className="py-4 pl-4 text-2xl">THE END</h1>
         {song && (
           <div>
-            <AppleScriptPlayer song={song} />
+            <AppleScriptPlayer trackId={song} />
           </div>
         )}
       </div>

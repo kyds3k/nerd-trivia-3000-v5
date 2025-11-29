@@ -27,3 +27,28 @@ export const sendMessage = async (type: string | null, message: string | null, t
 };
 
 
+
+export const sendDirective = async (type: string, round: string | null, question: string | null, active: boolean | null) => {
+  console.log("sendDirective called with:", { type, round, question, active });
+
+  try {
+    const response = await fetch('/api/direct', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type, round, question, active }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const json = await response.json();
+    console.log("Directive sent successfully:", json);
+    return json;
+  } catch (error) {
+    console.error("Error sending directive:", error);
+    throw error;
+  }
+};
