@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 export interface EditionDraftData {
+  id?: string;
   title: string;
   date: string | null;
   blurb: string;
@@ -33,18 +34,18 @@ export interface EditionDraftData {
   imp1Gif: string;
   imp1Question: string;
   imp1Ppa: string;
-  imp1SongsApple: { [key: number]: string };
+  imp1SongsApple: string[];
   imp1Answers: string[];
-  imp1AnswerGifs: { [key: number]: string };
+  imp1AnswerGifs: string[];
   // Impossible 2
   imp2IntroGif: string;
   imp2Theme: string;
   imp2Gif: string;
   imp2Question: string;
   imp2Ppa: string;
-  imp2SongsApple: { [key: number]: string };
+  imp2SongsApple: string[];
   imp2Answers: string[];
-  imp2AnswerGifs: { [key: number]: string };
+  imp2AnswerGifs: string[];
   // Wager
   wagerGif: string;
   wagerPlacingGif: string;

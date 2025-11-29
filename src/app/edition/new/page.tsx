@@ -26,11 +26,69 @@ import { useDateFormatter } from "@react-aria/i18n";
 import { useParams } from "next/navigation";
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
-import { useEditionDraft } from "../../../../src/hooks/useEditionDraft";
+import { useEditionDraft, EditionDraftData } from "../../../../src/hooks/useEditionDraft";
 import { useDateField } from "../../../../src/hooks/useDateField";
 import GifPicker, { Theme } from "gif-picker-react";
 
 
+
+
+const defaultEditionData: EditionDraftData = {
+  title: "",
+  date: null,
+  blurb: "",
+  editionGif: "",
+  homeSongApple: "",
+  endGif1: "",
+  endGif2: "",
+  r1Gif: "",
+  r2Gif: "",
+  r3Gif: "",
+  round1Questions: [],
+  round2Questions: [],
+  round3Questions: [],
+  round1Answers: [],
+  round2Answers: [],
+  round3Answers: [],
+  round1SongsApple: [],
+  round2SongsApple: [],
+  round3SongsApple: [],
+  round1AnswerGifs: [],
+  round2AnswerGifs: [],
+  round3AnswerGifs: [],
+  banthaAnswer: "",
+  banthaAnswerGif: "",
+  imp1IntroGif: "",
+  imp1Theme: "",
+  imp1Gif: "",
+  imp1Question: "",
+  imp1Ppa: "",
+  imp1SongsApple: [],
+  imp1Answers: [],
+  imp1AnswerGifs: [],
+  imp2IntroGif: "",
+  imp2Theme: "",
+  imp2Gif: "",
+  imp2Question: "",
+  imp2Ppa: "",
+  imp2SongsApple: [],
+  imp2Answers: [],
+  imp2AnswerGifs: [],
+  wagerGif: "",
+  wagerPlacingGif: "",
+  wagerSongApple: "",
+  finalCat: "",
+  finalCatGif: "",
+  finalIntroGif: "",
+  finalQuestion: "",
+  finalAnswer: "",
+  finalAnswerGif: "",
+  finalSongApple: "",
+  numImpossibleAnswers: 0,
+  numImpossibleAnswers2: 0,
+  numImpossibleSongs: 0,
+  numImpossibleSongs2: 0,
+};
 
 export default function NewEditionPage() {
 
@@ -78,14 +136,57 @@ export default function NewEditionPage() {
   const gifInputsRef = useRef<HTMLInputElement[]>([]);
 
   // --- useEditionDraft must be before any useEffect that references editionData ---
-  const {
-    editionData,
-    updateField,
-    updateArrayItem,
-    addArrayItem,
-    removeArrayItem,
-    clearDraft,
-  } = useEditionDraft();
+  const { saveDraft, loadDraft, clearDraft, hasDraft } = useEditionDraft();
+
+  const [editionData, setEditionData] = useState<EditionDraftData>(() => {
+    if (typeof window !== "undefined") {
+      const draft = loadDraft();
+      if (draft) return draft;
+    }
+    return defaultEditionData;
+  });
+
+  const updateField = (key: keyof EditionDraftData) => (value: any) => {
+    setEditionData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateArrayItem = (field: keyof EditionDraftData, index: number, value: any) => {
+    setEditionData(prev => {
+      const current = prev[field];
+      let updated: any;
+
+      if (Array.isArray(current)) {
+        updated = [...current];
+        updated[index] = value;
+      } else {
+        updated = value;
+      }
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const addArrayItem = (field: keyof EditionDraftData, value: any = "") => {
+    setEditionData(prev => {
+      const updated = Array.isArray(prev[field]) ? [...(prev[field] as any[]), value] : [value];
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  const removeArrayItem = (field: keyof EditionDraftData, index: number) => {
+    setEditionData(prev => {
+      const updated = Array.isArray(prev[field]) ? [...(prev[field] as any[])] : [];
+      updated.splice(index, 1);
+      return { ...prev, [field]: updated };
+    });
+  };
+
+  // Auto-save effect
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      saveDraft(editionData);
+    }, 2000);
+    return () => clearTimeout(handler);
+  }, [editionData, saveDraft]);
 
   // --- useDateField depends on editionData ---
   const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
@@ -137,17 +238,17 @@ export default function NewEditionPage() {
 
   const updateQuestion: UpdateQuestionFunction = (round, index, value) => {
     const fieldMap: Record<1 | 2 | 3, keyof typeof editionData> = {
-      1: "r1Questions",
-      2: "r2Questions",
-      3: "r3Questions"
+      1: "round1Questions",
+      2: "round2Questions",
+      3: "round3Questions"
     };
     updateArrayItem(fieldMap[round], index, value);
   };
   const updateAnswer: UpdateAnswerFunction = (round, index, value) => {
     const fieldMap: Record<1 | 2 | 3 | "imp1" | "imp2", keyof typeof editionData> = {
-      1: "r1Answers",
-      2: "r2Answers",
-      3: "r3Answers",
+      1: "round1Answers",
+      2: "round2Answers",
+      3: "round3Answers",
       imp1: "imp1Answers",
       imp2: "imp2Answers",
     };
@@ -155,11 +256,11 @@ export default function NewEditionPage() {
   };
 
   const handleImp1Songs = (index: number, value: string) => {
-    updateArrayItem("imp1Songs", index, value);
+    updateArrayItem("imp1SongsApple", index, value);
   };
 
   const handleImp2Songs = (index: number, value: string) => {
-    updateArrayItem("imp2Songs", index, value);
+    updateArrayItem("imp2SongsApple", index, value);
   };
 
 
@@ -218,16 +319,16 @@ export default function NewEditionPage() {
 
   const updateImpossibleRounds = async (
     editionId: string,
-    imp1Songs: { [key: number]: string },
+    imp1SongsApple: string[],
     imp1Answers: string[],
-    imp1AnswerGifs: { [key: number]: string },
-    imp2Songs: { [key: number]: string },
+    imp1AnswerGifs: string[],
+    imp2SongsApple: string[],
     imp2Answers: string[],
-    imp2AnswerGifs: { [key: number]: string }
+    imp2AnswerGifs: string[]
   ): Promise<any[][]> => {
     const updatedRounds = await Promise.all([
-      updateImpossibleRound(editionId, 1, imp1Songs, imp1Answers, imp1AnswerGifs),
-      updateImpossibleRound(editionId, 2, imp2Songs, imp2Answers, imp2AnswerGifs),
+      updateImpossibleRound(editionId, 1, imp1SongsApple, imp1Answers, imp1AnswerGifs),
+      updateImpossibleRound(editionId, 2, imp2SongsApple, imp2Answers, imp2AnswerGifs),
     ]);
     return updatedRounds;
   }
@@ -235,17 +336,17 @@ export default function NewEditionPage() {
   const updateImpossibleRound = async (
     editionId: string,
     roundNumber: 1 | 2,
-    songs: { [key: number]: string },
+    songs: string[],
     answers: string[],
-    answerGifs: { [key: number]: string }
+    answerGifs: string[]
   ): Promise<any[]> => {
     const round = roundNumber;
     const roundData = roundNumber === 1 ? {
       intro_gif: editionData.imp1IntroGif,
       theme: editionData.imp1Theme,
-      theme_gif: editionData.imp1ThemeGif,
+      theme_gif: editionData.imp1Gif,
       question_text: editionData.imp1Question,
-      point_value: editionData.imp1AnswerValue,
+      point_value: editionData.imp1Ppa,
       apple_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
@@ -254,9 +355,9 @@ export default function NewEditionPage() {
     } : {
       intro_gif: editionData.imp2IntroGif,
       theme: editionData.imp2Theme,
-      theme_gif: editionData.imp2ThemeGif,
+      theme_gif: editionData.imp2Gif,
       question_text: editionData.imp2Question,
-      point_value: editionData.imp2AnswerValue,
+      point_value: editionData.imp2Ppa,
       apple_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
@@ -421,24 +522,24 @@ export default function NewEditionPage() {
 
       // Step 2: Update the Questions
       const roundQuestions = [
-        padArray(editionData.r1Questions, 5),
-        padArray(editionData.r2Questions, 5),
-        padArray(editionData.r3Questions, 5)
+        padArray(editionData.round1Questions, 5),
+        padArray(editionData.round2Questions, 5),
+        padArray(editionData.round3Questions, 5)
       ];
       const roundSongs = [
-        padArray(editionData.r1SongsApple, 5),
-        padArray(editionData.r2SongsApple, 5),
-        padArray(editionData.r3SongsApple, 5)
+        padArray(editionData.round1SongsApple, 5),
+        padArray(editionData.round2SongsApple, 5),
+        padArray(editionData.round3SongsApple, 5)
       ];
       const roundAnswers = [
-        padArray(editionData.r1Answers, 5),
-        padArray(editionData.r2Answers, 5),
-        padArray(editionData.r3Answers, 5)
+        padArray(editionData.round1Answers, 5),
+        padArray(editionData.round2Answers, 5),
+        padArray(editionData.round3Answers, 5)
       ];
       const roundAnswerGifs = [
-        padArray(editionData.r1AnswerGifs, 5),
-        padArray(editionData.r2AnswerGifs, 5),
-        padArray(editionData.r3AnswerGifs, 5)
+        padArray(editionData.round1AnswerGifs, 5),
+        padArray(editionData.round2AnswerGifs, 5),
+        padArray(editionData.round3AnswerGifs, 5)
       ];
       const roundGifs = [editionData.r1Gif, editionData.r2Gif, editionData.r3Gif];
 
@@ -476,9 +577,9 @@ export default function NewEditionPage() {
       setLoadMessage("Creating wager round . . .");
 
       const updatedWagerRound = await pb.collection("wager_rounds").create({
-        wager_intro_gif: editionData.wagerIntroGif,
-        final_cat: editionData.finalCategory,
-        final_cat_gif: editionData.finalCategoryGif,
+        wager_intro_gif: editionData.wagerGif,
+        final_cat: editionData.finalCat,
+        final_cat_gif: editionData.finalCatGif,
         wager_placing_gif: editionData.wagerPlacingGif,
         wager_song_apple: editionData.wagerSongApple,
         edition_id: editionId,
@@ -559,19 +660,19 @@ export default function NewEditionPage() {
 
   useEffect(() => {
     // Impossible 1
-    updateField("imp1Songs")(syncArrayToCount(editionData.imp1Songs, editionData.imp1SongCount, ""));
-    updateField("imp1Answers")(syncArrayToCount(editionData.imp1Answers, editionData.imp1AnswerCount, ""));
-    updateField("imp1AnswerGifs")(syncArrayToCount(editionData.imp1AnswerGifs, editionData.imp1AnswerCount, ""));
+    updateField("imp1SongsApple")(syncArrayToCount(editionData.imp1SongsApple, editionData.numImpossibleSongs, ""));
+    updateField("imp1Answers")(syncArrayToCount(editionData.imp1Answers, editionData.numImpossibleAnswers, ""));
+    updateField("imp1AnswerGifs")(syncArrayToCount(editionData.imp1AnswerGifs, editionData.numImpossibleAnswers, ""));
 
     // Impossible 2
-    updateField("imp2Songs")(syncArrayToCount(editionData.imp2Songs, editionData.imp2SongCount, ""));
-    updateField("imp2Answers")(syncArrayToCount(editionData.imp2Answers, editionData.imp2AnswerCount, ""));
-    updateField("imp2AnswerGifs")(syncArrayToCount(editionData.imp2AnswerGifs, editionData.imp2AnswerCount, ""));
+    updateField("imp2SongsApple")(syncArrayToCount(editionData.imp2SongsApple, editionData.numImpossibleSongs2, ""));
+    updateField("imp2Answers")(syncArrayToCount(editionData.imp2Answers, editionData.numImpossibleAnswers2, ""));
+    updateField("imp2AnswerGifs")(syncArrayToCount(editionData.imp2AnswerGifs, editionData.numImpossibleAnswers2, ""));
   }, [
-    editionData.imp1SongCount,
-    editionData.imp1AnswerCount,
-    editionData.imp2SongCount,
-    editionData.imp2AnswerCount,
+    editionData.numImpossibleSongs,
+    editionData.numImpossibleAnswers,
+    editionData.numImpossibleSongs2,
+    editionData.numImpossibleAnswers2,
   ]);
 
 
@@ -795,22 +896,22 @@ export default function NewEditionPage() {
                 <div key={`round1-question${index + 1}`}>
                   <h3 className="mb-2">Question {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r1Questions?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r1Questions", index, newVal)}
+                    state={editionData.round1Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round1Questions", index, newVal)}
                     identifier={`r1q${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
                   <div className="w-1/2 mb-2">
                     <AppleMusicSearch
-                      initialValue={editionData.r1SongsApple?.[index]}
-                      onSelect={(track) => updateArrayItem("r1SongsApple", index, track.id)}
+                      initialValue={editionData.round1SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("round1SongsApple", index, track.id)}
                     />
                   </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r1Answers?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r1Answers", index, newVal)}
+                    state={editionData.round1Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round1Answers", index, newVal)}
                     identifier={`r1a${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
@@ -820,14 +921,14 @@ export default function NewEditionPage() {
                     type="text"
                     data-type="gif"
                     className="w-1/2 mb-6"
-                    value={editionData.r1AnswerGifs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r1AnswerGifs", index, newVal)}
+                    value={editionData.round1AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("round1AnswerGifs", index, newVal)}
                   />
                   <GifAnswerPickerToggle
-                    show={editionData.r1AnswerGifs?.[index]}
-                    onToggle={(_show) => updateArrayItem("r1AnswerGifs", index, _show)}
-                    gifUrl={editionData.r1AnswerGifs?.[index]}
-                    onGifPick={(gif) => updateArrayItem("r1AnswerGifs", index, gif.url)}
+                    show={editionData.round1AnswerGifs?.[index]}
+                    onToggle={(_show: boolean) => updateArrayItem("round1AnswerGifs", index, _show)}
+                    gifUrl={editionData.round1AnswerGifs?.[index]}
+                    onGifPick={(gif: any) => updateArrayItem("round1AnswerGifs", index, gif.url)}
                     gifInputsRef={gifInputsRef}
                     index={index}
                   />
@@ -851,9 +952,9 @@ export default function NewEditionPage() {
                       />
                       <GifAnswerPickerToggle
                         show={editionData.banthaAnswerGif}
-                        onToggle={(_show) => updateField("banthaAnswerGif")(_show)}
+                        onToggle={(_show: boolean) => updateField("finalAnswerGif")(_show)}
                         gifUrl={editionData.banthaAnswerGif}
-                        onGifPick={(gif) => updateField("banthaAnswerGif")(gif.url)}
+                        onGifPick={(gif: any) => updateField("banthaAnswerGif")(gif.url)}
                         gifInputsRef={gifInputsRef}
                         index="bantha"
                       />
@@ -921,8 +1022,8 @@ export default function NewEditionPage() {
                   type="text"
                   data-type="gif"
                   className="w-1/2"
-                  value={editionData.imp1ThemeGif}
-                  onValueChange={updateField("imp1ThemeGif")}
+                  value={editionData.imp1Gif}
+                  onValueChange={updateField("imp1Gif")}
                 />
                 <Button
                   className="mt-2"
@@ -933,7 +1034,7 @@ export default function NewEditionPage() {
                 {showImp1ThemeGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("imp1ThemeGif")(gif.url)}
+                      onGifClick={(gif) => updateField("imp1Gif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
@@ -941,7 +1042,7 @@ export default function NewEditionPage() {
 
                     />
                     <img
-                      src={editionData.imp1ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      src={editionData.imp1Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
                       className="w-full max-w-[500px] h-auto self-start"
                     />
@@ -961,15 +1062,15 @@ export default function NewEditionPage() {
                   label="Number of Songs"
                   data-identifier="i1_num_songs"
                   className="w-80 mb-8"
-                  selectedKeys={[String(editionData.imp1SongCount)]}
+                  selectedKeys={[String(editionData.numImpossibleSongs)]}
                   onSelectionChange={(keys) => {
                     const selectedValue = Array.from(keys)[0];
                     const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
-                    updateField("imp1SongCount")(value);
+                    updateField("numImpossibleSongs")(value);
                   }}
                 >
                   {[1, 2, 3].map((num, index) => (
-                    <SelectItem key={`${index + 1}`} value={index + 1} textValue={`${index + 1}`}>
+                    <SelectItem key={`${index + 1}`} textValue={`${index + 1}`}>
                       {index + 1}
                     </SelectItem>
                   ))}
@@ -978,7 +1079,7 @@ export default function NewEditionPage() {
 
                 {/* Render the Song Inputs Based on State */}
                 <div className="song_list ml-4" data-impossible="1">
-                  {Array.from({ length: editionData.imp1SongCount }).map((_, index) => (
+                  {Array.from({ length: editionData.numImpossibleSongs }).map((_, index) => (
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
@@ -988,20 +1089,10 @@ export default function NewEditionPage() {
                           type="text"
                           data-type="song"
                           required
-                          value={editionData.imp1Songs?.[index] || ""}
-                          onValueChange={(newVal) => updateArrayItem("imp1Songs", index, newVal)}
+                          value={editionData.imp1SongsApple?.[index] || ""}
+                          onValueChange={(newVal) => updateArrayItem("imp1SongsApple", index, newVal)}
                         />
-                        {imp1SongInfos[index] && (
-                          <div style={{ display: "flex", alignItems: "center", marginTop: 4 }}>
-                            {imp1SongInfos[index].albumImage && (
-                              <img src={imp1SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                            )}
-                            <div>
-                              <div style={{ fontWeight: 500 }}>{imp1SongInfos[index].title}</div>
-                              <div style={{ color: "#888" }}>{imp1SongInfos[index].artists}</div>
-                            </div>
-                          </div>
-                        )}
+
                       </div>
                     </div>
                   ))}
@@ -1016,16 +1107,16 @@ export default function NewEditionPage() {
                   label="Number of Answers"
                   data-identifier="i1_num_answers"
                   className="w-80 mb-8"
-                  selectedKeys={[String(editionData.imp1AnswerCount)]}
+                  selectedKeys={[String(editionData.numImpossibleAnswers)]}
                   onSelectionChange={(keys) => {
                     const selectedValue = Array.from(keys)[0];
                     const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
-                    updateField("imp1AnswerCount")(value);
+                    updateField("numImpossibleAnswers")(value);
                   }}
 
                 >
                   {Array.from({ length: 20 }, (_, index) => (
-                    <SelectItem key={index + 1} value={index + 1} textValue={`${index + 1}`}>
+                    <SelectItem key={index + 1} textValue={`${index + 1}`}>
                       {index + 1}
                     </SelectItem>
                   ))}
@@ -1041,8 +1132,8 @@ export default function NewEditionPage() {
                     step="50"
                     min="50"
                     className="w-1/12"
-                    value={editionData.imp1AnswerValue}
-                    onValueChange={updateField("imp1AnswerValue")}
+                    value={editionData.imp1Ppa}
+                    onValueChange={updateField("imp1Ppa")}
                   />
                 </div>
 
@@ -1050,7 +1141,7 @@ export default function NewEditionPage() {
 
                 {/* Render the Answer Inputs Based on State */}
                 <div className="answer_list ml-4" data-impossible="1">
-                  {Array.from({ length: editionData.imp1AnswerCount || 0 }).map((_, index) => (
+                  {Array.from({ length: editionData.numImpossibleAnswers || 0 }).map((_, index) => (
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Answer {index + 1}</h4>
@@ -1074,9 +1165,9 @@ export default function NewEditionPage() {
                         />
                         <GifAnswerPickerToggle
                           show={editionData.imp1AnswerGifs[index]}
-                          onToggle={(_show) => updateArrayItem("imp1AnswerGifs", index, _show)}
+                          onToggle={(_show: boolean) => updateArrayItem("imp1AnswerGifs", index, _show)}
                           gifUrl={editionData.imp1AnswerGifs[index]}
-                          onGifPick={(gif) => updateArrayItem("imp1AnswerGifs", index, gif.url)}
+                          onGifPick={(gif: any) => updateArrayItem("imp1AnswerGifs", index, gif.url)}
                           gifInputsRef={gifInputsRef}
                           index={index}
                         />
@@ -1129,22 +1220,22 @@ export default function NewEditionPage() {
                 <div key={`round2-question${index + 1}`}>
                   <h3 className="mb-2">Question {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r2Questions?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r2Questions", index, newVal)}
+                    state={editionData.round2Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round2Questions", index, newVal)}
                     identifier={`r2q${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
                   <div className="w-1/2 mb-2">
                     <AppleMusicSearch
-                      initialValue={editionData.r2SongsApple?.[index]}
-                      onSelect={(track) => updateArrayItem("r2SongsApple", index, track.id)}
+                      initialValue={editionData.round2SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("round2SongsApple", index, track.id)}
                     />
                   </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r2Answers?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r2Answers", index, newVal)}
+                    state={editionData.round2Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round2Answers", index, newVal)}
                     identifier={`r2a${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
@@ -1154,15 +1245,15 @@ export default function NewEditionPage() {
                     type="text"
                     data-type="gif"
                     className="w-1/2 mb-6"
-                    value={editionData.r2AnswerGifs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r2AnswerGifs", index, newVal)}
+                    value={editionData.round2AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("round2AnswerGifs", index, newVal)}
                   />
                   <div className="gif-picker flex gap-4">
                     <GifAnswerPickerToggle
-                      show={editionData.r2AnswerGifs?.[index]}
-                      onToggle={(_show) => updateArrayItem("r2AnswerGifs", index, _show)}
-                      gifUrl={editionData.r2AnswerGifs?.[index]}
-                      onGifPick={(gif) => updateArrayItem("r2AnswerGifs", index, gif.url)}
+                      show={editionData.round2AnswerGifs?.[index]}
+                      onToggle={(_show: boolean) => updateArrayItem("round2AnswerGifs", index, _show)}
+                      gifUrl={editionData.round2AnswerGifs?.[index]}
+                      onGifPick={(gif: any) => updateArrayItem("round2AnswerGifs", index, gif.url)}
                       gifInputsRef={gifInputsRef}
                       index={index}
                     />
@@ -1231,8 +1322,8 @@ export default function NewEditionPage() {
                   type="text"
                   data-type="gif"
                   className="w-1/2"
-                  value={editionData.imp2ThemeGif}
-                  onValueChange={updateField("imp2ThemeGif")}
+                  value={editionData.imp2Gif}
+                  onValueChange={updateField("imp2Gif")}
                 />
                 <Button
                   className="mt-2"
@@ -1243,7 +1334,7 @@ export default function NewEditionPage() {
                 {showImp2ThemeGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("imp2ThemeGif")(gif.url)}
+                      onGifClick={(gif) => updateField("imp2Gif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
@@ -1251,7 +1342,7 @@ export default function NewEditionPage() {
 
                     />
                     <img
-                      src={editionData.imp2ThemeGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      src={editionData.imp2Gif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
                       className="w-full max-w-[500px] h-auto self-start"
                     />
@@ -1276,22 +1367,22 @@ export default function NewEditionPage() {
                   label="Number of Songs"
                   data-identifier="i2_num_songs"
                   className="w-80 mb-8"
-                  selectedKeys={[String(editionData.imp2SongCount)]}
+                  selectedKeys={[String(editionData.numImpossibleSongs2)]}
                   onSelectionChange={(keys) => {
                     const selectedValue = Array.from(keys)[0];
                     const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
-                    updateField("imp2SongCount")(value);
+                    updateField("numImpossibleSongs2")(value);
                   }}
                 >
                   {[1, 2, 3].map((num, index) => (
-                    <SelectItem key={`${index + 1}`} value={index + 1} textValue={`${index + 1}`}>
+                    <SelectItem key={`${index + 1}`} textValue={`${index + 1}`}>
                       {index + 1}
                     </SelectItem>
                   ))}
                 </Select>
 
                 <div className="song_list ml-4" data-impossible="2">
-                  {Array.from({ length: editionData.imp2SongCount }).map((_, index) => (
+                  {Array.from({ length: editionData.numImpossibleSongs2 }).map((_, index) => (
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
@@ -1301,8 +1392,8 @@ export default function NewEditionPage() {
                           type="text"
                           data-type="song"
                           required
-                          value={editionData.imp2Songs?.[index] || ""}
-                          onValueChange={(newVal) => updateArrayItem("imp2Songs", index, newVal)}
+                          value={editionData.imp2SongsApple?.[index] || ""}
+                          onValueChange={(newVal) => updateArrayItem("imp2SongsApple", index, newVal)}
                         />
                       </div>
                     </div>
@@ -1317,15 +1408,15 @@ export default function NewEditionPage() {
                   label="Number of Answers"
                   data-identifier="i2_num_answers"
                   className="w-80 mb-8"
-                  selectedKeys={[String(editionData.imp2AnswerCount)]}
+                  selectedKeys={[String(editionData.numImpossibleAnswers2)]}
                   onSelectionChange={(keys) => {
                     const selectedValue = Array.from(keys)[0];
                     const value = typeof selectedValue === "string" ? parseInt(selectedValue) : selectedValue;
-                    updateField("imp2AnswerCount")(value);
+                    updateField("numImpossibleAnswers2")(value);
                   }}
                 >
                   {Array.from({ length: 20 }, (_, index) => (
-                    <SelectItem key={index + 1} value={index + 1} textValue={`${index + 1}`}>
+                    <SelectItem key={index + 1} textValue={`${index + 1}`}>
                       {index + 1}
                     </SelectItem>
                   ))}
@@ -1342,15 +1433,15 @@ export default function NewEditionPage() {
                     step="50"
                     min="50"
                     className="w-1/12"
-                    value={editionData.imp2AnswerValue}
-                    onValueChange={updateField("imp2AnswerValue")}
+                    value={editionData.imp2Ppa}
+                    onValueChange={updateField("imp2Ppa")}
                   />
                 </div>
 
                 <hr className="block my-10 bg-gray-500"></hr>
 
                 <div className="answer_list ml-4" data-impossible="2">
-                  {Array.from({ length: editionData.imp2AnswerCount || 0 }).map((_, index) => (
+                  {Array.from({ length: editionData.numImpossibleAnswers2 || 0 }).map((_, index) => (
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Answer {index + 1}</h4>
@@ -1374,9 +1465,9 @@ export default function NewEditionPage() {
                         />
                         <GifAnswerPickerToggle
                           show={editionData.imp2AnswerGifs[index]}
-                          onToggle={(_show) => updateArrayItem("imp2AnswerGifs", index, _show)}
+                          onToggle={(_show: boolean) => updateArrayItem("imp2AnswerGifs", index, _show)}
                           gifUrl={editionData.imp2AnswerGifs[index]}
-                          onGifPick={(gif) => updateArrayItem("imp2AnswerGifs", index, gif.url)}
+                          onGifPick={(gif: any) => updateArrayItem("imp2AnswerGifs", index, gif.url)}
                           gifInputsRef={gifInputsRef}
                           index={index}
                         />
@@ -1434,22 +1525,22 @@ export default function NewEditionPage() {
                 <div key={`round3-question${index + 1}`}>
                   <h3 className="mb-2">Question {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r3Questions?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r3Questions", index, newVal)}
+                    state={editionData.round3Questions?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round3Questions", index, newVal)}
                     identifier={`r3q${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
                   <div className="w-1/2 mb-2">
                     <AppleMusicSearch
-                      initialValue={editionData.r3SongsApple?.[index]}
-                      onSelect={(track) => updateArrayItem("r3SongsApple", index, track.id)}
+                      initialValue={editionData.round3SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("round3SongsApple", index, track.id)}
                     />
                   </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
-                    state={editionData.r3Answers?.[index] || ""}
-                    setState={(newVal) => updateArrayItem("r3Answers", index, newVal)}
+                    state={editionData.round3Answers?.[index] || ""}
+                    setState={(newVal) => updateArrayItem("round3Answers", index, newVal)}
                     identifier={`r3a${index + 1}`}
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
@@ -1459,14 +1550,14 @@ export default function NewEditionPage() {
                     type="text"
                     data-type="gif"
                     className="w-1/2 mb-6"
-                    value={editionData.r3AnswerGifs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r3AnswerGifs", index, newVal)}
+                    value={editionData.round3AnswerGifs?.[index] || ""}
+                    onValueChange={(newVal) => updateArrayItem("round3AnswerGifs", index, newVal)}
                   />
                   <GifAnswerPickerToggle
-                    show={editionData.r3AnswerGifs?.[index]}
-                    onToggle={(_show) => updateArrayItem("r3AnswerGifs", index, _show)}
-                    gifUrl={editionData.r3AnswerGifs?.[index]}
-                    onGifPick={(gif) => updateArrayItem("r3AnswerGifs", index, gif.url)}
+                    show={editionData.round3AnswerGifs?.[index]}
+                    onToggle={(_show: boolean) => updateArrayItem("round3AnswerGifs", index, _show)}
+                    gifUrl={editionData.round3AnswerGifs?.[index]}
+                    onGifPick={(gif: any) => updateArrayItem("round3AnswerGifs", index, gif.url)}
                     gifInputsRef={gifInputsRef}
                     index={index}
                   />
@@ -1491,8 +1582,8 @@ export default function NewEditionPage() {
                   id="wager_gif"
                   type="text"
                   data-type="gif"
-                  value={editionData.wagerIntroGif}
-                  onValueChange={updateField("wagerIntroGif")}
+                  value={editionData.wagerGif}
+                  onValueChange={updateField("wagerGif")}
                 />
                 <Button
                   className="mt-2"
@@ -1503,7 +1594,7 @@ export default function NewEditionPage() {
                 {showWagerIntroGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("wagerIntroGif")(gif.url)}
+                      onGifClick={(gif) => updateField("wagerGif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
@@ -1511,7 +1602,7 @@ export default function NewEditionPage() {
 
                     />
                     <img
-                      src={editionData.wagerIntroGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      src={editionData.wagerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
                       className="w-full max-w-[500px] h-auto self-start"
                     />
@@ -1527,8 +1618,8 @@ export default function NewEditionPage() {
                   id="final_category"
                   type="text"
                   data-type="text"
-                  value={editionData.finalCategory}
-                  onValueChange={updateField("finalCategory")}
+                  value={editionData.finalCat}
+                  onValueChange={updateField("finalCat")}
                 />
               </div>
 
@@ -1540,8 +1631,8 @@ export default function NewEditionPage() {
                   id="final_cat_gif"
                   type="text"
                   data-type="gif"
-                  value={editionData.finalCategoryGif}
-                  onValueChange={updateField("finalCategoryGif")}
+                  value={editionData.finalCatGif}
+                  onValueChange={updateField("finalCatGif")}
                 />
                 <Button
                   className="mt-2"
@@ -1552,7 +1643,7 @@ export default function NewEditionPage() {
                 {showFinalCategoryGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("finalCategoryGif")(gif.url)}
+                      onGifClick={(gif) => updateField("finalCatGif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
@@ -1560,7 +1651,7 @@ export default function NewEditionPage() {
 
                     />
                     <img
-                      src={editionData.finalCategoryGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                      src={editionData.finalCatGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
                       alt="Selected GIF"
                       className="w-full max-w-[500px] h-auto self-start"
                     />
@@ -1588,7 +1679,7 @@ export default function NewEditionPage() {
                 {showWagerPlacingGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("wagerPlacingGif")(gif.url)}
+                      onGifClick={(gif: any) => updateField("wagerPlacingGif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
@@ -1686,7 +1777,7 @@ export default function NewEditionPage() {
                 {showFinalAnswerGifPicker && (
                   <div className="gif-picker flex gap-4 mt-2">
                     <GifPicker
-                      onGifClick={(gif) => updateField("finalAnswerGif")(gif.url)}
+                      onGifClick={(gif: any) => updateField("finalAnswerGif")(gif.url)}
                       width={500}
                       height={500}
                       tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
