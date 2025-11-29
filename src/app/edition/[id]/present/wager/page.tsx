@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 //import { Image } from "@heroui/react";
 import Image from 'next/image';
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
@@ -16,7 +16,7 @@ import { useTransitionRouter } from "next-transition-router";
 import { set } from 'lodash';
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 
 interface Wager {
@@ -25,7 +25,7 @@ interface Wager {
   final_cat: string;
   final_cat_gif: string;
   wager_placing_gif: string;
-  wager_song: string;
+  wager_song_apple: string;
   is_active: boolean;
 }
 
@@ -39,7 +39,7 @@ export default function Wager() {
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+
   const [wagerIntroGif, setWagerIntroGif] = useState<string | null>(null);
   const [finalCat, setFinalCat] = useState<string | null>(null);
   const [finalCatGif, setFinalCatGif] = useState<string | null>(null);
@@ -74,25 +74,17 @@ export default function Wager() {
     }
   }, [emblaApi])
 
-  // function to grab the album art, song name, and artist name from the Spotify API
-  const getSongInfo = async (song: string) => {
-    const songId = song.split(":")[2];
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${spotifyToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Song info:", data);
-      setSongArtist(data.artists[0].name);
-      setSongTitle(data.name);
-      setSongAlbumArt(data.album.images[0].url);
-    } else {
-      console.log("Failed to fetch song info:", await response.json());
+  // function to grab the album art, song name, and artist name from the Apple Music API
+  const getSongInfo = async (songId: string) => {
+    try {
+      const track = await getAppleMusicTrack(songId);
+      if (track) {
+        setSongArtist(track.artists);
+        setSongTitle(track.title);
+        setSongAlbumArt(track.albumImage);
+      }
+    } catch (error) {
+      console.error("Failed to fetch song info:", error);
     }
   }
 
@@ -104,17 +96,17 @@ export default function Wager() {
         setLoading(false);
         return;
       }
-  
+
       console.log("Authenticated with Pocketbase successfully.");
       const authData = localStorage.getItem("pocketbase_auth");
-  
+
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
         setIsAdmin(false);
         return;
       }
-  
+
       const parsedAuth = JSON.parse(authData);
       if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
@@ -122,46 +114,43 @@ export default function Wager() {
         setIsAdmin(false);
         return;
       }
-  
+
       console.log("Admin authenticated.");
       setIsAdmin(true);
-      refreshSpotifyToken(setSpotifyToken);
+
     };
 
 
-      const convertSpotifyUrlToUri = (url: string): string | null => {
-        const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-        return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-      };
 
 
-      const fetchWager = async () => {
-        try {
-          pb.autoCancellation(false);
-          const response = await pb
-            .collection("wager_rounds")
-            .getFirstListItem<Wager>(`edition_id = "${editionId}"`);
 
-          console.log("Wager round fetched:", response);
+    const fetchWager = async () => {
+      try {
+        pb.autoCancellation(false);
+        const response = await pb
+          .collection("wager_rounds")
+          .getFirstListItem<Wager>(`edition_id = "${editionId}"`);
 
-          setWagerIntroGif(response.wager_intro_gif);
-          setFinalCat(response.final_cat);
-          setFinalCatGif(response.final_cat_gif);
-          setWagerPlacingGif(response.wager_placing_gif);
-          setSong(convertSpotifyUrlToUri(response.wager_song));
+        console.log("Wager round fetched:", response);
 
-          setIsActive(response.is_active);
+        setWagerIntroGif(response.wager_intro_gif);
+        setFinalCat(response.final_cat);
+        setFinalCatGif(response.final_cat_gif);
+        setWagerPlacingGif(response.wager_placing_gif);
+        setSong(response.wager_song_apple);
 
-        } catch (error) {
-          console.error("Failed to fetch wager round:", error);
-        }
-      };
+        setIsActive(response.is_active);
 
-      if (editionId) {
-        initializeApp();
-        fetchWager();
+      } catch (error) {
+        console.error("Failed to fetch wager round:", error);
       }
-   }, []);
+    };
+
+    if (editionId) {
+      initializeApp();
+      fetchWager();
+    }
+  }, []);
 
   useEffect(() => {
     if (song) {
@@ -174,15 +163,15 @@ export default function Wager() {
     <div className="h-svh overflow-y-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">Wager Round</h1>
-        {spotifyToken && (
+        {song && (
           <div>
-            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+            <AppleScriptPlayer trackId={song} />
           </div>
         )}
       </div>
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
-  
+
           {/* First Slide */}
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
@@ -202,7 +191,7 @@ export default function Wager() {
               )}
             </div>
           </div>
-  
+
           {/* Second Slide */}
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
@@ -222,7 +211,7 @@ export default function Wager() {
               )}
             </div>
           </div>
-  
+
           {/* Third Slide */}
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
@@ -242,7 +231,7 @@ export default function Wager() {
               )}
             </div>
           </div>
-  
+
           {/* Last Slide */}
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
@@ -260,5 +249,5 @@ export default function Wager() {
       </div>
     </div>
   );
-  
+
 }

@@ -8,22 +8,22 @@ import Pocketbase from "pocketbase";
 //import { Image } from "@heroui/react";
 import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from "@heroui/react";
 import { useTransitionRouter } from "next-transition-router";
-import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
+import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 interface Question {
   edition_id: string;
   question_text: string;
   answer: string;
   final_answer_gif: string;
-  final_song: string;
-  end_gif_1: string;  end_gif_2: string;
+  final_song_apple: string;
+  end_gif_1: string; end_gif_2: string;
   is_active: boolean;
 }
 
@@ -38,7 +38,7 @@ export default function Question() {
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [endGif1, setEndGif1] = useState<string | null>(null);
   const [endGif2, setEndGif2] = useState<string | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+
 
 
   // Use the hook and pass the callback for question_toggle
@@ -74,111 +74,19 @@ export default function Question() {
     }
   }, [emblaApi])
 
-  // Clear stored tokens helper function
-  const clearStoredTokens = () => {
-    localStorage.removeItem("spotifyAuthToken");
-    localStorage.removeItem("spotifyRefreshTokenExpiry");
-    localStorage.removeItem("spotifyRefreshToken");
-    localStorage.removeItem("spotifyAuthRefreshToken");
-    localStorage.removeItem("spotifyAuthTokenExpiry");
-  };
 
-  const refreshSpotifyAuth = async () => {
-    console.log("refreshSpotifyAuth called");
-    
-    const savedToken = localStorage.getItem("spotifyAuthToken");
-    const refreshTokenExpiry = localStorage.getItem("spotifyRefreshTokenExpiry");
-    const savedRefreshToken = localStorage.getItem("spotifyRefreshToken");
 
-    console.log("Saved Token:", savedToken);
-    console.log("Refresh Token Expiry:", refreshTokenExpiry);
-    console.log("Saved Refresh Token:", savedRefreshToken);
-
-    // Check if we have all required tokens
-    if (savedToken && refreshTokenExpiry && savedRefreshToken) {
-      const expiry = parseInt(refreshTokenExpiry, 10) || 0;
-      const now = Date.now();
-
-      console.log(`Token expiry: ${expiry}, Current time: ${now}`);
-      
-      // Check if token is expired (with 5 minute buffer)
-      if (expiry < (now + 5 * 60 * 1000)) {
-        console.log("Token expired or expiring soon. Attempting to refresh...");
-        try {
-          const response = await fetch("https://accounts.spotify.com/api/token", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization: `Basic ${btoa(
-                `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}:${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET}`
-              )}`,
-            },
-            body: new URLSearchParams({
-              grant_type: "refresh_token",
-              refresh_token: savedRefreshToken,
-              client_id: `${process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID}`,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem("spotifyAuthToken", data.access_token);
-            setSpotifyToken(data.access_token);
-            localStorage.setItem(
-              "spotifyRefreshTokenExpiry",
-              (Date.now() + data.expires_in * 1000).toString()
-            );
-            localStorage.setItem("spotifyRefreshToken", data.refresh_token);
-            console.log("Refreshed Spotify token successfully:", data.access_token);
-          } else {
-            const errorData = await response.json();
-            console.error("Failed to refresh Spotify token:", errorData);
-            // If refresh token is invalid, clear tokens and redirect
-            if (response.status === 400) {
-              clearStoredTokens();
-              window.location.href = "/api/auth/signin";
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Error refreshing Spotify token:", error);
-          if (error?.toString().includes("revoked")) {
-            console.log("Token was revoked, clearing local storage");
-            clearStoredTokens();
-            window.location.href = "/api/auth/signin";
-            return;
-          }
-        }
-      } else {
-        console.log("Token is still valid");
-        setSpotifyToken(savedToken);
+  // function to grab the album art, song name, and artist name from the Apple Music API
+  const getSongInfo = async (songId: string) => {
+    try {
+      const track = await getAppleMusicTrack(songId);
+      if (track) {
+        setSongArtist(track.artists);
+        setSongTitle(track.title);
+        setSongAlbumArt(track.albumImage);
       }
-    } else {
-      console.log("No valid token found. Redirecting to sign-in.");
-      clearStoredTokens();
-      window.location.href = "/api/auth/signin";
-    }
-  }
-
-  // function to grab the album art, song name, and artist name from the Spotify API
-  const getSongInfo = async (song: string) => {
-    const songId = song.split(":")[2];
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${spotifyToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Song info:", data);
-      setSongArtist(data.artists[0].name);
-      setSongTitle(data.name);
-      setSongAlbumArt(data.album.images[0].url);
-    } else {
-      console.error("Failed to fetch song info:", await response.json());
+    } catch (error) {
+      console.error("Failed to fetch song info:", error);
     }
   }
 
@@ -195,7 +103,7 @@ export default function Question() {
 
         // Sanitize and set HTML content
 
-        setSong(convertSpotifyUrlToUri(response.final_song));
+        setSong(response.final_song_apple);
 
         setEndGif1(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_1}`);
         setEndGif2(`https://nerdtriviabucket.s3.us-east-1.amazonaws.com/hvunkxgg0yziid1/u215tr37ub999gz/${response.end_gif_2}`);
@@ -206,14 +114,11 @@ export default function Question() {
       }
     };
 
-    const convertSpotifyUrlToUri = (url: string): string | null => {
-      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-    };
-    
+
+
     if (editionId) {
       fetchQuestion();
-      refreshSpotifyAuth();
+
     }
   }, []);
 
@@ -227,9 +132,9 @@ export default function Question() {
     <div className="h-dvh overflow-y-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">THE END</h1>
-        {spotifyToken && (
+        {song && (
           <div>
-            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+            <AppleScriptPlayer song={song} />
           </div>
         )}
       </div>
@@ -268,7 +173,7 @@ export default function Question() {
                 <Spinner size="lg" />
               </>
             )}
-          </div>          
+          </div>
         </div>
       </div>
     </div>

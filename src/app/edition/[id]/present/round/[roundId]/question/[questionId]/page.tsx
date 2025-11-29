@@ -7,7 +7,7 @@ import Pocketbase from "pocketbase";
 // import { Image } from "@heroui/react";
 import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
@@ -18,7 +18,7 @@ import Typed from "typed.js";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from '@/components/ShallNotPass';
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/lib/spotifyAuth";
+import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 
 interface Question {
@@ -31,7 +31,7 @@ interface Question {
   is_banthashit_question: boolean;
   bantha_answer: string;
   bantha_answer_gif: string;
-  song: string;
+  apple_ids: string;
   bonus_answers: string[];
   is_active: boolean;
 }
@@ -64,7 +64,7 @@ export default function Question() {
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [bonusAnswers, setBonusAnswers] = useState<string[] | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -165,7 +165,7 @@ export default function Question() {
 
       checkFit();
     }
-  }, [questionText, isResized]);
+  }, [questionText, isResized, questionActive]);
 
   const el = useRef<HTMLSpanElement | null>(null);
 
@@ -199,40 +199,19 @@ export default function Question() {
   }, [emblaApi])
 
 
-  // function to grab the album art, song name, and artist name from the Spotify API
-  const getSongInfo = async (song: string) => {
-    if (!spotifyToken) {
-      console.log("No Spotify token available for song info");
-      return;
-    }
-
-    const songId = song.split(":")[2];
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${spotifyToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Song info:", data);
-      setSongArtist(data.artists[0].name);
-      setSongTitle(data.name);
-      setSongAlbumArt(data.album.images[0].url);
-    } else if (response.status === 401) {
-      console.log("Spotify token expired, refreshing...");
-      await refreshSpotifyToken(setSpotifyToken);
-    } else {
-      console.error("Failed to fetch song info:", await response.json());
+  // function to grab the album art, song name, and artist name from the Apple Music API
+  const getSongInfo = async (songId: string) => {
+    try {
+      const track = await getAppleMusicTrack(songId);
+      if (track) {
+        setSongArtist(track.artist);
+        setSongTitle(track.title);
+        setSongAlbumArt(track.artworkUrl);
+      }
+    } catch (error) {
+      console.error("Failed to fetch song info:", error);
     }
   }
-
-  const convertSpotifyUrlToUri = (url: string): string | null => {
-    const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-    return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-  };
 
 
   const fetchQuestion = async () => {
@@ -247,8 +226,13 @@ export default function Question() {
       setAnswerGif(response.answer_gif);
       setIsBanthaShitQuestion(response.is_banthashit_question);
       setBanthaAnswerGif(response.bantha_answer_gif);
-      setSong(response.song);
-      setBonusAnswers(response.bonus_answers);
+      if (response.song_apple) {
+        console.log("Question Page: Found song_apple:", response.song_apple);
+        setSong(response.song_apple);
+      } else {
+        console.log("Question Page: No song_apple found for this question.");
+      }
+
       setIsActive(response.is_active);
 
       const fixColor = (text: string) => {
@@ -277,7 +261,7 @@ export default function Question() {
 
       setBanthaAnswerGif(response.bantha_answer_gif);
 
-      setSong(convertSpotifyUrlToUri(response.song));
+      // setSong(response.apple_ids); // Removed to prevent overwriting song_apple
 
       if (response.bonus_answers) {
         const sanitizedBonusAnswers = response.bonus_answers.map((answer) => DOMPurify.sanitize(answer));
@@ -321,7 +305,7 @@ export default function Question() {
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setLoading(false);
-      refreshSpotifyToken(setSpotifyToken);
+
 
       if (editionId) {
         //initializeApp();
@@ -330,7 +314,7 @@ export default function Question() {
 
     initializeApp();
     fetchQuestion();
-    refreshSpotifyToken(setSpotifyToken);
+    fetchQuestion();
 
   }, []);
 
@@ -353,20 +337,11 @@ export default function Question() {
   ) : (
     <div className="h-screen overflow-hidden">
       <div className="flex justify-between p-4">
-        <h1 className="text-2xl">
-          Round {roundId} Question {questionId} -{" "}
-          <span
-            className={`${roundId === "3" ? "font-linebeam text-glow-blue-600 text-3xl -mx-2" : ""
-              } px-2 inline-block`}
-          >
-            {Number(questionId) * (roundId === "3" ? 200 : 100)}
-          </span>{" "}
-          points
-        </h1>
+        <h1 className="py-4 pl-4 text-2xl">Question {questionId}</h1>
 
-        {spotifyToken && (
+        {song && (
           <div>
-            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+            <AppleScriptPlayer trackId={song} />
           </div>
         )}
       </div>

@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
@@ -18,7 +18,7 @@ import { set } from 'lodash';
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/lib/spotifyAuth";
+import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 interface Impossible {
   edition_id: string;
@@ -30,7 +30,7 @@ interface Impossible {
   question_text: string;
   answers: string[];
   answer_gifs: string[];
-  spotify_ids: string[];
+  apple_music_ids: string[] | { [key: string]: string };
   is_active: boolean;
 }
 
@@ -52,7 +52,7 @@ export default function Impossible() {
   const [songTitles, setSongTitles] = useState<string[]>([]);
   const [songAlbumArts, setSongAlbumArts] = useState<string[]>([]);
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
@@ -140,9 +140,8 @@ export default function Impossible() {
       console.log("Admin authenticated.");
       setIsAdmin(true);
       setLoading(false);
-      
-      // Initialize Spotify token
-      refreshSpotifyToken(setSpotifyToken);
+
+
     };
 
     const fetchQuestion = async () => {
@@ -166,13 +165,13 @@ export default function Impossible() {
 
         setAnswerGifs(response.answer_gifs);
 
-        console.log("response.spotify_ids:", response.spotify_ids);
+        console.log("response.apple_music_ids:", response.apple_music_ids);
 
         let ids: string[] = [];
-        if (Array.isArray(response.spotify_ids)) {
-          ids = response.spotify_ids;
+        if (Array.isArray(response.apple_music_ids)) {
+          ids = response.apple_music_ids;
         } else {
-          ids = Object.values(response.spotify_ids).map((id) => id as string);
+          ids = Object.values(response.apple_music_ids).map((id) => id as string);
           console.log("ids:", ids);
         }
 
@@ -191,53 +190,15 @@ export default function Impossible() {
       const titles: string[] = [];
       const albumArts: string[] = [];
 
-      const token = localStorage.getItem("spotifyAuthToken");
-
-      console.log('token from local storage: ', token);
-
       console.log("Songs:", songs);
-      // Iterate over each song URL in the `songs` array
-      for (const song of songs) {
-        const songId = song.split("/track/")[1].split("?")[0]; // Extract the song ID from the Spotify URL
+      // Iterate over each song ID in the `songs` array
+      for (const songId of songs) {
         try {
-          const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log("Song info:", data);
-
-            // Collect song information
-            artists.push(data.artists[0].name);
-            titles.push(data.name);
-            albumArts.push(data.album.images[0].url);
-          } else if (response.status === 401) {
-            console.log("Spotify token expired, refreshing...");
-            await refreshSpotifyToken(setSpotifyToken);
-            // Retry with refreshed token
-            const newToken = localStorage.getItem("spotifyAuthToken");
-            if (newToken) {
-              const retryResponse = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-                method: "GET",
-                headers: {
-                  Authorization: `Bearer ${newToken}`,
-                  "Content-Type": "application/json",
-                },
-              });
-              if (retryResponse.ok) {
-                const retryData = await retryResponse.json();
-                artists.push(retryData.artists[0].name);
-                titles.push(retryData.name);
-                albumArts.push(retryData.album.images[0].url);
-              }
-            }
-          } else {
-            console.log("Failed to fetch song info:", await response.json());
+          const track = await getAppleMusicTrack(songId);
+          if (track) {
+            artists.push(track.artist);
+            titles.push(track.title);
+            albumArts.push(track.artworkUrl);
           }
         } catch (error) {
           console.log("Error fetching song info:", error);
@@ -256,18 +217,10 @@ export default function Impossible() {
       if (editionId) {
         await initializeApp();
         const songs = await fetchQuestion(); // Wait for fetchQuestion and get the songs
-        
-        // Only fetch song info if we have songs and a valid token
+
+        // Only fetch song info if we have songs
         if (songs && songs.length > 0) {
-          // Wait a bit for Spotify token to be initialized
-          setTimeout(async () => {
-            const token = localStorage.getItem("spotifyAuthToken");
-            if (token) {
-              await getSongsInfo(songs);
-            } else {
-              console.log("No Spotify token available for song info");
-            }
-          }, 1000);
+          await getSongsInfo(songs);
         }
       }
     };
@@ -285,9 +238,9 @@ export default function Impossible() {
     <div className="overflow-y-hidden h-dvh">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">Impossible Question {impossibleId} </h1>
-        {spotifyToken && (
+        {songs.length > 0 && (
           <div>
-            <SpotifyPlayer token={spotifyToken} songs={songs} song={null} />
+            <AppleScriptPlayer trackIds={songs} />
           </div>
         )}
       </div>
@@ -336,7 +289,13 @@ export default function Impossible() {
             {songAlbumArts.length > 0 ? (
               songAlbumArts.map((albumArt, index) => (
                 <div key={index} className="song-info flex flex-col gap-4 items-center">
-                  <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" height="600" />
+                  {albumArt ? (
+                    <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" height="600" />
+                  ) : (
+                    <div className="w-[600px] h-[600px] bg-gray-800 flex items-center justify-center">
+                      <span className="text-gray-400">No Artwork</span>
+                    </div>
+                  )}
                   <h3 className="text-3xl">"{songTitles[index]}" by {songArtists[index]}</h3>
                 </div>
               ))

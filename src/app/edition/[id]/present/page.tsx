@@ -4,13 +4,14 @@ import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Image, Progress } from "@heroui/react";
 import DOMPurify from "dompurify"; // Import the sanitizer
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTimer } from "react-timer-hook";
 import { set } from "lodash";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import SpotTimer from "@/components/SpotTimer";
+
 import { useTransitionRouter } from "next-transition-router";
 
 
@@ -19,7 +20,7 @@ interface Edition {
   date: string;
   edition_gif: string;
   blurb: string;
-  home_song: string;
+  home_song_apple: string;
 }
 
 interface session {
@@ -50,7 +51,6 @@ export default function EditionPage() {
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
   const [editionGif, setEditionGif] = useState<string | null>(null);
   const [blurb, setBlurb] = useState<string | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
   const [pageSong, setPageSong] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [googleAuth, setGoogleAuth] = useState<boolean>(false)
@@ -73,6 +73,35 @@ export default function EditionPage() {
   time.setSeconds(time.getSeconds() + 600);
 
   useEffect(() => {
+    const fetchEdition = async (id: string) => {
+      try {
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        const response = await pb
+          .collection("editions")
+          .getOne<Edition>(id, { requestKey: randomRequestKey });
+
+        if (response.date) {
+          const formattedDate = new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(response.date));
+          setDate(formattedDate);
+        }
+
+        setEditionTitle(response.title);
+        setEditionGif(response.edition_gif);
+        setPageSong(response.home_song_apple);
+
+        if (response.blurb) {
+          const sanitizedHtml = DOMPurify.sanitize(response.blurb);
+          setBlurb(sanitizedHtml);
+        }
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
+      }
+    };
+
     const initializeApp = async () => {
       if (!pb.authStore.isValid) {
         setGoogleAuth(false);
@@ -102,54 +131,13 @@ export default function EditionPage() {
       setIsAdmin(true);
       setGoogleAuth(true);
       setLoading(false);
-      if (session)
-        console.log('session:', session);
-      else 
-        console.log('no session');
-      refreshSpotifyToken(setSpotifyToken);
-
     };
 
-    const convertSpotifyUrlToUri = (url: string): string | null => {
-      const match = url.match(/track\/([a-zA-Z0-9]+)/);
-      return match ? `spotify:track:${match[1]}` : null;
-    };
-
-    const fetchEdition = async (id: string) => {
-      try {
-        const randomRequestKey = Math.random().toString(36).substring(7);
-        const response = await pb
-          .collection("editions")
-          .getOne<Edition>(id, { requestKey: randomRequestKey });
-
-        if (response.date) {
-          const formattedDate = new Intl.DateTimeFormat("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }).format(new Date(response.date));
-          setDate(formattedDate);
-        }
-
-        setEditionTitle(response.title);
-        setEditionGif(response.edition_gif);
-        setPageSong(convertSpotifyUrlToUri(response.home_song));
-
-        if (response.blurb) {
-          const sanitizedHtml = DOMPurify.sanitize(response.blurb);
-          setBlurb(sanitizedHtml);
-        }
-      } catch (error) {
-        console.error("Failed to fetch edition:", error);
-      }
-    };
-
-    // initializeApp();
     if (editionId) {
       initializeApp();
       fetchEdition(editionId);
     }
-  }, []);
+  }, [editionId]);
 
   if (loading) {
     return (
@@ -181,9 +169,9 @@ export default function EditionPage() {
             dangerouslySetInnerHTML={{ __html: blurb }}
           />
         )}
-        {spotifyToken && (
+        {pageSong && (
           <div>
-            <SpotifyPlayer token={spotifyToken} song={pageSong} songs={null} />
+            <AppleScriptPlayer trackId={pageSong} />
           </div>
         )}
       </div>

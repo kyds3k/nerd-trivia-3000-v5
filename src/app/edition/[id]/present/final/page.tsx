@@ -8,7 +8,7 @@ import Pocketbase from "pocketbase";
 //import { Image } from "@heroui/react";
 import Image from 'next/image';
 import DOMPurify from "dompurify"; // Import the sanitizer
-import SpotifyPlayer from "@/components/SpotifyPlayer";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import useEmblaCarousel from 'embla-carousel-react'
 import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
@@ -18,7 +18,7 @@ import { useTransitionRouter } from "next-transition-router";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass"
 import { useSession } from "next-auth/react";
-import { refreshSpotifyToken } from "@/hooks/refreshSpotifyToken";
+import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 
 interface Question {
@@ -26,7 +26,7 @@ interface Question {
   question_text: string;
   answer: string;
   final_answer_gif: string;
-  final_song: string;
+  final_song_apple: string;
   is_active: boolean;
 }
 
@@ -43,7 +43,7 @@ export default function Question() {
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+
   const [questionActive, setQuestionActive] = useState<boolean | null>(null);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -86,7 +86,7 @@ export default function Question() {
     } catch (error) {
       console.error("Failed to get loading quote:", error);
     }
-  };  
+  };
 
   const questionRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -125,25 +125,17 @@ export default function Question() {
     }
   }, [emblaApi])
 
-  // function to grab the album art, song name, and artist name from the Spotify API
-  const getSongInfo = async (song: string) => {
-    const songId = song.split(":")[2];
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${songId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${spotifyToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Song info:", data);
-      setSongArtist(data.artists[0].name);
-      setSongTitle(data.name);
-      setSongAlbumArt(data.album.images[0].url);
-    } else {
-      console.error("Failed to fetch song info:", await response.json());
+  // function to grab the album art, song name, and artist name from the Apple Music API
+  const getSongInfo = async (songId: string) => {
+    try {
+      const track = await getAppleMusicTrack(songId);
+      if (track) {
+        setSongArtist(track.artists);
+        setSongTitle(track.title);
+        setSongAlbumArt(track.albumImage);
+      }
+    } catch (error) {
+      console.error("Failed to fetch song info:", error);
     }
   }
 
@@ -155,17 +147,17 @@ export default function Question() {
         setLoading(false);
         return;
       }
-  
+
       console.log("Authenticated with Pocketbase successfully.");
       const authData = localStorage.getItem("pocketbase_auth");
-  
+
       if (!authData) {
         console.error("No auth data found.");
         setLoading(false);
         setIsAdmin(false);
         return;
       }
-  
+
       const parsedAuth = JSON.parse(authData);
       if (!parsedAuth.record.is_admin) {
         console.log("Not an admin.");
@@ -173,16 +165,13 @@ export default function Question() {
         setIsAdmin(false);
         return;
       }
-  
+
       console.log("Admin authenticated.");
       setIsAdmin(true);
     };
 
 
-    const convertSpotifyUrlToUri = (url: string): string | null => {
-      const match = url.match(/track\/([a-zA-Z0-9]+)/); // Extract the track ID using a regex
-      return match ? `spotify:track:${match[1]}` : null; // Return the Spotify URI or null if invalid
-    };
+
 
 
     const fetchQuestion = async () => {
@@ -210,7 +199,7 @@ export default function Question() {
           setAnswer(sanitizedAnswer);
         }
 
-        setSong(convertSpotifyUrlToUri(response.final_song));
+        setSong(response.final_song_apple);
 
         setIsActive(response.is_active);
 
@@ -221,7 +210,7 @@ export default function Question() {
 
     if (editionId) {
       fetchQuestion();
-      refreshSpotifyToken(setSpotifyToken);
+
     }
   }, []);
 
@@ -239,9 +228,9 @@ export default function Question() {
     <div className="max-h-svh overflow-hidden">
       <div className="flex justify-between p-4">
         <h1 className="py-4 pl-4 text-2xl">FINAL QUESTION</h1>
-        {spotifyToken && (
+        {song && (
           <div>
-            <SpotifyPlayer token={spotifyToken} song={song} songs={null} />
+            <AppleScriptPlayer trackId={song} />
           </div>
         )}
       </div>

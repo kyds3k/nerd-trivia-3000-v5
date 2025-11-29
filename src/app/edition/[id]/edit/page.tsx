@@ -1,72 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-// Helper: Spotify Track Info Fetcher
-const fetchSpotifyTrackInfo = async (uri: string, token: string, refreshToken?: () => Promise<string | null>) => {
-  // Accepts Spotify URI or URL, extracts track id, fetches metadata
-  if (!uri) return null;
-  let match = uri.match(/spotify:track:([a-zA-Z0-9]+)/);
-  if (!match) {
-    // Try URL
-    match = uri.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-  }
-  const trackId = match ? match[1] : null;
-  if (!trackId) return null;
-  try {
-    const resp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // If 401 and we have a refresh callback, try to get a new token and retry
-    if (resp.status === 401 && refreshToken) {
-      const newToken = await refreshToken();
-      if (newToken) {
-        const retryResp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-          headers: { Authorization: `Bearer ${newToken}` },
-        });
-        if (!retryResp.ok) return null;
-        const retryData = await retryResp.json();
-        return {
-          title: retryData.name,
-          artists: retryData.artists?.map((a: any) => a.name).join(", "),
-          albumImage: retryData.album?.images?.[2]?.url || retryData.album?.images?.[0]?.url || "",
-        };
-      }
-    }
-
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    return {
-      title: data.name,
-      artists: data.artists?.map((a: any) => a.name).join(", "),
-      albumImage: data.album?.images?.[2]?.url || data.album?.images?.[0]?.url || "",
-    };
-  } catch (e) {
-    return null;
-  }
-};
-
-// Helper: fetch Spotify client credentials token (public)
-const getSpotifyToken = async () => {
-  // Use env vars for client id/secret
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  const resp = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: "Basic " + (typeof window !== "undefined" && window.btoa
-        ? window.btoa(`${clientId}:${clientSecret}`)
-        : Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-      ),
-    },
-    body: "grant_type=client_credentials",
-  });
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  return data.access_token;
-};
+import AppleMusicSearch from "@/components/AppleMusicSearch";
+import { AppleMusicTrack } from "@/lib/appleMusic";
 
 import {
   Tabs,
@@ -92,6 +28,7 @@ import debounce from 'lodash/debounce';
 import Tiptap from "@/components/TipTap";
 import ShallNotPass from "@/components/ShallNotPass";
 import GifPicker, { Theme } from "gif-picker-react";
+import { useEditionDraft, EditionDraftData } from "@/hooks/useEditionDraft";
 
 
 export default function EditEditionPage() {
@@ -103,7 +40,7 @@ export default function EditEditionPage() {
   const [date, setDate] = React.useState<any>(null);
   let formatter = useDateFormatter({ dateStyle: "full" });
   const [blurb, setBlurb] = useState("");
-  const [homeSong, setHomeSong] = useState("");
+  const [homeSongApple, setHomeSongApple] = useState("");
   const [editionGif, setEditionGif] = useState("");
   const [endGif1, setEndGif1] = useState("");
   const [endGif2, setEndGif2] = useState("");
@@ -116,9 +53,9 @@ export default function EditEditionPage() {
   const [round1Answers, setRound1Answers] = useState(Array(5).fill(""));
   const [round2Answers, setRound2Answers] = useState(Array(5).fill(""));
   const [round3Answers, setRound3Answers] = useState(Array(5).fill(""));
-  const [round1Songs, setRound1Songs] = useState(Array(5).fill(""));
-  const [round2Songs, setRound2Songs] = useState(Array(5).fill(""));
-  const [round3Songs, setRound3Songs] = useState(Array(5).fill(""));
+  const [round1SongsApple, setRound1SongsApple] = useState(Array(5).fill(""));
+  const [round2SongsApple, setRound2SongsApple] = useState(Array(5).fill(""));
+  const [round3SongsApple, setRound3SongsApple] = useState(Array(5).fill(""));
   const [round1AnswerGifs, setRound1AnswerGifs] = useState(Array(5).fill(""));
   const [round2AnswerGifs, setRound2AnswerGifs] = useState(Array(5).fill(""));
   const [round3AnswerGifs, setRound3AnswerGifs] = useState(Array(5).fill(""));
@@ -133,7 +70,7 @@ export default function EditEditionPage() {
   const [imp1Theme, setImp1Theme] = useState("");
   const [imp1Gif, setImp1Gif] = useState("");
   const [imp1Question, setImp1Question] = useState("");
-  const [imp1Songs, setImp1Songs] = useState<{ [key: number]: string }>({});
+  const [imp1SongsApple, setImp1SongsApple] = useState<{ [key: number]: string }>({});
   const [imp1Answers, setImp1Answers] = useState<string[]>([]);
   const [imp1AnswerGifs, setImp1AnswerGifs] = useState<{ [key: number]: string }>({});
   const [imp1Ppa, setImp1Ppa] = useState("");
@@ -141,20 +78,20 @@ export default function EditEditionPage() {
   const [imp2Theme, setImp2Theme] = useState("");
   const [imp2Question, setImp2Question] = useState("");
   const [imp2Gif, setImp2Gif] = useState("");
-  const [imp2Songs, setImp2Songs] = useState<{ [key: number]: string }>({});
+  const [imp2SongsApple, setImp2SongsApple] = useState<{ [key: number]: string }>({});
   const [imp2Answers, setImp2Answers] = useState<string[]>([]);
   const [imp2AnswerGifs, setImp2AnswerGifs] = useState<{ [key: number]: string }>({});
   const [imp2Ppa, setImp2Ppa] = useState("");
   const [wagerGif, setWagerGif] = useState("");
   const [wagerPlacingGif, setWagerPlacingGif] = useState("");
-  const [wagerSong, setWagerSong] = useState("");
+  const [wagerSongApple, setWagerSongApple] = useState("");
   const [finalCat, setFinalCat] = useState("");
   const [finalCatGif, setFinalCatGif] = useState("");
   const [finalIntroGif, setFinalIntroGif] = useState("");
   const [finalQuestion, setFinalQuestion] = useState("");
   const [finalAnswer, setFinalAnswer] = useState("");
   const [finalAnswerGif, setFinalAnswerGif] = useState("");
-  const [finalSong, setFinalSong] = useState("");
+  const [finalSongApple, setFinalSongApple] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const router = useRouter();
@@ -167,14 +104,7 @@ export default function EditEditionPage() {
   // Helper: Sleep function
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Spotify states
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
-  const [homeSongInfo, setHomeSongInfo] = useState<any>(null);
-  const [r1SongInfos, setR1SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [r2SongInfos, setR2SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [r3SongInfos, setR3SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [wagerSongInfo, setWagerSongInfo] = useState<any>(null);
-  const [finalSongInfo, setFinalSongInfo] = useState<any>(null);
+
 
   // GIF Picker toggle states
   const [showEditionGifPicker, setShowEditionGifPicker] = useState(false);
@@ -192,6 +122,7 @@ export default function EditEditionPage() {
   const [showImp2ThemeGifPicker, setShowImp2ThemeGifPicker] = useState(false);
   const [showImp1IntroGifPicker, setShowImp1IntroGifPicker] = useState(false);
   const [showImp2IntroGifPicker, setShowImp2IntroGifPicker] = useState(false);
+  const [activeGifPicker, setActiveGifPicker] = useState<string | null>(null);
 
 
   pb.autoCancellation(false);
@@ -204,18 +135,7 @@ export default function EditEditionPage() {
     return; // Prevent further execution if the ID is missing
   }
 
-  // Token refresh callback for Spotify API retry logic
-  const refreshSpotifyToken = useCallback(async () => {
-    const newToken = await getSpotifyToken();
-    if (newToken) {
-      setSpotifyToken(newToken);
-      try {
-        localStorage.setItem("spotify_token", newToken);
-        localStorage.setItem("spotify_token_timestamp", Date.now().toString());
-      } catch (e) { /* ignore */ }
-    }
-    return newToken;
-  }, []);
+
 
   /* function grabInfo to find the data-identifier of everything on the page and output to console */
   const grabInfo = () => {
@@ -237,6 +157,8 @@ export default function EditEditionPage() {
 
     });
   };
+
+
 
   type UpdateQuestionFunction = (
     round: 1 | 2 | 3,
@@ -287,14 +209,14 @@ export default function EditEditionPage() {
   };
 
   const handleImp1Songs = (index: number, value: string) => {
-    setImp1Songs((prevSongs) => ({
+    setImp1SongsApple((prevSongs) => ({
       ...prevSongs,
       [index]: value,
     }));
   };
 
   const handleImp2Songs = (index: number, value: string) => {
-    setImp2Songs((prevSongs) => ({
+    setImp2SongsApple((prevSongs) => ({
       ...prevSongs,
       [index]: value,
     }));
@@ -312,8 +234,7 @@ export default function EditEditionPage() {
       setTitle(getEdition.title);
       setEditionGif(getEdition.edition_gif);
       setBlurb(getEdition.blurb);
-      setHomeSong(getEdition.home_song);
-      setIsLoaded(true);
+      setHomeSongApple(getEdition.home_song_apple);
       setEndGif1(getEdition.end_gif_1);
       setEndGif2(getEdition.end_gif_2);
       const dbDate = getEdition.date;
@@ -351,10 +272,10 @@ export default function EditEditionPage() {
         }
       });
 
-      const setRoundSongs = [setRound1Songs, setRound2Songs, setRound3Songs];
+      const setRoundSongs = [setRound1SongsApple, setRound2SongsApple, setRound3SongsApple];
       setRoundSongs.forEach((setter, index) => {
         const roundSongs = getQuestions.filter((question) => question.round_number === index + 1);
-        const songTexts = roundSongs.map((question) => question.song);
+        const songTexts = roundSongs.map((question) => question.song_apple);
         setter(songTexts);
       });
 
@@ -378,24 +299,29 @@ export default function EditEditionPage() {
           setImp1Gif(round.theme_gif);
           setImp1Question(round.question_text);
           setImp1Ppa(round.point_value);
-          setNumImpossibleSongs(Object.values(round.spotify_ids).length);
-          setNumImpossibleAnswers(Object.values(round.answers).length);
+          const appleIds = round.apple_music_ids || {};
+          const answers = round.answers || {};
+          const answerGifs = round.answer_gifs || {};
+
+          setNumImpossibleSongs(Object.values(appleIds).length);
+          setNumImpossibleAnswers(Object.values(answers).length);
+
           // for each song in the round, set the state
-          const songIds = Object.keys(round.spotify_ids);
-          const songNames = Object.values(round.spotify_ids) as string[];
-          const songs: Record<number, string> = {}; // Explicitly type the object
+          const songIds = Object.keys(appleIds);
+          const songNames = Object.values(appleIds) as string[];
+          const songs: Record<number, string> = {};
 
           songIds.forEach((id, index) => {
             songs[index] = songNames[index];
           });
-          setImp1Songs(songs);
+          setImp1SongsApple(songs);
 
-          const answerNames = Object.values(round.answers) as string[];
-          setImp1Answers(answerNames); // Directly set the array
+          const answerNames = Object.values(answers) as string[];
+          setImp1Answers(answerNames);
 
-          const answerGifs = Object.values(round.answer_gifs) as string[];
+          const answerGifValues = Object.values(answerGifs) as string[];
           const answerGifObj: Record<number, string> = {};
-          answerGifs.forEach((gif, index) => {
+          answerGifValues.forEach((gif, index) => {
             answerGifObj[index] = gif;
           });
           setImp1AnswerGifs(answerGifObj);
@@ -405,24 +331,29 @@ export default function EditEditionPage() {
           setImp2Gif(round.theme_gif);
           setImp2Question(round.question_text);
           setImp2Ppa(round.point_value);
-          setNumImpossibleSongs2(Object.values(round.spotify_ids).length);
-          setNumImpossibleAnswers2(Object.values(round.answers).length);
+          const appleIds = round.apple_music_ids || {};
+          const answers = round.answers || {};
+          const answerGifs = round.answer_gifs || {};
+
+          setNumImpossibleSongs2(Object.values(appleIds).length);
+          setNumImpossibleAnswers2(Object.values(answers).length);
+
           // for each song in the round, set the state
-          const songIds = Object.keys(round.spotify_ids);
-          const songNames = Object.values(round.spotify_ids) as string[];
-          const songs: Record<number, string> = {}; // Explicitly type the object
+          const songIds = Object.keys(appleIds);
+          const songNames = Object.values(appleIds) as string[];
+          const songs: Record<number, string> = {};
 
           songIds.forEach((id, index) => {
             songs[index] = songNames[index];
           });
-          setImp2Songs(songs);
+          setImp2SongsApple(songs);
 
-          const answerNames = Object.values(round.answers) as string[];
-          setImp2Answers(answerNames); // Directly set the array
+          const answerNames = Object.values(answers) as string[];
+          setImp2Answers(answerNames);
 
-          const answerGifs = Object.values(round.answer_gifs) as string[];
+          const answerGifValues = Object.values(answerGifs) as string[];
           const answerGifObj: Record<number, string> = {};
-          answerGifs.forEach((gif, index) => {
+          answerGifValues.forEach((gif, index) => {
             answerGifObj[index] = gif;
           });
           setImp2AnswerGifs(answerGifObj);
@@ -434,17 +365,22 @@ export default function EditEditionPage() {
       setFinalCat(wagerRound.final_cat);
       setFinalCatGif(wagerRound.final_cat_gif);
       setWagerPlacingGif(wagerRound.wager_placing_gif);
-      setWagerSong(wagerRound.wager_song);
+      setWagerSongApple(wagerRound.wager_song_apple);
 
       const finalRound = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${editionEditId}"`);
       setFinalIntroGif(finalRound.final_intro_gif);
       setFinalQuestion(finalRound.question_text);
       setFinalAnswer(finalRound.answer);
       setFinalAnswerGif(finalRound.final_answer_gif);
-      setFinalSong(finalRound.final_song);
+      setFinalSongApple(finalRound.final_song_apple);
+
+
+      setFinalAnswerGif(finalRound.final_answer_gif);
+      setFinalSongApple(finalRound.final_song_apple);
 
 
       setLoading(false);
+      setIsLoaded(true);
       setError("Edition imported successfully!");
     } catch (err) {
       console.error("Failed to import edition:", err);
@@ -460,60 +396,65 @@ export default function EditEditionPage() {
     roundAnswers: string[][],
     roundAnswerGifs: string[][]
   ): Promise<any[][]> => {
-    // Loop through rounds (outer array of questions)
-    const updatedQuestions = await Promise.all(
-      roundQuestions.map(async (questions, roundIndex) => {
-        const round = roundIndex + 1; // Rounds are 1-based
+    const updatedQuestions: any[][] = [];
 
-        setLoadMessage(`Updating questions for round ${round}...`);
+    // Loop through rounds sequentially
+    for (let roundIndex = 0; roundIndex < roundQuestions.length; roundIndex++) {
+      const questions = roundQuestions[roundIndex];
+      const round = roundIndex + 1; // Rounds are 1-based
 
-        // Fetch the existing questions for the round
-        const fetchedRoundQuestions = await pb
-          .collection("questions")
-          .getFullList({
-            filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
+      setLoadMessage(`Updating questions for round ${round}...`);
+
+      // Fetch the existing questions for the round
+      const fetchedRoundQuestions = await pb
+        .collection("questions")
+        .getFullList({
+          filter: `edition_id = "${editionEditId}" && round_number = "${round}"`,
+          sort: 'question_number', // Ensure consistent order
+        });
+
+      const updatedRoundQuestions: any[] = [];
+
+      // Update each question in the round sequentially
+      for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
+        const questionText = questions[questionIndex];
+
+        // Safety check to ensure we have a corresponding fetched question
+        if (!fetchedRoundQuestions[questionIndex]) {
+          console.error(`Missing question record for Round ${round} Question ${questionIndex + 1}`);
+          continue;
+        }
+
+        const questionId = fetchedRoundQuestions[questionIndex].id;
+
+        // Update the question with its corresponding data
+        const updatedQuestion = await pb.collection("questions").update(questionId, {
+          question_text: questionText,
+          song_apple: roundSongs[roundIndex][questionIndex],
+          answer: roundAnswers[roundIndex][questionIndex],
+          answer_gif: roundAnswerGifs[roundIndex][questionIndex],
+        });
+
+        updatedRoundQuestions.push(updatedQuestion);
+
+        // if round is 1, update the bantha answer and gif. they are both fields in question 3 (index 2)
+        if (round === 1 && questionIndex === 2) {
+          const banthaQuestionId = fetchedRoundQuestions[questionIndex].id;
+          await pb.collection("questions").update(banthaQuestionId, {
+            bantha_answer: banthaAnswer,
+            bantha_answer_gif: banthaAnswerGif,
           });
+          setLoadMessage(`Bantha question updated . . .`);
+          await sleep(200); // Add delay after bantha update
+        }
 
-        // Validate: Ensure the number of fetched questions matches the number of input questions
-        // if (fetchedRoundQuestions.length !== questions.length) {
-        //   console.error(
-        //     `Mismatch: Fetched ${fetchedRoundQuestions.length} questions but received ${questions.length} for round ${round}.`
-        //   );
-        //   throw new Error("Question count mismatch.");
-        // }
+        setLoadMessage(`Round ${round} Question ${questionIndex + 1} updated . . .`);
+        await sleep(500); // Add delay between question updates
+      }
 
-        // Update each question in the round
-        const updatedRoundQuestions = await Promise.all(
-          questions.map(async (questionText, questionIndex) => {
-            const questionId = fetchedRoundQuestions[questionIndex].id;
-
-            // Update the question with its corresponding data
-            const updatedQuestion = await pb.collection("questions").update(questionId, {
-              question_text: questionText,
-              song: roundSongs[roundIndex][questionIndex],
-              answer: roundAnswers[roundIndex][questionIndex],
-              answer_gif: roundAnswerGifs[roundIndex][questionIndex],
-            });
-
-            // if round is 3, update the bantha answer and gif. they are both fields in question 3 as "bantha_answer" and "bantha_answer_gif"
-            if (round === 1 && questionIndex === 2) {
-              const banthaQuestionId = fetchedRoundQuestions[questionIndex].id;
-              const updatedBanthaQuestion = await pb.collection("questions").update(banthaQuestionId, {
-                bantha_answer: banthaAnswer,
-                bantha_answer_gif: banthaAnswerGif,
-              });
-              setLoadMessage(`Bantha question updated . . .`);
-            }
-
-            setLoadMessage(`Round ${round} Question ${questionIndex + 1} updated . . .`);
-            return updatedQuestion;
-          })
-        );
-
-
-        return updatedRoundQuestions;
-      })
-    );
+      updatedQuestions.push(updatedRoundQuestions);
+      await sleep(1000); // Add larger delay between rounds
+    }
 
     return updatedQuestions;
   };
@@ -527,10 +468,17 @@ export default function EditEditionPage() {
     imp2Answers: string[],
     imp2AnswerGifs: { [key: number]: string }
   ): Promise<any[][]> => {
-    const updatedRounds = await Promise.all([
-      updateImpossibleRound(editionEditId, 1, imp1Songs, imp1Answers, imp1AnswerGifs),
-      updateImpossibleRound(editionEditId, 2, imp2Songs, imp2Answers, imp2AnswerGifs),
-    ]);
+    const updatedRounds = [];
+
+    // Update Impossible Round 1
+    const imp1Update = await updateImpossibleRound(editionEditId, 1, imp1Songs, imp1Answers, imp1AnswerGifs);
+    updatedRounds.push(imp1Update);
+    await sleep(500);
+
+    // Update Impossible Round 2
+    const imp2Update = await updateImpossibleRound(editionEditId, 2, imp2Songs, imp2Answers, imp2AnswerGifs);
+    updatedRounds.push(imp2Update);
+
     return updatedRounds;
   }
 
@@ -548,7 +496,7 @@ export default function EditEditionPage() {
       theme_gif: imp1Gif,
       question_text: imp1Question,
       point_value: imp1Ppa,
-      spotify_ids: songs,
+      apple_music_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
     } : {
@@ -557,7 +505,7 @@ export default function EditEditionPage() {
       theme_gif: imp2Gif,
       question_text: imp2Question,
       point_value: imp2Ppa,
-      spotify_ids: songs,
+      apple_music_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
     };
@@ -594,7 +542,7 @@ export default function EditEditionPage() {
         date: formattedDate, // Ensure `date` is formatted correctly
         edition_gif: editionGif,
         blurb: blurb,
-        home_song: homeSong,
+        home_song_apple: homeSongApple,
         end_gif_1: endGif1,
         end_gif_2: endGif2,
       });
@@ -605,7 +553,7 @@ export default function EditEditionPage() {
       // Step 2: Update the Questions
       setLoadMessage("Updating questions . . .");
       const roundQuestions = [round1Questions, round2Questions, round3Questions];
-      const roundSongs = [round1Songs, round2Songs, round3Songs];
+      const roundSongs = [round1SongsApple, round2SongsApple, round3SongsApple];
       const roundAnswers = [round1Answers, round2Answers, round3Answers];
       const roundAnswerGifs = [round1AnswerGifs, round2AnswerGifs, round3AnswerGifs];
       const roundGifs = [r1Gif, r2Gif, r3Gif];
@@ -623,10 +571,10 @@ export default function EditEditionPage() {
       setLoadMessage("Updating impossible rounds . . .");
       const updatedRounds = await updateImpossibleRounds(
         editionEditId,
-        imp1Songs,
+        imp1SongsApple,
         imp1Answers,
         imp1AnswerGifs,
-        imp2Songs,
+        imp2SongsApple,
         imp2Answers,
         imp2AnswerGifs
       );
@@ -644,7 +592,7 @@ export default function EditEditionPage() {
         final_cat: finalCat,
         final_cat_gif: finalCatGif,
         wager_placing_gif: wagerPlacingGif,
-        wager_song: wagerSong,
+        wager_song_apple: wagerSongApple,
       });
       await sleep(800);
 
@@ -658,7 +606,7 @@ export default function EditEditionPage() {
         question_text: finalQuestion,
         answer: finalAnswer,
         final_answer_gif: finalAnswerGif,
-        final_song: finalSong,
+        final_song_apple: finalSongApple,
       });
       await sleep(800);
 
@@ -714,123 +662,9 @@ export default function EditEditionPage() {
     });
   }, [numImpossibleAnswers2]);
 
-  // Fetch and refresh Spotify token with caching in localStorage
-  useEffect(() => {
-    let ignore = false;
-    const TOKEN_KEY = "spotify_token";
-    const TIMESTAMP_KEY = "spotify_token_timestamp";
-    const MAX_AGE_MS = 55 * 60 * 1000; // 55 minutes
-    let intervalId: NodeJS.Timeout | number | null = null;
 
-    async function fetchAndCacheToken() {
-      const token = await getSpotifyToken();
-      if (token && !ignore) {
-        setSpotifyToken(token);
-        try {
-          localStorage.setItem(TOKEN_KEY, token);
-          localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
-        } catch (e) { /* ignore */ }
-      }
-    }
 
-    function getCachedToken() {
-      try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const timestamp = localStorage.getItem(TIMESTAMP_KEY);
-        if (token && timestamp) {
-          const age = Date.now() - parseInt(timestamp, 10);
-          if (!isNaN(age) && age < MAX_AGE_MS) {
-            return token;
-          }
-        }
-      } catch (e) { /* ignore */ }
-      return null;
-    }
 
-    // Initial check
-    const cachedToken = getCachedToken();
-    if (cachedToken) {
-      setSpotifyToken(cachedToken);
-    } else {
-      fetchAndCacheToken();
-    }
-
-    // Set up interval to refresh every 55 minutes
-    intervalId = setInterval(() => {
-      fetchAndCacheToken();
-    }, MAX_AGE_MS);
-
-    return () => {
-      ignore = true;
-      if (intervalId) clearInterval(intervalId as number);
-    };
-  }, []);
-
-  // Home Song Info
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!homeSong) { setHomeSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(homeSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setHomeSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [homeSong, spotifyToken, refreshSpotifyToken]);
-
-  // Round 1 Song Infos
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = round1Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR1SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [round1Songs, spotifyToken, refreshSpotifyToken]);
-
-  // Round 2 Song Infos
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = round2Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR2SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [round2Songs, spotifyToken, refreshSpotifyToken]);
-
-  // Round 3 Song Infos
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = round3Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR3SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [round3Songs, spotifyToken, refreshSpotifyToken]);
-
-  // Wager Song Info
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!wagerSong) { setWagerSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(wagerSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setWagerSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [wagerSong, spotifyToken, refreshSpotifyToken]);
-
-  // Final Song Info
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!finalSong) { setFinalSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(finalSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setFinalSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [finalSong, spotifyToken, refreshSpotifyToken]);
 
   useEffect(() => {
     //refreshAuthState();
@@ -839,6 +673,173 @@ export default function EditEditionPage() {
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Local Storage Draft Integration
+  const { saveDraft, loadDraft, hasDraft } = useEditionDraft();
+
+  // Ref to store the initial DB state to avoid overwriting draft on load
+  const dbStateRef = useRef<EditionDraftData | null>(null);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!isLoaded) return; // Don't save before initial load
+
+    const draftData: EditionDraftData = {
+      title,
+      date: date ? date.toString() : null,
+      blurb,
+      editionGif,
+      homeSongApple,
+      endGif1,
+      endGif2,
+      r1Gif,
+      r2Gif,
+      r3Gif,
+      round1Questions,
+      round2Questions,
+      round3Questions,
+      round1Answers,
+      round2Answers,
+      round3Answers,
+      round1SongsApple,
+      round2SongsApple,
+      round3SongsApple,
+      round1AnswerGifs,
+      round2AnswerGifs,
+      round3AnswerGifs,
+      banthaAnswer,
+      banthaAnswerGif,
+      imp1IntroGif,
+      imp1Theme,
+      imp1Gif,
+      imp1Question,
+      imp1Ppa,
+      imp1SongsApple,
+      imp1Answers,
+      imp1AnswerGifs,
+      imp2IntroGif,
+      imp2Theme,
+      imp2Gif,
+      imp2Question,
+      imp2Ppa,
+      imp2SongsApple,
+      imp2Answers,
+      imp2AnswerGifs,
+      wagerGif,
+      wagerPlacingGif,
+      wagerSongApple,
+      finalCat,
+      finalCatGif,
+      finalIntroGif,
+      finalQuestion,
+      finalAnswer,
+      finalAnswerGif,
+      finalSongApple,
+      numImpossibleAnswers,
+      numImpossibleAnswers2,
+      numImpossibleSongs,
+      numImpossibleSongs2,
+    };
+
+    // If this is the first run after load, capture the DB state and don't save
+    if (!dbStateRef.current) {
+      console.log("Initial load complete. capturing DB state.");
+      dbStateRef.current = draftData;
+      return;
+    }
+
+    // Check if current state is different from DB state
+    if (JSON.stringify(draftData) === JSON.stringify(dbStateRef.current)) {
+      // console.log("State matches DB, skipping auto-save");
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      saveDraft(draftData);
+    }, 2000); // Save after 2 seconds of inactivity
+
+    return () => clearTimeout(handler);
+  }, [
+    isLoaded,
+    title, date, blurb, editionGif, homeSongApple, endGif1, endGif2,
+    r1Gif, r2Gif, r3Gif,
+    round1Questions, round2Questions, round3Questions,
+    round1Answers, round2Answers, round3Answers,
+    round1SongsApple, round2SongsApple, round3SongsApple,
+    round1AnswerGifs, round2AnswerGifs, round3AnswerGifs,
+    banthaAnswer, banthaAnswerGif,
+    imp1IntroGif, imp1Theme, imp1Gif, imp1Question, imp1Ppa, imp1SongsApple, imp1Answers, imp1AnswerGifs,
+    imp2IntroGif, imp2Theme, imp2Gif, imp2Question, imp2Ppa, imp2SongsApple, imp2Answers, imp2AnswerGifs,
+    wagerGif, wagerPlacingGif, wagerSongApple, finalCat, finalCatGif,
+    finalIntroGif, finalQuestion, finalAnswer, finalAnswerGif, finalSongApple,
+    numImpossibleAnswers, numImpossibleAnswers2, numImpossibleSongs, numImpossibleSongs2,
+    saveDraft
+  ]);
+
+  const handleLoadDraft = () => {
+    if (confirm("Are you sure you want to load the draft? This will overwrite current unsaved changes.")) {
+      const draft = loadDraft();
+      if (draft) {
+        setTitle(draft.title);
+        if (draft.date) setDate(parseDate(draft.date));
+        setBlurb(draft.blurb);
+        setEditionGif(draft.editionGif);
+        setHomeSongApple(draft.homeSongApple);
+        setEndGif1(draft.endGif1);
+        setEndGif2(draft.endGif2);
+        setR1Gif(draft.r1Gif);
+        setR2Gif(draft.r2Gif);
+        setR3Gif(draft.r3Gif);
+        setRound1Questions(draft.round1Questions);
+        setRound2Questions(draft.round2Questions);
+        setRound3Questions(draft.round3Questions);
+        setRound1Answers(draft.round1Answers);
+        setRound2Answers(draft.round2Answers);
+        setRound3Answers(draft.round3Answers);
+        setRound1SongsApple(draft.round1SongsApple);
+        setRound2SongsApple(draft.round2SongsApple);
+        setRound3SongsApple(draft.round3SongsApple);
+        setRound1AnswerGifs(draft.round1AnswerGifs);
+        setRound2AnswerGifs(draft.round2AnswerGifs);
+        setRound3AnswerGifs(draft.round3AnswerGifs);
+        setBanthaAnswer(draft.banthaAnswer);
+        setBanthaAnswerGif(draft.banthaAnswerGif);
+        setImp1IntroGif(draft.imp1IntroGif);
+        setImp1Theme(draft.imp1Theme);
+        setImp1Gif(draft.imp1Gif);
+        setImp1Question(draft.imp1Question);
+        setImp1Ppa(draft.imp1Ppa);
+        setImp1SongsApple(draft.imp1SongsApple);
+        setImp1Answers(draft.imp1Answers);
+        setImp1AnswerGifs(draft.imp1AnswerGifs);
+        setImp2IntroGif(draft.imp2IntroGif);
+        setImp2Theme(draft.imp2Theme);
+        setImp2Gif(draft.imp2Gif);
+        setImp2Question(draft.imp2Question);
+        setImp2Ppa(draft.imp2Ppa);
+        setImp2SongsApple(draft.imp2SongsApple);
+        setImp2Answers(draft.imp2Answers);
+        setImp2AnswerGifs(draft.imp2AnswerGifs);
+        setWagerGif(draft.wagerGif);
+        setWagerPlacingGif(draft.wagerPlacingGif);
+        setWagerSongApple(draft.wagerSongApple);
+        setFinalCat(draft.finalCat);
+        setFinalCatGif(draft.finalCatGif);
+        setFinalIntroGif(draft.finalIntroGif);
+        setFinalQuestion(draft.finalQuestion);
+        setFinalAnswer(draft.finalAnswer);
+        setFinalAnswerGif(draft.finalAnswerGif);
+        setFinalSongApple(draft.finalSongApple);
+        setNumImpossibleAnswers(draft.numImpossibleAnswers);
+        setNumImpossibleAnswers2(draft.numImpossibleAnswers2);
+        setNumImpossibleSongs(draft.numImpossibleSongs);
+        setNumImpossibleSongs2(draft.numImpossibleSongs2);
+        alert("Draft loaded successfully!");
+      } else {
+        alert("No draft found.");
+      }
+    }
   };
 
   return (
@@ -873,6 +874,15 @@ export default function EditEditionPage() {
             onClick={() => router.push("/dashboard")}>
             Return to Dashboard
           </Button>
+          {hasDraft && (
+            <Button
+              color="warning"
+              variant="flat"
+              onClick={handleLoadDraft}
+            >
+              Load Local Draft
+            </Button>
+          )}
         </div>
         <h1 className="mb-6 text-2xl">Edit Edition</h1>
         {loading ? (
@@ -977,30 +987,10 @@ export default function EditEditionPage() {
                 <label className="mb-2 block" htmlFor="edition_home_song">
                   Home Song:
                 </label>
-                <Input
-                  id="edition_home_song"
-                  type="text"
-                  data-type="song"
-                  data-identifier="edition_home_song"
-                  value={homeSong}
-                  onValueChange={setHomeSong}
-                  required
+                <AppleMusicSearch
+                  initialValue={homeSongApple}
+                  onSelect={(track) => setHomeSongApple(track.id)}
                 />
-                {homeSongInfo && (
-                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
-                    {homeSongInfo.albumImage && (
-                      <img
-                        src={homeSongInfo.albumImage}
-                        alt="Album cover"
-                        className="w-12 h-12"
-                      />
-                    )}
-                    <div>
-                      <div className="font-semibold">{homeSongInfo.title}</div>
-                      <div className="text-sm text-gray-400">{homeSongInfo.artists}</div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </Tab>
@@ -1056,33 +1046,16 @@ export default function EditEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r1s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2"
-                    value={round1Songs[index]} // Bind the value dynamically
-                    onChange={(e) => {
-                      const updatedSongs = [...round1Songs];
-                      updatedSongs[index] = e.target.value;
-                      setRound1Songs(updatedSongs); // Update the specific song in the array
-                    }}
-                  />
-                  {r1SongInfos[index] && (
-                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
-                      {r1SongInfos[index].albumImage && (
-                        <img
-                          src={r1SongInfos[index].albumImage}
-                          alt="Album cover"
-                          className="w-12 h-12"
-                        />
-                      )}
-                      <div>
-                        <div className="font-semibold">{r1SongInfos[index].title}</div>
-                        <div className="text-sm text-gray-400">{r1SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2">
+                    <AppleMusicSearch
+                      initialValue={round1SongsApple[index]}
+                      onSelect={(track) => {
+                        const updatedSongs = [...round1SongsApple];
+                        updatedSongs[index] = track.id;
+                        setRound1SongsApple(updatedSongs);
+                      }}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round1Answers[index]}
@@ -1103,6 +1076,32 @@ export default function EditEditionPage() {
                       setRound1AnswerGifs(updatedGifs); // Update the specific gif in the array
                     }}
                   />
+                  <Button
+                    className="mt-2 mb-4"
+                    size="sm"
+                    onPress={() => setActiveGifPicker(activeGifPicker === `r1q${index}` ? null : `r1q${index}`)}
+                  >
+                    {activeGifPicker === `r1q${index}` ? "Hide" : "Show"} GIF Picker
+                  </Button>
+                  {activeGifPicker === `r1q${index}` && (
+                    <div className="gif-picker flex gap-4 mt-2 mb-4">
+                      <GifPicker
+                        tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                        onGifClick={(gif) => {
+                          const updatedGifs = [...round1AnswerGifs];
+                          updatedGifs[index] = gif.url;
+                          setRound1AnswerGifs(updatedGifs);
+                          setActiveGifPicker(null);
+                        }}
+                        theme={Theme.DARK}
+                      />
+                      <img
+                        src={round1AnswerGifs[index] || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                        alt={`Round 1 Question ${index + 1} GIF`}
+                        className="w-full max-w-[500px] h-auto self-start"
+                      />
+                    </div>
+                  )}
                   {index == 2 && (
                     <div>
                       <h3 className="mb-2">Bantha Answer</h3>
@@ -1121,6 +1120,30 @@ export default function EditEditionPage() {
                         value={banthaAnswerGif} // Bind the value dynamically
                         onValueChange={setBanthaAnswerGif}
                       />
+                      <Button
+                        className="mt-2 mb-4"
+                        size="sm"
+                        onPress={() => setActiveGifPicker(activeGifPicker === "bantha" ? null : "bantha")}
+                      >
+                        {activeGifPicker === "bantha" ? "Hide" : "Show"} GIF Picker
+                      </Button>
+                      {activeGifPicker === "bantha" && (
+                        <div className="gif-picker flex gap-4 mt-2 mb-4">
+                          <GifPicker
+                            tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                            onGifClick={(gif) => {
+                              setBanthaAnswerGif(gif.url);
+                              setActiveGifPicker(null);
+                            }}
+                            theme={Theme.DARK}
+                          />
+                          <img
+                            src={banthaAnswerGif || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                            alt="Bantha Answer GIF"
+                            className="w-full max-w-[500px] h-auto self-start"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                   <Divider className="my-4" />
@@ -1252,17 +1275,10 @@ export default function EditEditionPage() {
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
-                        <Input
-                          data-identifier={`i1_song${index + 1}`}
-                          type="text"
-                          data-type="song"
-                          required
-                          value={imp1Songs[index] ?? ""}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleImp1Songs(index, e.target.value ?? "")
-                          }
+                        <AppleMusicSearch
+                          initialValue={imp1SongsApple[index]}
+                          onSelect={(track) => handleImp1Songs(index, track.id)}
                         />
-                        1
                       </div>
                     </div>
                   ))}
@@ -1338,6 +1354,33 @@ export default function EditEditionPage() {
                             }));
                           }}
                         />
+                        <Button
+                          className="mt-2 mb-4"
+                          size="sm"
+                          onPress={() => setActiveGifPicker(activeGifPicker === `imp1a${index}` ? null : `imp1a${index}`)}
+                        >
+                          {activeGifPicker === `imp1a${index}` ? "Hide" : "Show"} GIF Picker
+                        </Button>
+                        {activeGifPicker === `imp1a${index}` && (
+                          <div className="gif-picker flex gap-4 mt-2 mb-4">
+                            <GifPicker
+                              tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                              onGifClick={(gif) => {
+                                setImp1AnswerGifs((prevGifs) => ({
+                                  ...prevGifs,
+                                  [index]: gif.url,
+                                }));
+                                setActiveGifPicker(null);
+                              }}
+                              theme={Theme.DARK}
+                            />
+                            <img
+                              src={imp1AnswerGifs[index] || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                              alt={`Impossible 1 Answer ${index + 1} GIF`}
+                              className="w-full max-w-[500px] h-auto self-start"
+                            />
+                          </div>
+                        )}
                       </div>
                       <hr className="block my-10 bg-gray-300"></hr>
                     </div>
@@ -1399,33 +1442,16 @@ export default function EditEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r2s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2"
-                    value={round2Songs[index]} // Bind the value dynamically
-                    onChange={(e) => {
-                      const updatedSongs = [...round2Songs];
-                      updatedSongs[index] = e.target.value;
-                      setRound2Songs(updatedSongs); // Update the specific song in the array
-                    }}
-                  />
-                  {r2SongInfos[index] && (
-                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
-                      {r2SongInfos[index].albumImage && (
-                        <img
-                          src={r2SongInfos[index].albumImage}
-                          alt="Album cover"
-                          className="w-12 h-12"
-                        />
-                      )}
-                      <div>
-                        <div className="font-semibold">{r2SongInfos[index].title}</div>
-                        <div className="text-sm text-gray-400">{r2SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2">
+                    <AppleMusicSearch
+                      initialValue={round2SongsApple[index]}
+                      onSelect={(track) => {
+                        const updatedSongs = [...round2SongsApple];
+                        updatedSongs[index] = track.id;
+                        setRound2SongsApple(updatedSongs);
+                      }}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round2Answers[index]}
@@ -1446,6 +1472,32 @@ export default function EditEditionPage() {
                       setRound2AnswerGifs(updatedGifs); // Update the specific gif in the array
                     }}
                   />
+                  <Button
+                    className="mt-2 mb-4"
+                    size="sm"
+                    onPress={() => setActiveGifPicker(activeGifPicker === `r2q${index}` ? null : `r2q${index}`)}
+                  >
+                    {activeGifPicker === `r2q${index}` ? "Hide" : "Show"} GIF Picker
+                  </Button>
+                  {activeGifPicker === `r2q${index}` && (
+                    <div className="gif-picker flex gap-4 mt-2 mb-4">
+                      <GifPicker
+                        tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                        onGifClick={(gif) => {
+                          const updatedGifs = [...round2AnswerGifs];
+                          updatedGifs[index] = gif.url;
+                          setRound2AnswerGifs(updatedGifs);
+                          setActiveGifPicker(null);
+                        }}
+                        theme={Theme.DARK}
+                      />
+                      <img
+                        src={round2AnswerGifs[index] || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                        alt={`Round 2 Question ${index + 1} GIF`}
+                        className="w-full max-w-[500px] h-auto self-start"
+                      />
+                    </div>
+                  )}
                   <Divider className="my-4" />
                   <hr className="block my-10 bg-gray-500"></hr>
                 </div>
@@ -1581,15 +1633,9 @@ export default function EditEditionPage() {
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
-                        <Input
-                          data-identifier={`i1_song${index + 1}`}
-                          type="text"
-                          data-type="song"
-                          required
-                          value={imp2Songs[index] ?? ""}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleImp2Songs(index, e.target.value ?? "")
-                          }
+                        <AppleMusicSearch
+                          initialValue={imp2SongsApple[index]}
+                          onSelect={(track) => handleImp2Songs(index, track.id)}
                         />
 
                       </div>
@@ -1666,6 +1712,33 @@ export default function EditEditionPage() {
                             }));
                           }}
                         />
+                        <Button
+                          className="mt-2 mb-4"
+                          size="sm"
+                          onPress={() => setActiveGifPicker(activeGifPicker === `imp2a${index}` ? null : `imp2a${index}`)}
+                        >
+                          {activeGifPicker === `imp2a${index}` ? "Hide" : "Show"} GIF Picker
+                        </Button>
+                        {activeGifPicker === `imp2a${index}` && (
+                          <div className="gif-picker flex gap-4 mt-2 mb-4">
+                            <GifPicker
+                              tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                              onGifClick={(gif) => {
+                                setImp2AnswerGifs((prevGifs) => ({
+                                  ...prevGifs,
+                                  [index]: gif.url,
+                                }));
+                                setActiveGifPicker(null);
+                              }}
+                              theme={Theme.DARK}
+                            />
+                            <img
+                              src={imp2AnswerGifs[index] || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                              alt={`Impossible 2 Answer ${index + 1} GIF`}
+                              className="w-full max-w-[500px] h-auto self-start"
+                            />
+                          </div>
+                        )}
                       </div>
                       <hr className="block my-10 bg-gray-300"></hr>
                     </div>
@@ -1728,33 +1801,16 @@ export default function EditEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r3s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2"
-                    value={round3Songs[index]} // Bind the value dynamically
-                    onChange={(e) => {
-                      const updatedSongs = [...round3Songs];
-                      updatedSongs[index] = e.target.value;
-                      setRound3Songs(updatedSongs); // Update the specific song in the array
-                    }}
-                  />
-                  {r3SongInfos[index] && (
-                    <div className="mb-6 mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded w-1/2">
-                      {r3SongInfos[index].albumImage && (
-                        <img
-                          src={r3SongInfos[index].albumImage}
-                          alt="Album cover"
-                          className="w-12 h-12"
-                        />
-                      )}
-                      <div>
-                        <div className="font-semibold">{r3SongInfos[index].title}</div>
-                        <div className="text-sm text-gray-400">{r3SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2">
+                    <AppleMusicSearch
+                      initialValue={round3SongsApple[index]}
+                      onSelect={(track) => {
+                        const updatedSongs = [...round3SongsApple];
+                        updatedSongs[index] = track.id;
+                        setRound3SongsApple(updatedSongs);
+                      }}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={round3Answers[index]}
@@ -1775,6 +1831,32 @@ export default function EditEditionPage() {
                       setRound3AnswerGifs(updatedGifs); // Update the specific gif in the array
                     }}
                   />
+                  <Button
+                    className="mt-2 mb-4"
+                    size="sm"
+                    onPress={() => setActiveGifPicker(activeGifPicker === `r3q${index}` ? null : `r3q${index}`)}
+                  >
+                    {activeGifPicker === `r3q${index}` ? "Hide" : "Show"} GIF Picker
+                  </Button>
+                  {activeGifPicker === `r3q${index}` && (
+                    <div className="gif-picker flex gap-4 mt-2 mb-4">
+                      <GifPicker
+                        tenorApiKey={process.env.NEXT_PUBLIC_TENOR_API_KEY || ""}
+                        onGifClick={(gif) => {
+                          const updatedGifs = [...round3AnswerGifs];
+                          updatedGifs[index] = gif.url;
+                          setRound3AnswerGifs(updatedGifs);
+                          setActiveGifPicker(null);
+                        }}
+                        theme={Theme.DARK}
+                      />
+                      <img
+                        src={round3AnswerGifs[index] || "https://cdn.dribbble.com/userupload/41629504/file/original-de8cd818907e593c2bde764591ba9d43.png?resize=200x0"}
+                        alt={`Round 3 Question ${index + 1} GIF`}
+                        className="w-full max-w-[500px] h-auto self-start"
+                      />
+                    </div>
+                  )}
                   <Divider className="my-4" />
                   <hr className="block my-10 bg-gray-500"></hr>
                 </div>
@@ -1917,28 +1999,10 @@ export default function EditEditionPage() {
                 <label className="mb-2 block" htmlFor="wager_song">
                   Wager Placing Song:
                 </label>
-                <Input
-                  id="wager_song"
-                  type="text"
-                  data-type="song"
-                  value={wagerSong}
-                  onValueChange={setWagerSong}
+                <AppleMusicSearch
+                  initialValue={wagerSongApple}
+                  onSelect={(track) => setWagerSongApple(track.id)}
                 />
-                {wagerSongInfo && (
-                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
-                    {wagerSongInfo.albumImage && (
-                      <img
-                        src={wagerSongInfo.albumImage}
-                        alt="Album cover"
-                        className="w-12 h-12"
-                      />
-                    )}
-                    <div>
-                      <div className="font-semibold">{wagerSongInfo.title}</div>
-                      <div className="text-sm text-gray-400">{wagerSongInfo.artists}</div>
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>
@@ -2044,27 +2108,10 @@ export default function EditEditionPage() {
 
               <div className="mb-8 w-1/2">
                 <h4 className="mb-2">Song:</h4>
-                <Input
-                  data-identifier="final_song"
-                  data-type="song"
-                  value={finalSong}
-                  onValueChange={setFinalSong}
+                <AppleMusicSearch
+                  initialValue={finalSongApple}
+                  onSelect={(track) => setFinalSongApple(track.id)}
                 />
-                {finalSongInfo && (
-                  <div className="mt-2 flex items-center gap-2 p-2 bg-gray-800 rounded">
-                    {finalSongInfo.albumImage && (
-                      <img
-                        src={finalSongInfo.albumImage}
-                        alt="Album cover"
-                        className="w-12 h-12"
-                      />
-                    )}
-                    <div>
-                      <div className="font-semibold">{finalSongInfo.title}</div>
-                      <div className="text-sm text-gray-400">{finalSongInfo.artists}</div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="mb-8 w-full">

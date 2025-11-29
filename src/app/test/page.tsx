@@ -7,15 +7,15 @@ import Pocketbase from "pocketbase";
 
 export default function App() {
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const refreshSpotifyAuth = async () => {
+  const refreshAuth = async () => {
     pb.autoCancellation(false);
-    const authData = await pb.collection("users").authWithOAuth2({provider: 'google'});
+    const authData = await pb.collection("users").authWithOAuth2({ provider: 'google' });
     console.log("authData", authData);
   }
 
 
   useEffect(() => {
-    refreshSpotifyAuth();
+    refreshAuth();
   }, []);
 
   // Renders the editor instance, and its contents as HTML below.

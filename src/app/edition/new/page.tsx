@@ -1,75 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-// Helper: Spotify Track Info Fetcher
-const fetchSpotifyTrackInfo = async (uri: string, token: string, refreshToken?: () => Promise<string | null>) => {
-  // Accepts Spotify URI or URL, extracts track id, fetches metadata
-  if (!uri) return null;
-  let match = uri.match(/spotify:track:([a-zA-Z0-9]+)/);
-  if (!match) {
-    // Try URL
-    match = uri.match(/spotify\.com\/track\/([a-zA-Z0-9]+)/);
-  }
-  const trackId = match ? match[1] : null;
-  if (!trackId) return null;
-  try {
-    const resp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // If 401 and we have a refresh callback, try to get a new token and retry
-    if (resp.status === 401 && refreshToken) {
-      const newToken = await refreshToken();
-      if (newToken) {
-        const retryResp = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-          headers: { Authorization: `Bearer ${newToken}` },
-        });
-        if (!retryResp.ok) return null;
-        const retryData = await retryResp.json();
-        return {
-          title: retryData.name,
-          artists: retryData.artists?.map((a: any) => a.name).join(", "),
-          albumImage: retryData.album?.images?.[2]?.url || retryData.album?.images?.[0]?.url || "",
-        };
-      }
-    }
-
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    return {
-      title: data.name,
-      artists: data.artists?.map((a: any) => a.name).join(", "),
-      albumImage: data.album?.images?.[2]?.url || data.album?.images?.[0]?.url || "",
-    };
-  } catch (e) {
-    return null;
-  }
-};
+import AppleMusicSearch from "@/components/AppleMusicSearch";
+import { AppleMusicTrack } from "@/lib/appleMusic";
 
 // Helper: Sleep function to add delays between requests
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper: fetch Spotify client credentials token (public)
-const getSpotifyToken = async () => {
-  // Use env vars for client id/secret
-  const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-  const clientSecret = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  const resp = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: "Basic " + (typeof window !== "undefined" && window.btoa
-        ? window.btoa(`${clientId}:${clientSecret}`)
-        : Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-      ),
-    },
-    body: "grant_type=client_credentials",
-  });
-  if (!resp.ok) return null;
-  const data = await resp.json();
-  return data.access_token;
-};
 
 
 import {
@@ -105,17 +41,9 @@ export default function NewEditionPage() {
   // Songs
   // Removed redundant local state for songs. Using editionData directly.
 
-  // Spotify track info states
-  const [homeSongInfo, setHomeSongInfo] = useState<any>(null);
-  const [r1SongInfos, setR1SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [r2SongInfos, setR2SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [r3SongInfos, setR3SongInfos] = useState<any[]>(Array(5).fill(null));
-  const [imp1SongInfos, setImp1SongInfos] = useState<any[]>([]);
-  const [imp2SongInfos, setImp2SongInfos] = useState<any[]>([]);
-  const [wagerSongInfo, setWagerSongInfo] = useState<any>(null);
-  const [finalSongInfo, setFinalSongInfo] = useState<any>(null);
-  // Spotify token state
-  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  // Apple Music state (if needed, or just rely on editionData)
+  // We don't need separate state for metadata if the Search component handles it, 
+  // but we might want to display it if we are not using the Search component for display only.
   // All other UI state (questions, answers, gifs, etc)
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
@@ -162,180 +90,9 @@ export default function NewEditionPage() {
   // --- useDateField depends on editionData ---
   const { parsedDate, onDateChange } = useDateField(editionData.date, updateField("date"));
 
-  // Token refresh callback for Spotify API retry logic
-  const refreshSpotifyToken = useCallback(async () => {
-    const newToken = await getSpotifyToken();
-    if (newToken) {
-      setSpotifyToken(newToken);
-      try {
-        localStorage.setItem("spotify_token", newToken);
-        localStorage.setItem("spotify_token_timestamp", Date.now().toString());
-      } catch (e) { /* ignore */ }
-    }
-    return newToken;
-  }, []);
 
-  // --- All useEffect hooks that depend on editionData or song states come after variable declarations ---
-  // Fetch and refresh Spotify token with caching in localStorage
-  useEffect(() => {
-    let ignore = false;
-    const TOKEN_KEY = "spotify_token";
-    const TIMESTAMP_KEY = "spotify_token_timestamp";
-    const MAX_AGE_MS = 55 * 60 * 1000; // 55 minutes
-    let intervalId: NodeJS.Timeout | number | null = null;
 
-    async function fetchAndCacheToken() {
-      const token = await getSpotifyToken();
-      if (token && !ignore) {
-        setSpotifyToken(token);
-        try {
-          localStorage.setItem(TOKEN_KEY, token);
-          localStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
-        } catch (e) { /* ignore */ }
-      }
-    }
 
-    function getCachedToken() {
-      try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const timestamp = localStorage.getItem(TIMESTAMP_KEY);
-        if (token && timestamp) {
-          const age = Date.now() - parseInt(timestamp, 10);
-          if (!isNaN(age) && age < MAX_AGE_MS) {
-            return token;
-          }
-        }
-      } catch (e) { /* ignore */ }
-      return null;
-    }
-
-    // Initial check
-    const cachedToken = getCachedToken();
-    if (cachedToken) {
-      setSpotifyToken(cachedToken);
-    } else {
-      fetchAndCacheToken();
-    }
-
-    // Set up interval to refresh every 55 minutes
-    intervalId = setInterval(() => {
-      fetchAndCacheToken();
-    }, MAX_AGE_MS);
-
-    return () => {
-      ignore = true;
-      if (intervalId) clearInterval(intervalId as number);
-    };
-  }, []);
-
-  // --- Home Song Info ---
-  // --- Home Song Info ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!editionData.homeSong) { setHomeSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(editionData.homeSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setHomeSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [editionData.homeSong, spotifyToken, refreshSpotifyToken]);
-
-  // --- Round 1 Song Infos ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = editionData.r1Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR1SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [editionData.r1Songs, spotifyToken, refreshSpotifyToken]);
-  // --- Round 2 Song Infos ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = editionData.r2Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR2SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [editionData.r2Songs, spotifyToken, refreshSpotifyToken]);
-  // --- Round 3 Song Infos ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = editionData.r3Songs || [];
-    Promise.all(songUris.map((uri: string) =>
-      uri ? fetchSpotifyTrackInfo(uri, spotifyToken, refreshSpotifyToken) : Promise.resolve(null)
-    )).then((infos) => { if (!ignore) setR3SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [editionData.r3Songs, spotifyToken, refreshSpotifyToken]);
-
-  // --- Impossible 1 Song Infos ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = editionData.imp1Songs || [];
-    Promise.all(
-      Array.from({ length: editionData.imp1SongCount || 0 }).map((_, idx) =>
-        editionData.imp1Songs?.[idx]
-          ? fetchSpotifyTrackInfo(editionData.imp1Songs[idx], spotifyToken, refreshSpotifyToken)
-          : Promise.resolve(null)
-      )
-    ).then((infos) => { if (!ignore) setImp1SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [editionData.imp1Songs, editionData.imp1SongCount, spotifyToken, refreshSpotifyToken]);
-
-  // --- Sync Song Counts on Mount (Migration Helper) ---
-  useEffect(() => {
-    if (editionData.imp1SongCount === 0 && editionData.imp1Songs) {
-      const count = Array.isArray(editionData.imp1Songs) ? editionData.imp1Songs.length : Object.keys(editionData.imp1Songs).length;
-      if (count > 0) updateField("imp1SongCount")(count);
-    }
-    if (editionData.imp2SongCount === 0 && editionData.imp2Songs) {
-      const count = Array.isArray(editionData.imp2Songs) ? editionData.imp2Songs.length : Object.keys(editionData.imp2Songs).length;
-      if (count > 0) updateField("imp2SongCount")(count);
-    }
-  }, []); // Run once on mount
-
-  // --- Impossible 2 Song Infos ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    let ignore = false;
-    const songUris = editionData.imp2Songs || [];
-    Promise.all(
-      Array.from({ length: editionData.imp2SongCount || 0 }).map((_, idx) =>
-        editionData.imp2Songs?.[idx]
-          ? fetchSpotifyTrackInfo(editionData.imp2Songs[idx], spotifyToken, refreshSpotifyToken)
-          : Promise.resolve(null)
-      )
-    ).then((infos) => { if (!ignore) setImp2SongInfos(infos); });
-    return () => { ignore = true; };
-  }, [editionData.imp2Songs, editionData.imp2SongCount, spotifyToken, refreshSpotifyToken]);
-
-  // --- Wager Song Info ---
-  // --- Wager Song Info ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!editionData.wagerSong) { setWagerSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(editionData.wagerSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setWagerSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [editionData.wagerSong, spotifyToken, refreshSpotifyToken]);
-
-  // --- Final Song Info ---
-  // --- Final Song Info ---
-  useEffect(() => {
-    if (!spotifyToken || spotifyToken === "") return;
-    if (!editionData.finalSong) { setFinalSongInfo(null); return; }
-    let ignore = false;
-    fetchSpotifyTrackInfo(editionData.finalSong, spotifyToken, refreshSpotifyToken).then(info => {
-      if (!ignore) setFinalSongInfo(info);
-    });
-    return () => { ignore = true; };
-  }, [editionData.finalSong, spotifyToken, refreshSpotifyToken]);
 
 
 
@@ -428,7 +185,7 @@ export default function NewEditionPage() {
           // Update the question with its corresponding data
           const updatedQuestion = await pb.collection("questions").create({
             question_text: questionText,
-            song: roundSongs[roundIndex][questionIndex],
+            apple_ids: roundSongs[roundIndex][questionIndex],
             answer: roundAnswers[roundIndex][questionIndex],
             answer_gif: roundAnswerGifs[roundIndex][questionIndex],
             bantha_answer: round === 1 && questionIndex === 2 ? editionData.banthaAnswer : '',
@@ -489,7 +246,7 @@ export default function NewEditionPage() {
       theme_gif: editionData.imp1ThemeGif,
       question_text: editionData.imp1Question,
       point_value: editionData.imp1AnswerValue,
-      spotify_ids: songs,
+      apple_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
       edition_id: editionId,
@@ -500,7 +257,7 @@ export default function NewEditionPage() {
       theme_gif: editionData.imp2ThemeGif,
       question_text: editionData.imp2Question,
       point_value: editionData.imp2AnswerValue,
-      spotify_ids: songs,
+      apple_ids: songs,
       answers: answers,
       answer_gifs: answerGifs,
       edition_id: editionId,
@@ -584,7 +341,7 @@ export default function NewEditionPage() {
         date: formattedDate, // Ensure `date` is formatted correctly
         edition_gif: editionData.editionGif,
         blurb: editionData.blurb,
-        home_song: editionData.homeSong,
+        home_songs_apple: editionData.homeSongApple,
         end_gif_1: editionData.endGif1,
         end_gif_2: editionData.endGif2,
       });
@@ -669,9 +426,9 @@ export default function NewEditionPage() {
         padArray(editionData.r3Questions, 5)
       ];
       const roundSongs = [
-        padArray(editionData.r1Songs, 5),
-        padArray(editionData.r2Songs, 5),
-        padArray(editionData.r3Songs, 5)
+        padArray(editionData.r1SongsApple, 5),
+        padArray(editionData.r2SongsApple, 5),
+        padArray(editionData.r3SongsApple, 5)
       ];
       const roundAnswers = [
         padArray(editionData.r1Answers, 5),
@@ -701,10 +458,10 @@ export default function NewEditionPage() {
       // Step 3: Update the Impossible Rounds
       const updatedRounds = await updateImpossibleRounds(
         editionId,
-        editionData.imp1Songs,
+        editionData.imp1SongsApple,
         editionData.imp1Answers,
         editionData.imp1AnswerGifs,
-        editionData.imp2Songs,
+        editionData.imp2SongsApple,
         editionData.imp2Answers,
         editionData.imp2AnswerGifs
       );
@@ -723,7 +480,7 @@ export default function NewEditionPage() {
         final_cat: editionData.finalCategory,
         final_cat_gif: editionData.finalCategoryGif,
         wager_placing_gif: editionData.wagerPlacingGif,
-        wager_song: editionData.wagerSong,
+        wager_song_apple: editionData.wagerSongApple,
         edition_id: editionId,
       });
 
@@ -740,7 +497,7 @@ export default function NewEditionPage() {
         question_text: editionData.finalQuestion,
         answer: editionData.finalAnswer,
         final_answer_gif: editionData.finalAnswerGif,
-        final_song: editionData.finalSong,
+        final_song_apple: editionData.finalSongApple,
         edition_id: editionId,
       };
 
@@ -986,25 +743,10 @@ export default function NewEditionPage() {
                   <label className="mb-2 block" htmlFor="home_song">
                     Landing Page Song
                   </label>
-                  <Input
-                    id="home_song"
-                    data-identifier="home_song"
-                    type="text"
-                    data-type="song"
-                    value={editionData.homeSong}
-                    onValueChange={updateField("homeSong")}
+                  <AppleMusicSearch
+                    initialValue={editionData.homeSongApple}
+                    onSelect={(track) => updateField("homeSongApple")(track.id)}
                   />
-                  {homeSongInfo && (
-                    <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
-                      {homeSongInfo.albumImage && (
-                        <img src={homeSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{homeSongInfo.title}</div>
-                        <div style={{ color: "#888" }}>{homeSongInfo.artists}</div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -1059,25 +801,12 @@ export default function NewEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r1s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2 mb-2"
-                    value={editionData.r1Songs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r1Songs", index, newVal)}
-                  />
-                  {r1SongInfos[index] && (
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-                      {r1SongInfos[index].albumImage && (
-                        <img src={r1SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{r1SongInfos[index].title}</div>
-                        <div style={{ color: "#888" }}>{r1SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2 mb-2">
+                    <AppleMusicSearch
+                      initialValue={editionData.r1SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("r1SongsApple", index, track.id)}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r1Answers?.[index] || ""}
@@ -1406,25 +1135,12 @@ export default function NewEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r2s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2 mb-6"
-                    value={editionData.r2Songs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r2Songs", index, newVal)}
-                  />
-                  {r2SongInfos[index] && (
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-                      {r2SongInfos[index].albumImage && (
-                        <img src={r2SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{r2SongInfos[index].title}</div>
-                        <div style={{ color: "#888" }}>{r2SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2 mb-2">
+                    <AppleMusicSearch
+                      initialValue={editionData.r2SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("r2SongsApple", index, track.id)}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r2Answers?.[index] || ""}
@@ -1724,25 +1440,12 @@ export default function NewEditionPage() {
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <Input
-                    data-identifier={`r3s${index + 1}`}
-                    type="text"
-                    data-type="song"
-                    className="w-1/2 mb-6"
-                    value={editionData.r3Songs?.[index] || ""}
-                    onValueChange={(newVal) => updateArrayItem("r3Songs", index, newVal)}
-                  />
-                  {r3SongInfos[index] && (
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-                      {r3SongInfos[index].albumImage && (
-                        <img src={r3SongInfos[index].albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                      )}
-                      <div>
-                        <div style={{ fontWeight: 500 }}>{r3SongInfos[index].title}</div>
-                        <div style={{ color: "#888" }}>{r3SongInfos[index].artists}</div>
-                      </div>
-                    </div>
-                  )}
+                  <div className="w-1/2 mb-2">
+                    <AppleMusicSearch
+                      initialValue={editionData.r3SongsApple?.[index]}
+                      onSelect={(track) => updateArrayItem("r3SongsApple", index, track.id)}
+                    />
+                  </div>
                   <h3 className="mb-2">Answer {index + 1}</h3>
                   <Tiptap
                     state={editionData.r3Answers?.[index] || ""}
@@ -1905,24 +1608,10 @@ export default function NewEditionPage() {
                 <label className="mb-2 block" htmlFor="wager_song">
                   Wager Placing Song:
                 </label>
-                <Input
-                  id="wager_song"
-                  type="text"
-                  data-type="song"
-                  value={editionData.wagerSong}
-                  onValueChange={updateField("wagerSong")}
+                <AppleMusicSearch
+                  initialValue={editionData.wagerSongApple}
+                  onSelect={(track) => updateField("wagerSongApple")(track.id)}
                 />
-                {wagerSongInfo && (
-                  <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
-                    {wagerSongInfo.albumImage && (
-                      <img src={wagerSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{wagerSongInfo.title}</div>
-                      <div style={{ color: "#888" }}>{wagerSongInfo.artists}</div>
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>
@@ -2015,24 +1704,12 @@ export default function NewEditionPage() {
 
               <div className="mb-8">
                 <h4 className="mb-2">Song:</h4>
-                <Input
-                  data-identifier="final_song"
-                  data-type="song"
-                  className="w-1/2"
-                  value={editionData.finalSong}
-                  onValueChange={updateField("finalSong")}
-                />
-                {finalSongInfo && (
-                  <div style={{ display: "flex", alignItems: "center", marginTop: 8 }}>
-                    {finalSongInfo.albumImage && (
-                      <img src={finalSongInfo.albumImage} alt="album" style={{ width: 48, height: 48, borderRadius: 4, marginRight: 12 }} />
-                    )}
-                    <div>
-                      <div style={{ fontWeight: 500 }}>{finalSongInfo.title}</div>
-                      <div style={{ color: "#888" }}>{finalSongInfo.artists}</div>
-                    </div>
-                  </div>
-                )}
+                <div className="w-1/2">
+                  <AppleMusicSearch
+                    initialValue={editionData.finalSongApple}
+                    onSelect={(track) => updateField("finalSongApple")(track.id)}
+                  />
+                </div>
               </div>
 
               <div className="mb-8 w-1/2">

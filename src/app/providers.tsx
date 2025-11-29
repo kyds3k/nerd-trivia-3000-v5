@@ -14,29 +14,7 @@ interface ProvidersProps {
 export function Providers({ children, session }: ProvidersProps) {
   const firstLayer = useRef<HTMLDivElement | null>(null);
 
-  // Keep Spotify tokens from NextAuth session in localStorage to avoid auth loops on direct routes
-  const SessionSync: React.FC = () => {
-    const { data: sess } = useSession();
 
-    useEffect(() => {
-      if (!sess) return;
-      try {
-        if (sess.accessToken) {
-          localStorage.setItem("spotifyAuthToken", sess.accessToken);
-        }
-        if (sess.refreshToken) {
-          localStorage.setItem("spotifyRefreshToken", sess.refreshToken);
-        }
-        if (sess.expiresAt) {
-          localStorage.setItem("spotifyRefreshTokenExpiry", String(sess.expiresAt));
-        }
-      } catch (err) {
-        console.error("Failed to sync Spotify tokens to localStorage", err);
-      }
-    }, [sess?.accessToken, sess?.refreshToken, sess?.expiresAt]);
-
-    return null;
-  };
 
   return (
     <SessionProvider session={session}>
@@ -108,7 +86,7 @@ export function Providers({ children, session }: ProvidersProps) {
           }}
         >
           {children}
-          <SessionSync />
+
           <div
             ref={firstLayer}
             className="fixed inset-0 z-50 translate-y-full"

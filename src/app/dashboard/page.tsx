@@ -11,8 +11,7 @@ import ShallNotPass from "../../components/ShallNotPass";
 import { set } from "lodash";
 import { useSession } from "next-auth/react";
 
-import SpotifySignIn from "@/components/SpotifySignIn";
-import SpotifySignOut from "@/components/SpotifySignOut";
+
 
 // Create an intersection type to handle the UI flag
 type EditionWithFlags = Edition & { isWip?: boolean; progress?: any };
@@ -34,7 +33,6 @@ export default function DashboardPage() {
   const [googleUser, setGoogleUser] = useState<string>("");
   const [googleAvatar, setGoogleAvatar] = useState<string>("");
   const { data: session } = useSession();
-  const [hasSession, setHasSession] = useState<boolean>(false);
   const [wipEditions, setWipEditions] = useState<any[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
@@ -252,19 +250,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (session) {
-      console.log("Session retrieved:", session);
-      setHasSession(true);
-      if (session) {
-        localStorage.setItem("spotifyRefreshToken", session.refreshToken ?? "");
-        localStorage.setItem("spotifyAuthToken", session.accessToken ?? "");
-        localStorage.setItem("spotifyRefreshTokenExpiry", String(session.expiresAt));
-      }
-    } else {
-      console.log("No session found. Are cookies enabled?");
-    }
-  }, [session]);
+
 
   useEffect(() => {
     const fetchWipEditions = async () => {
@@ -385,7 +371,7 @@ export default function DashboardPage() {
                     {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
                     <div className="my-4 flex gap-2">
                       {!edition.isWip && (
-                        <Button as={Link} isDisabled={!hasSession} href={`/edition/${edition.id}/present`}>Present</Button>
+                        <Button as={Link} href={`/edition/${edition.id}/present`}>Present</Button>
                       )}
 
                       {/* ONLY SHOW ADMIN BUTTON IF NOT WIP */}
@@ -421,15 +407,7 @@ export default function DashboardPage() {
         <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt">
           <h2 className="text-2xl mb-8">I/O</h2>
           <div className="flex flex-col gap-4">
-            {!hasSession ? (
-              <div className="flex flex-col gap-4">
-                <p>You must sign in to Spotify before presenting an edition</p>
-                <SpotifySignIn />
-              </div>
 
-            ) : (
-              <SpotifySignOut />
-            )}
             <Button className="w-fit" onPress={() => logoutGoogle()}>Logout</Button>
           </div>
         </div>

@@ -93,7 +93,14 @@ export default function Round() {
           `edition_id = "${editionId}" && round = ${roundId}` // Removed quotes around roundId
         );
         if (round) {
-          setRoundGif(round.round_gif);
+          console.log("Raw round_gif value:", round.round_gif);
+          let url = round.round_gif;
+          // If it looks like a filename (no protocol), prepend PB URL
+          if (!url.includes('://')) {
+            url = `${process.env.NEXT_PUBLIC_POCKETBASE_URL}/api/files/${round.collectionId}/${round.id}/${round.round_gif}`;
+          }
+          console.log("Final round_gif URL:", url);
+          setRoundGif(url);
         }
       } catch (error) {
         console.error("Failed to fetch round:", error);

@@ -62,22 +62,7 @@ export default function RootLayout({
 		<html lang="en" className="dark" suppressHydrationWarning>
 			<head>
 				<link rel="stylesheet" type="text/css" href="/augmented-ui.min.css" />
-				{/* Define onSpotifyWebPlaybackSDKReady globally */}
-				<script
-					dangerouslySetInnerHTML={{
-						__html: `
-            window.onSpotifyWebPlaybackSDKReady = function() {
-              console.log("Spotify Web Playback SDK is ready.");
-            };
-          `,
-					}}
-				></script>
-				{/* Add Spotify Web Playback SDK script */}
-				<script
-					id="spotify-sdk"
-					src="https://sdk.scdn.co/spotify-player.js"
-					async
-				></script>
+
 			</head>
 			<body
 				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} ${linebeam.variable} font-sans antialiased grid-bg`}
