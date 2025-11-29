@@ -14,6 +14,8 @@ import Fade from 'embla-carousel-fade'
 import { useHotkeys } from "react-hotkeys-hook";
 import DynamicText from "@/components/DynamicText"; // Correct for default exports
 import { Spinner } from "@heroui/react";
+import Typed from "typed.js";
+
 import { useTransitionRouter } from "next-transition-router";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass"
@@ -48,6 +50,9 @@ export default function Question() {
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  const [isResized, setIsResized] = useState<boolean>(false);
+  const el = useRef<HTMLSpanElement | null>(null);
 
 
   // Use the hook and pass the callback for question_toggle
@@ -89,25 +94,51 @@ export default function Question() {
   };
 
   const questionRef = useRef<HTMLDivElement | null>(null);
+
+  // Reset resized state when question text changes
   useEffect(() => {
-    if (questionRef.current) {
+    setIsResized(false);
+  }, [questionText]);
+
+  useEffect(() => {
+    if (questionRef.current && !isResized && questionText) {
       const container = questionRef.current;
       const parentWidth = container.offsetWidth;
       const parentHeight = container.offsetHeight;
 
       // Start with a large font size and reduce it until the text fits
-      let fontSize = 100; // Initial font size
+      let fontSize = 80; // Initial font size
       container.style.fontSize = `${fontSize}px`;
 
-      while (
-        container.scrollWidth > parentWidth ||
-        container.scrollHeight > parentHeight
-      ) {
-        fontSize -= 1; // Reduce font size
-        container.style.fontSize = `${fontSize}px`;
-      }
+      const checkFit = () => {
+        if (
+          (container.scrollWidth > parentWidth ||
+            container.scrollHeight > parentHeight) && fontSize > 10
+        ) {
+          fontSize -= 1; // Reduce font size
+          container.style.fontSize = `${fontSize}px`;
+          requestAnimationFrame(checkFit);
+        } else {
+          setIsResized(true);
+        }
+      };
+
+      checkFit();
     }
-  }, [questionText]);
+  }, [questionText, isResized, questionActive]);
+
+  useEffect(() => {
+    if (el.current && questionActive && questionText && isResized) {
+      const typed = new Typed(el.current, {
+        strings: [questionText],
+        typeSpeed: 20,
+        showCursor: false,
+        loop: false,
+      });
+
+      return () => typed.destroy(); // Cleanup Typed.js instance on unmount or rerun
+    }
+  }, [questionText, questionActive, isResized]);
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: false }, [Fade()])
 
@@ -238,12 +269,16 @@ export default function Question() {
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)]">
             {questionActive ? (
-              // <span ref={el} className="text-2xl"></span>
-              (<DynamicText
-                html={questionText}
-                maxFontSize={80}
-                className="p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start"
-              />)
+              <div
+                ref={questionRef}
+                className="p-8 h-[calc(100vh-4rem)] flex flex-col items-start justify-start overflow-hidden w-full"
+              >
+                {!isResized ? (
+                  <span className="opacity-0">{questionText}</span>
+                ) : (
+                  <span ref={el}></span>
+                )}
+              </div>
             ) : (
               <p className="text-2xl flex">{loadingQuote}</p>
             )}

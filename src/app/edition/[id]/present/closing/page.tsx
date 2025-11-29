@@ -16,6 +16,7 @@ import DynamicText from "@/components/DynamicText"; // Correct for default expor
 import { Spinner } from "@heroui/react";
 import { useTransitionRouter } from "next-transition-router";
 import { getAppleMusicTrack } from "@/lib/appleMusic";
+import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 
 interface Question {
   edition_id: string;
