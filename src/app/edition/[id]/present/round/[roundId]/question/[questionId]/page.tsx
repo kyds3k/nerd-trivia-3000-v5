@@ -337,7 +337,17 @@ export default function Question() {
   ) : (
     <div className="h-screen overflow-hidden">
       <div className="flex justify-between p-4">
-        <h1 className="py-4 pl-4 text-2xl">Question {questionId}</h1>
+        <h1 className="py-4 pl-4 text-2xl">
+          Question {questionId} - <span className={roundId === "3" ? "font-linebeam text-4xl text-cyan-400" : ""}>
+            {(() => {
+              const qNum = parseInt(questionId || "0", 10);
+              const rNum = parseInt(roundId || "0", 10);
+              if (rNum === 1 || rNum === 2) return qNum * 100;
+              if (rNum === 3) return qNum * 200;
+              return 0;
+            })()} Points
+          </span>
+        </h1>
 
         {song && (
           <div>
