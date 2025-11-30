@@ -142,7 +142,7 @@ export default function Question() {
       <div className="embla" ref={emblaRef}>
         <div className="embla__container">
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center w-full relative h-[70vh]">
               {endGif1 ? (
                 <Image src={endGif1} className="object-contain" alt="End GIF 1" fill={true} unoptimized={true} />
               ) : (
@@ -153,7 +153,7 @@ export default function Question() {
             </div>
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
-            <div className="flex items-center justify-center w-full">
+            <div className="flex items-center justify-center w-full relative h-[70vh]">
               {endGif2 ? (
                 <Image className="object-contain" src={endGif2} alt="End GIF 2" fill={true} unoptimized={true} />
               ) : (
