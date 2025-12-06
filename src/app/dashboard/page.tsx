@@ -274,6 +274,8 @@ export default function DashboardPage() {
       } else {
         console.log("No pocketbase_auth data found in localStorage.");
       }
+    } else {
+      setLoading(false);
     }
   }, []);
 
