@@ -8,6 +8,7 @@ export interface Message {
   round: string;
   question: string;
   active: boolean;
+  tiedTeamIds?: string[];
 }
 
 const activeChannels: Record<string, boolean> = {};
@@ -24,12 +25,8 @@ export function usePrimeDirectives(
   const currentPath = usePathname();
 
   useEffect(() => {
-    if (activeChannels[channelName]) {
-      return;
-    }
-
     console.log(`Subscribing to Pusher channel: ${channelName}`);
-    activeChannels[channelName] = true;
+    // activeChannels[channelName] = true; // Removed to allow multiple listeners/bindings
 
     const pusher = getPusherClient();
     const channel = pusher.subscribe(channelName);
@@ -59,6 +56,17 @@ export function usePrimeDirectives(
         case "final_jump":
           setNavigationPath(`/edition/${editionId}/play/${teamId}/final`);
           break;
+        case "tiebreaker_jump":
+          if (data.tiedTeamIds && teamId && data.tiedTeamIds.includes(teamId)) {
+            setNavigationPath(`/edition/${editionId}/play/${teamId}/tiebreaker`);
+          } else {
+            console.log("Not part of the tiebreaker. Staying put.");
+            // Optionally navigate to a "waiting" or "spectator" screen if needed,
+            // but per requirements, we just don't navigate them to the input screen.
+            // If we want them to see the scoreboard or something else, we'd handle it here.
+            // For now, we do nothing, so they stay on the Final screen (or wherever they are).
+          }
+          break;
         case "question_toggle":
           if (onQuestionToggle) {
             onQuestionToggle(data.active);
@@ -84,7 +92,8 @@ export function usePrimeDirectives(
       channel.unbind("evt::direct", handleEvent);
       channel.unbind("evt::notify", handleNotification); // Unbind notification
       pusher.unsubscribe(channelName);
-      activeChannels[channelName] = false;
+      pusher.unsubscribe(channelName);
+      // activeChannels[channelName] = false;
     };
   }, [channelName, editionId, teamId, onMessage, onQuestionToggle]);
 

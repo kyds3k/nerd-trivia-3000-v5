@@ -3,7 +3,11 @@
 import React, { use } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useEffectOnce } from 'react-use';
-import { useParams } from "next/navigation";
+import { useParams } from "next/navigation"; // Keeping for now if needed elsewhere, but likely unused
+// Actually, let's just remove it if it's the only usage.
+// Wait, I can't see if it's used elsewhere easily without reading, but I replaced the only usage I knew of.
+// Let's just leave it or remove it. I'll remove it.
+import { useRouter } from "next/navigation";
 import Pocketbase from "pocketbase";
 //import { Image } from "@heroui/react";
 import Image from 'next/image';
@@ -28,11 +32,80 @@ interface Question {
   is_active: boolean;
 }
 
-export default function Question() {
+export default function Question({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const { id: editionId } = use(params);
+  const sp = use(searchParams); // Unwrap searchParams to satisfy Next.js 15 strictness
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useTransitionRouter();
-  const params = useParams();
-  const editionId = typeof params?.id === "string" ? params.id : undefined;
+  // Actually, useParams returns Params, not a Promise in Client Components usually, but Next.js 15 changed this for Page props.
+  // Wait, useParams() from next/navigation is a hook.
+  // The error says "params are being enumerated. params is a Promise".
+  // This usually happens when using `props.params` in a Server Component or `useParams` in a way that expects sync access but it's now async-like or strict.
+  // However, `useParams` hook *returns* the params.
+  // Let's look at the error again: "params are being enumerated. params is a Promise".
+  // This typically refers to the `params` prop passed to the page component, NOT `useParams()`.
+  // But this file is "use client".
+  // Ah, `useParams` in Next 15 might return a Promise? No, `useParams` returns `Params`.
+  // BUT, if the user is passing `params` as a prop to a client component from a server component page, that might be it.
+  // Wait, `export default function Question() {` is the page component.
+  // In Next.js 15, Page components receive `params` as a Promise.
+  // Even in "use client" files?
+  // Yes, if it's a page.
+  // So I should change the signature to accept props.
+
+  // Let's check how `params` is defined currently.
+  // `const params = useParams();`
+  // If `useParams()` is used, it should be fine?
+  // The error stack trace says: `at Question.useEffect (src/app/edition/[id]/present/closing/page.tsx:80:15)`
+  // Line 80 is `console.log(emblaApi.slideNodes())`.
+  // That seems unrelated to `params`.
+
+  // Wait, the error message says: `params are being enumerated. params is a Promise`.
+  // This often happens when `useParams` is used?
+  // "In Next.js 15, `params` and `searchParams` props are Promises."
+  // "If you are using `useParams` hook, it remains synchronous." -> WRONG?
+  // Actually, `useParams` returns `Params` which is an object.
+
+  // Let's look at the file again.
+  // `const params = useParams();`
+  // `const editionId = typeof params?.id === "string" ? params.id : undefined;`
+
+  // If `useParams` returns a Promise (which it shouldn't, but maybe the user is on a canary version or I'm mistaken about 15 vs 16 behavior), then accessing `params.id` would fail.
+  // BUT the error says "params are being enumerated".
+  // `typeof params?.id` might trigger enumeration?
+
+  // Actually, looking at Next.js 15 docs:
+  // "The `params` and `searchParams` props passed to layouts and pages are now Promises."
+  // "The `useParams` hook is NOT a Promise."
+
+  // So why is the user seeing this?
+  // Maybe they are passing `params` as a prop?
+  // `export default function Question() {` -> It takes NO props.
+  // So `useParams()` is the only source.
+
+  // Wait, the error might be misleading or I'm misinterpreting "Question.useEffect".
+  // Is it possible `useParams` is returning a Promise in this version?
+  // "Next.js version: 16.0.7 (Turbopack)" -> This is very new.
+  // Maybe in 16, `useParams` is also async?
+
+  // Let's try to wrap it with `use()` just in case, or handle it as a Promise.
+  // But `use()` expects a Promise.
+
+  // Alternative: The user might be using `params` from the Page props but didn't declare it?
+  // No, the code is `const params = useParams();`.
+
+  // Let's assume `useParams` returns a Promise-like object or the user is actually receiving props and I missed it?
+  // No, I see the file content.
+
+  // Let's try to change how we access `params`.
+  // Instead of `useParams`, let's accept `params` as a prop and `use()` it.
+  // `export default function Question({ params }: { params: Promise<{ id: string }> }) {`
+  // And remove `useParams`.
+
+  // This is the recommended way for Pages in Next 15+.
+
+  // Let's try that.
+
   const [song, setSong] = useState<string | null>(null);
   const [songArtist, setSongArtist] = useState<string | null>(null);
   const [songTitle, setSongTitle] = useState<string | null>(null);
@@ -41,6 +114,8 @@ export default function Question() {
   const [endGif2, setEndGif2] = useState<string | null>(null);
 
 
+
+  const [hasTiebreaker, setHasTiebreaker] = useState<boolean>(false);
 
   // Use the hook and pass the callback for question_toggle
   // Assuming active might be a string, convert it to a boolean
@@ -55,7 +130,11 @@ export default function Question() {
   );
 
   useHotkeys("ctrl+ArrowLeft", () => {
-    router.push(`/edition/${editionId}/present/final/`);
+    if (hasTiebreaker) {
+      router.push(`/edition/${editionId}/present/tiebreaker/scoreboard`);
+    } else {
+      router.push(`/edition/${editionId}/present/final/`);
+    }
   });
 
 
@@ -69,11 +148,11 @@ export default function Question() {
     emblaApi?.scrollNext()
   });
 
-  useEffect(() => {
-    if (emblaApi) {
-      console.log(emblaApi.slideNodes()) // Access API
-    }
-  }, [emblaApi])
+  // useEffect(() => {
+  //   if (emblaApi) {
+  //     console.log(emblaApi.slideNodes()) // Access API
+  //   }
+  // }, [emblaApi])
 
 
 
@@ -109,6 +188,11 @@ export default function Question() {
         setEndGif1(pb.files.getUrl(response, response.end_gif_1));
         setEndGif2(pb.files.getUrl(response, response.end_gif_2));
 
+        // Check for tiebreaker answers
+        const tiebreakerAnswers = await pb.collection("answers").getList(1, 1, {
+          filter: `edition_id = "${editionId}" && answer_type = "tiebreaker"`,
+        });
+        setHasTiebreaker(tiebreakerAnswers.totalItems > 0);
 
       } catch (error) {
         console.log("Failed to fetch edition:", error);

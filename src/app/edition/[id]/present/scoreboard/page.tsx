@@ -24,6 +24,8 @@ export default function Scoreboard() {
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [scores, setScores] = useState<RecordModel[]>([]);
   const [origin, setOrigin] = useState<string | null>(null);
+  const [isTie, setIsTie] = useState<boolean>(false);
+  const [tiedTeamIds, setTiedTeamIds] = useState<string[]>([]);
 
   // Fetch scores from PocketBase
   const getScores = async () => {
@@ -36,12 +38,24 @@ export default function Scoreboard() {
     });
     console.log(scoreList);
     setScores(scoreList);
+
+    // Check for tie
+    if (scoreList.length > 1) {
+      const firstPlaceScore = scoreList[0].points_for_game;
+      const secondPlaceScore = scoreList[1].points_for_game;
+      if (firstPlaceScore === secondPlaceScore) {
+        setIsTie(true);
+        // Calculate tied teams
+        const tied = scoreList.filter(team => team.points_for_game === firstPlaceScore);
+        setTiedTeamIds(tied.map(team => team.id));
+      }
+    }
   };
 
   // Record the winner if this is the final scoreboard
   useEffect(() => {
     const recordWinner = async () => {
-      if (origin === "final" && scores.length > 0 && editionId) {
+      if (origin === "final" && scores.length > 0 && editionId && !isTie) {
         const winner = scores[0];
         console.log("Recording winner:", winner);
         try {
@@ -57,7 +71,7 @@ export default function Scoreboard() {
       }
     };
     recordWinner();
-  }, [scores, origin, editionId]);
+  }, [scores, origin, editionId, isTie]);
 
   // Fetch localStorage data on the client side
   useEffect(() => {
@@ -65,6 +79,23 @@ export default function Scoreboard() {
       setOrigin(localStorage.getItem("scoreBoardOrigin"));
     }
   }, []);
+
+  const sendTiebreakerDirective = async () => {
+    try {
+      await fetch('/api/direct/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'tiebreaker_jump',
+          tiedTeamIds: tiedTeamIds
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to send tiebreaker directive:", error);
+    }
+  };
 
   // Handle hotkeys
   useHotkeys(
@@ -75,11 +106,16 @@ export default function Scoreboard() {
       } else if (origin === "round3") {
         router.push(`/edition/${editionId}/present/wager`);
       } else if (origin === "final") {
-        router.push(`/edition/${editionId}/present/closing`);
+        if (isTie) {
+          sendTiebreakerDirective(); // Send directive to teams
+          router.push(`/edition/${editionId}/present/tiebreaker`);
+        } else {
+          router.push(`/edition/${editionId}/present/closing`);
+        }
       } else if (origin === "2")
         router.push(`/edition/${editionId}/present/round/3`);
     },
-    [origin]
+    [origin, isTie, tiedTeamIds]
   );
 
   useHotkeys(
@@ -139,6 +175,17 @@ export default function Scoreboard() {
                 </TableBody>
               </Table>
             </div>
+            {isTie && origin === "final" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 5 + (scores.length * 3) }} // Show after all scores have appeared
+                className="mt-10 text-center"
+              >
+                <h2 className="text-5xl font-bold text-red-500 animate-pulse font-linebeam">TIEBREAKER PROTOCOL INITIATED</h2>
+                <p className="text-xl mt-4 text-white">Please wait for the Tiebreaker Round...</p>
+              </motion.div>
+            )}
           </div>
         </div>
       </div>

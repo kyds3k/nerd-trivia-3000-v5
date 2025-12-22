@@ -61,6 +61,7 @@ export default function Admin() {
   const [switchI2, setSwitchI2] = useState(false);
   const [switchWager, setSwitchWager] = useState(false);
   const [switchFinal, setSwitchFinal] = useState(false);
+  const [switchTiebreaker, setSwitchTiebreaker] = useState(false);
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const handleSelectSubmit = (round: string, question: string) => {
     console.log("Selected Round:", round);
@@ -101,6 +102,7 @@ export default function Admin() {
         setSwitchI2(false);
         setSwitchWager(false);
         setSwitchFinal(false);
+        setSwitchTiebreaker(false);
       }
 
       toggleActive(value, 'question', Number(key[7]), Number(key[9]));
@@ -139,6 +141,7 @@ export default function Admin() {
           switchR3Q4: false,
           switchR3Q5: false,
         }));
+        setSwitchTiebreaker(false);
       }
 
       toggleActive(value, 'impossible', Number(key[1]), null);
@@ -174,6 +177,7 @@ export default function Admin() {
         setSwitchI1(false);
         setSwitchI2(false);
         setSwitchFinal(false);
+        setSwitchTiebreaker(false);
       }
 
     }
@@ -209,9 +213,43 @@ export default function Admin() {
         setSwitchI1(false);
         setSwitchI2(false);
         setSwitchWager(false);
+        setSwitchTiebreaker(false);
 
       }
 
+    }
+
+    // if the key is "tiebreaker", set the switchTiebreaker to the value
+    if (key === 'tiebreaker') {
+      setSwitchTiebreaker(value);
+
+      toggleActive(value, 'tiebreaker', null, null);
+
+      if (value == true) {
+        setSwitchStates((prev) => ({
+          ...prev,
+          switchR1Q1: false,
+          switchR1Q2: false,
+          switchR1Q3: false,
+          switchR1Q4: false,
+          switchR1Q5: false,
+          switchR2Q1: false,
+          switchR2Q2: false,
+          switchR2Q3: false,
+          switchR2Q4: false,
+          switchR2Q5: false,
+          switchR3Q1: false,
+          switchR3Q2: false,
+          switchR3Q3: false,
+          switchR3Q4: false,
+          switchR3Q5: false,
+        }));
+
+        setSwitchI1(false);
+        setSwitchI2(false);
+        setSwitchWager(false);
+        setSwitchFinal(false);
+      }
     }
 
 
@@ -285,10 +323,24 @@ export default function Admin() {
         );
         if (finalRecord?.is_active) {
           setSwitchFinal(true);
+          return;
         }
       } catch (error) {
         console.log('No active final round found:', error);
       }
+
+      // If no final round is active, check if a tiebreaker is active
+      try {
+        const tiebreakerList = await pb.collection('tiebreakers').getFullList();
+        const activeTiebreaker = tiebreakerList.find(t => t.is_active);
+
+        if (activeTiebreaker) {
+          setSwitchTiebreaker(true);
+        }
+      } catch (error) {
+        console.log('No active tiebreaker found:', error);
+      }
+
     } catch (error) {
       console.error('Failed to fetch questions:', error);
     }
@@ -296,8 +348,8 @@ export default function Admin() {
 
 
 
-  const sendDirective = async (type: string | null, round: string | null, question: string | null, active: boolean | null) => {
-    console.log("sendDirective called with:", { type, round, question, active });
+  const sendDirective = async (type: string | null, round: string | null, question: string | null, active: boolean | null, tiedTeamIds: string[] | null = null) => {
+    console.log("sendDirective called with:", { type, round, question, active, tiedTeamIds });
 
     try {
       const response = await fetch('/api/direct/', {
@@ -305,7 +357,7 @@ export default function Admin() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ type, round, question, active }),
+        body: JSON.stringify({ type, round, question, active, tiedTeamIds }),
       });
 
       if (!response.ok) {
@@ -320,19 +372,48 @@ export default function Admin() {
     }
   };
 
-  const handleButtonClick = (identifier: string, type: string, round: string | null, question: string | null, active: boolean | null) => {
+  const handleButtonClick = async (identifier: string, type: string, round: string | null, question: string | null, active: boolean | null) => {
     // Update active button
     setActiveButton(identifier);
     console.log('setting active button:', identifier);
     console.log('should be:', activeButton);
+
+    let tiedTeamIds: string[] | null = null;
+
+    if (type === 'tiebreaker_jump') {
+      console.log("Handling tiebreaker_jump...");
+      try {
+        // Calculate tied teams
+        const teams = await pb.collection('teams').getFullList({
+          filter: `current_edition = "${editionId}"`,
+          sort: '-points_for_game',
+        });
+
+        console.log("Fetched teams for tiebreaker calculation:", teams.length);
+
+        if (teams.length > 0) {
+          const topScore = teams[0].points_for_game;
+          console.log("Top score:", topScore);
+          const tiedTeams = teams.filter(team => team.points_for_game === topScore);
+          tiedTeamIds = tiedTeams.map(team => team.id);
+          console.log("Tied teams:", tiedTeamIds);
+        } else {
+          console.log("No teams found for this edition.");
+        }
+      } catch (error) {
+        console.error("Error calculating tied teams:", error);
+      }
+    }
+
     // Call sendDirective with appropriate parameters
-    sendDirective(type, round, question, active);
+    console.log("Sending directive...", { type, round, question, active, tiedTeamIds });
+    sendDirective(type, round, question, active, tiedTeamIds);
   };
 
 
   const toggleActive = async (
     isActive: boolean,
-    type: 'round' | 'question' | 'impossible' | 'wager' | 'final',
+    type: 'round' | 'question' | 'impossible' | 'wager' | 'final' | 'tiebreaker',
     round: number | null,
     question: number | null
   ) => {
@@ -426,6 +507,34 @@ export default function Admin() {
         sendDirective('question_toggle', null, null, isActive);
       }
 
+      if (type === 'tiebreaker') {
+        const tiebreakerList = await pb.collection('tiebreakers').getFullList();
+
+        if (tiebreakerList.length === 0) {
+          console.warn('No tiebreaker records found.');
+          return;
+        }
+
+        if (isActive) {
+          // Deactivate all first (to be clean)
+          await Promise.all(tiebreakerList.map(t => pb.collection('tiebreakers').update(t.id, { is_active: false })));
+
+          // Pick a random one
+          const randomIndex = Math.floor(Math.random() * tiebreakerList.length);
+          const randomTiebreaker = tiebreakerList[randomIndex];
+
+          console.log(`Activating random tiebreaker: ${randomTiebreaker.id} (Index: ${randomIndex})`);
+
+          await pb.collection('tiebreakers').update(randomTiebreaker.id, { is_active: true });
+        } else {
+          // Deactivate all
+          console.log("Deactivating all tiebreakers.");
+          await Promise.all(tiebreakerList.map(t => pb.collection('tiebreakers').update(t.id, { is_active: false })));
+        }
+
+        sendDirective('question_toggle', null, null, isActive);
+      }
+
     } catch (error) {
       console.error(`Failed to update ${type}:`, error);
     }
@@ -488,6 +597,8 @@ export default function Admin() {
         setActiveButton('wager');
       } else if (type === 'final_jump') {
         setActiveButton('final');
+      } else if (type === 'tiebreaker_jump') {
+        setActiveButton('tiebreaker');
       }
     });
 
@@ -605,7 +716,7 @@ export default function Admin() {
                       </div>
                     </div>
                   ))}
-                  <div className="flex flex-col gap-4 order-5">
+                  <div className="flex flex-col gap-4 order-6">
                     <h4>Wager</h4>
                     <div className="flex flex-col gap-2">
                       <Button
@@ -624,7 +735,7 @@ export default function Admin() {
                       </Switch>
                     </div>
                   </div>
-                  <div className="flex flex-col gap-4 order-6">
+                  <div className="flex flex-col gap-4 order-7">
                     <h4>Final</h4>
                     <div className="flex flex-col gap-2">
                       <Button
@@ -638,6 +749,25 @@ export default function Admin() {
                       <Switch
                         isSelected={switchFinal}
                         onValueChange={(value) => handleToggle('final', value)}
+                      >
+                        Active
+                      </Switch>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 order-8">
+                    <h4>Tiebreaker</h4>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        className="w-fit"
+                        onPress={() => handleButtonClick('tiebreaker', 'tiebreaker_jump', null, null, null)}
+                        size="sm"
+                        color={activeButton === 'tiebreaker' ? "success" : undefined}
+                      >
+                        Tiebreaker
+                      </Button>
+                      <Switch
+                        isSelected={switchTiebreaker}
+                        onValueChange={(value) => handleToggle('tiebreaker', value)}
                       >
                         Active
                       </Switch>

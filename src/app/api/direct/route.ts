@@ -19,6 +19,7 @@ export async function POST(req: Request) {
         round: body.round,
         question: body.question,
         active: body.active,
+        tiedTeamIds: body.tiedTeamIds, // Add tiedTeamIds to the payload
         message: "MAKE IT SO!",
       }
     );
