@@ -630,7 +630,7 @@ export default function Admin() {
           >
             <Tab key='navigation' title='Navigation'>
               <div className='md:px-4 pt-0 pb-4 mb-3'>
-                <h3 className='text-2xl mb-2'>Rounds</h3>
+                <h3 className='text-3xl mb-2'>Rounds</h3>
                 <div className="flex gap-4">
                   {/* Round Buttons */}
                   {['1', '2', '3'].map(round => {
@@ -639,7 +639,7 @@ export default function Admin() {
                       <Button
                         key={identifier}
                         onPress={() => handleButtonClick(identifier, 'round_jump', round, null, null)}
-                        size="sm"
+                        size="md"
                         color={activeButton === identifier ? "success" : undefined} // Add color dynamically
                       >
                         Round {round}
@@ -650,40 +650,37 @@ export default function Admin() {
               </div>
               <div className="p-4">
                 {/* loop through rounds 1-3, 5 questions per round. Each question has a button as above, and a nextui Switch with the label "Active" */}
-                <h3 className='text-2xl mb-2'>Questions</h3>
-                <div className="flex flex-col gap-6">
+                <h3 className='text-3xl mb-2'>Questions</h3>
+                <Tabs aria-label="Question Sections" className="mt-2">
                   {[
-                    { type: 'round', number: 1, order: 1 },
-                    { type: 'impossible', number: 1, order: 2 },
-                    { type: 'round', number: 2, order: 3 },
-                    { type: 'impossible', number: 2, order: 3 },
-                    { type: 'round', number: 3, order: 5 },
-                  ].map(({ type, number, order }) => (
-                    <div key={`${type}-${number}`} className={`flex flex-col gap-4 order-${order}`}>
-                      <h4>
-                        {type === 'round' ? `Round ${number}` : `Impossible ${number}`}
-                      </h4>
-                      <div className="flex flex-col gap-6">
-                        {type === 'round' ? (
+                    { title: 'Round 1', type: 'round', number: 1 },
+                    { title: 'Impossible 1', type: 'impossible', number: 1 },
+                    { title: 'Round 2', type: 'round', number: 2 },
+                    { title: 'Impossible 2', type: 'impossible', number: 2 },
+                    { title: 'Round 3', type: 'round', number: 3 },
+                    { title: 'Wager', type: 'wager' },
+                    { title: 'Final', type: 'final' },
+                    { title: 'Tiebreaker', type: 'tiebreaker' },
+                  ].map((item) => (
+                    <Tab key={item.title} title={item.title}>
+                      <div className="flex flex-col gap-4 pt-4">
+                        {item.type === 'round' && item.number && (
                           <div className="flex gap-6">
                             {[...Array(5)].map((_, questionIndex) => {
                               const questionNumber = questionIndex + 1;
-                              const key = `switchR${number}Q${questionNumber}`;
+                              const key = `switchR${item.number}Q${questionNumber}`;
                               return (
                                 <div key={key} className="flex flex-col gap-2">
                                   <Button
-                                    // onPress={() =>
-                                    //   sendDirective('question_jump', String(number), String(questionNumber), null)
-                                    // }
-                                    onPress={() => handleButtonClick(`question_jump_${String(number)}${String(questionNumber)}`, 'question_jump', String(number), String(questionNumber), null)}
-                                    size="sm"
-                                    color={activeButton === `question_jump_${String(number)}${String(questionNumber)}` ? "success" : undefined}
+                                    onPress={() => handleButtonClick(`question_jump_${String(item.number)}${String(questionNumber)}`, 'question_jump', String(item.number), String(questionNumber), null)}
+                                    size="md"
+                                    color={activeButton === `question_jump_${String(item.number)}${String(questionNumber)}` ? "success" : undefined}
                                   >
                                     Question {questionNumber}
                                   </Button>
                                   <Switch
                                     className='overflow-hidden'
-                                    isSelected={switchStates[key]}
+                                    isSelected={switchStates[key as keyof typeof switchStates]}
                                     onValueChange={(value) => handleToggle(key, value)}
                                   >
                                     Active
@@ -692,88 +689,85 @@ export default function Admin() {
                               );
                             })}
                           </div>
-                        ) : (
+                        )}
+                        {item.type === 'impossible' && item.number && (
                           <div className="flex flex-col gap-2">
                             <Button
                               className="w-fit"
-                              // onPress={() => sendDirective('impossible_jump', String(number), null, null)}
-                              onPress={() => handleButtonClick(`impossible_jump_${String(number)}`, 'impossible_jump', String(number), null, null)}
-                              color={activeButton === `impossible_jump_${String(number)}` ? "success" : undefined}
-                              size="sm"
+                              onPress={() => handleButtonClick(`impossible_jump_${String(item.number)}`, 'impossible_jump', String(item.number), null, null)}
+                              color={activeButton === `impossible_jump_${String(item.number)}` ? "success" : undefined}
+                              size="md"
                             >
-                              Impossible {number}
+                              Impossible {item.number}
                             </Button>
                             <Switch
-                              isSelected={number === 1 ? switchI1 : switchI2}
+                              isSelected={item.number === 1 ? switchI1 : switchI2}
                               onValueChange={(value) =>
-                                number === 1 ? handleToggle('I1', value) : handleToggle('I2', value)
+                                item.number === 1 ? handleToggle('I1', value) : handleToggle('I2', value)
                               }
                             >
                               Active
                             </Switch>
                           </div>
                         )}
+                        {item.type === 'wager' && (
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              className="w-fit"
+                              onPress={() => handleButtonClick('wager', 'wager_jump', null, null, null)}
+                              size="md"
+                              color={activeButton === 'wager' ? "success" : undefined}
+                            >
+                              Wager
+                            </Button>
+                            <Switch
+                              isSelected={switchWager}
+                              onValueChange={(value) => handleToggle('wager', value)}
+                            >
+                              Active
+                            </Switch>
+                          </div>
+                        )}
+                        {item.type === 'final' && (
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              className="w-fit"
+                              onPress={() => handleButtonClick('final', 'final_jump', null, null, null)}
+                              size="md"
+                              color={activeButton === 'final' ? "success" : undefined}
+                            >
+                              Final
+                            </Button>
+                            <Switch
+                              isSelected={switchFinal}
+                              onValueChange={(value) => handleToggle('final', value)}
+                            >
+                              Active
+                            </Switch>
+                          </div>
+                        )}
+                        {item.type === 'tiebreaker' && (
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              className="w-fit"
+                              onPress={() => handleButtonClick('tiebreaker', 'tiebreaker_jump', null, null, null)}
+                              size="md"
+                              color={activeButton === 'tiebreaker' ? "success" : undefined}
+                            >
+                              Tiebreaker
+                            </Button>
+                            <Switch
+                              isSelected={switchTiebreaker}
+                              onValueChange={(value) => handleToggle('tiebreaker', value)}
+                            >
+                              Active
+                            </Switch>
+                          </div>
+                        )}
                       </div>
-                    </div>
+                    </Tab>
                   ))}
-                  <div className="flex flex-col gap-4 order-6">
-                    <h4>Wager</h4>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        className="w-fit"
-                        onPress={() => handleButtonClick('wager', 'wager_jump', null, null, null)}
-                        size="sm"
-                        color={activeButton === 'wager' ? "success" : undefined}
-                      >
-                        Wager
-                      </Button>
-                      <Switch
-                        isSelected={switchWager}
-                        onValueChange={(value) => handleToggle('wager', value)}
-                      >
-                        Active
-                      </Switch>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-4 order-7">
-                    <h4>Final</h4>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        className="w-fit"
-                        onPress={() => handleButtonClick('final', 'final_jump', null, null, null)}
-                        size="sm"
-                        color={activeButton === 'final' ? "success" : undefined}
-                      >
-                        Final
-                      </Button>
-                      <Switch
-                        isSelected={switchFinal}
-                        onValueChange={(value) => handleToggle('final', value)}
-                      >
-                        Active
-                      </Switch>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-4 order-8">
-                    <h4>Tiebreaker</h4>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        className="w-fit"
-                        onPress={() => handleButtonClick('tiebreaker', 'tiebreaker_jump', null, null, null)}
-                        size="sm"
-                        color={activeButton === 'tiebreaker' ? "success" : undefined}
-                      >
-                        Tiebreaker
-                      </Button>
-                      <Switch
-                        isSelected={switchTiebreaker}
-                        onValueChange={(value) => handleToggle('tiebreaker', value)}
-                      >
-                        Active
-                      </Switch>
-                    </div>
-                  </div>
-                </div>
+                </Tabs>
 
               </div>
             </Tab>
@@ -787,7 +781,7 @@ export default function Admin() {
             </Tab>
             <Tab key='miscellany' title='Miscellany'>
               <div className='p-4 pb-10 md:p-10'>
-                <h2 className='text-2xl'>Miscellany</h2>
+                <h2 className='text-3xl'>Miscellany</h2>
                 <p>Other admin tasks.</p>
               </div>
             </Tab>
