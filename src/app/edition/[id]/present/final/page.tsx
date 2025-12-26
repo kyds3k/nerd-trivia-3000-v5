@@ -315,7 +315,7 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
                 {excelsiorAnswers.map((ans, idx) => (
                   <div key={idx} className="flex flex-col items-center p-4 border-b border-gray-700 w-full">
                     <span className="text-4xl font-bold text-yellow-400 mb-2">
-                      {ans.expand?.team_id?.team_name || "Unknown Team"}
+                      {ans.team_name || ans.expand?.team_id?.team_name || "Unknown Team"}
                     </span>
                     <span className="text-2xl text-white italic">"{ans.answer}"</span>
                   </div>
