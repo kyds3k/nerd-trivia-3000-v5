@@ -97,6 +97,48 @@ export default function TiebreakerScoreboardPage({ params }: { params: Promise<{
     }
   }, [editionId]);
 
+  // Record the winner
+  useEffect(() => {
+    const recordWinner = async () => {
+      const winners = results.filter(r => r.isWinner);
+      if (winners.length === 1 && editionId) {
+        const winner = winners[0];
+        console.log("Recording tiebreaker winner:", winner);
+        try {
+          // We need to fetch the full team record to get the ID and identifier if we don't have them in the result object
+          // The result object currently has teamName, teamAnswer, difference, isWinner.
+          // We need to find the team ID. We can do this by looking up the team by name or by storing the ID in the result object.
+          // Let's modify the fetchResults to include the team ID in the result object.
+
+          // Actually, let's just do it in fetchResults to be cleaner, but since I can't easily change the state type in this single block without changing the interface above, 
+          // I will look up the team ID here or rely on the fact that I can get it.
+          // Wait, I should update the interface and the fetch logic in one go. 
+          // But since I am restricted to a single contiguous block here, I will add a separate useEffect that depends on results.
+
+          // Better approach: I will modify the fetchResults to store the team ID in the results state.
+          // But I can't change the interface in this block.
+          // Let's assume I will do a multi_replace to handle the interface change and the logic update properly.
+          // For now, I will just add the logic to find the team and update.
+
+          const teamRecord = await pb.collection("teams").getFirstListItem(`team_name="${winner.teamName}" && current_edition="${editionId}"`);
+
+          await pb.collection("editions").update(editionId, {
+            winning_team: winner.teamName,
+            winning_team_identifier: teamRecord.team_identifier,
+            winning_team_id: teamRecord.id,
+          });
+          console.log("Tiebreaker winner recorded successfully.");
+        } catch (err) {
+          console.error("Failed to record tiebreaker winner:", err);
+        }
+      }
+    };
+
+    if (results.length > 0) {
+      recordWinner();
+    }
+  }, [results, editionId]);
+
   useHotkeys("ctrl+ArrowRight", () => {
     router.push(`/edition/${editionId}/present/closing`);
   });

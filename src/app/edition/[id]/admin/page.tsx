@@ -781,8 +781,49 @@ export default function Admin() {
             </Tab>
             <Tab key='miscellany' title='Miscellany'>
               <div className='p-4 pb-10 md:p-10'>
-                <h2 className='text-3xl'>Miscellany</h2>
-                <p>Other admin tasks.</p>
+                <h2 className='text-3xl mb-4'>Miscellany</h2>
+                <p className="mb-6">Other admin tasks.</p>
+                <Button
+                  color="danger"
+                  size="lg"
+                  onPress={async () => {
+                    if (confirm("Are you sure you want to FINISH IT? This will clear all team data for this edition.")) {
+                      try {
+                        // 1. Get winning team
+                        const edition = await pb.collection('editions').getOne(editionId!);
+                        if (edition.winning_team_id) {
+                          // 2. Add 1 to wins
+                          const winner = await pb.collection('teams').getOne(edition.winning_team_id);
+                          await pb.collection('teams').update(winner.id, {
+                            wins: (winner.wins || 0) + 1
+                          });
+                          console.log(`Incremented wins for ${winner.team_name}`);
+                        }
+
+                        // 3. Reset all teams
+                        const allTeams = await pb.collection('teams').getFullList({
+                          filter: `current_edition = "${editionId}"`
+                        });
+
+                        await Promise.all(allTeams.map(team => {
+                          return pb.collection('teams').update(team.id, {
+                            banthashit_card: false,
+                            current_edition: "",
+                            wager: "0"
+                          });
+                        }));
+
+                        alert("IT IS FINISHED.");
+
+                      } catch (error) {
+                        console.error("Failed to FINISH IT:", error);
+                        alert("Failed to finish it. Check console.");
+                      }
+                    }
+                  }}
+                >
+                  FINISH IT!
+                </Button>
               </div>
             </Tab>
           </Tabs>
