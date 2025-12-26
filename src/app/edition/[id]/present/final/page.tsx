@@ -19,6 +19,7 @@ import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import ShallNotPass from "@/components/ShallNotPass"
 import { useSession } from "next-auth/react";
 import { getAppleMusicTrack } from "@/lib/appleMusic";
+import { motion, AnimatePresence } from "framer-motion";
 
 
 interface Question {
@@ -51,6 +52,7 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
 
   const [isResized, setIsResized] = useState<boolean>(false);
+  const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const el = useRef<HTMLSpanElement | null>(null);
 
 
@@ -153,11 +155,30 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
   useEffect(() => {
     if (emblaApi) {
       console.log("Embla API ready");
-      emblaApi.on('select', () => {
+
+      const onSelect = () => {
         fetchExcelsior();
-      });
+
+        const index = emblaApi.selectedScrollSnap();
+        const excelsiorCount = excelsiorAnswers.length > 0 ? 1 : 0;
+        const answerSlideIndex = 1 + excelsiorCount;
+
+        if (index === answerSlideIndex) {
+          setShowAnswer(false);
+          setTimeout(() => {
+            setShowAnswer(true);
+          }, 1000);
+        } else {
+          setShowAnswer(false);
+        }
+      };
+
+      emblaApi.on('select', onSelect);
+      return () => {
+        emblaApi.off('select', onSelect);
+      };
     }
-  }, [emblaApi])
+  }, [emblaApi, excelsiorAnswers.length])
 
   // Re-initialize Embla when slides are added dynamically
   useEffect(() => {
@@ -272,6 +293,19 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
     getLoadingQuote();
   });
 
+  // Initial fade-in handled by Embla select listener or initial state
+  // Removing the automatic page-load timer to avoid conflicts with navigation logic
+  /*
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => {
+        setShowAnswer(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [loading]);
+  */
+
   useEffect(() => {
     if (song) {
       getSongInfo(song);
@@ -325,22 +359,33 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
           )}
 
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
-            <div className="p-8 flex items-center justify-center">
-              <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
-            </div>
-            <div className="flex items-center justify-center w-full grow relative">
-              {answerGif ? (
-                <Image
-                  src={answerGif}
-                  alt="Answer GIF"
-                  fill={true}
-                  unoptimized={true}
-                  className="object-contain"
-                />
-              ) : (
-                <Spinner size="lg" />
+            <AnimatePresence>
+              {showAnswer && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 1 }}
+                  className="w-full h-full flex flex-col items-center justify-start gap-4"
+                >
+                  <div className="p-8 flex items-center justify-center">
+                    <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
+                  </div>
+                  <div className="flex items-center justify-center w-full grow relative">
+                    {answerGif ? (
+                      <Image
+                        src={answerGif}
+                        alt="Answer GIF"
+                        fill={true}
+                        unoptimized={true}
+                        className="object-contain"
+                      />
+                    ) : (
+                      <Spinner size="lg" />
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
           </div>
 
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
