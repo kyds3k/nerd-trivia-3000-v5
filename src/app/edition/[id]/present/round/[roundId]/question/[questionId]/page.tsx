@@ -1,8 +1,7 @@
 "use client"
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, use } from 'react';
 import { useEffectOnce } from 'react-use';
-import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 // import { Image } from "@heroui/react";
 import Image from 'next/image';
@@ -22,6 +21,7 @@ import { getAppleMusicTrack } from "@/lib/appleMusic";
 
 
 interface Question {
+  id: string;
   edition_id: string;
   round_number: number;
   question_number: number;
@@ -32,26 +32,18 @@ interface Question {
   bantha_answer: string;
   bantha_answer_gif: string;
   apple_ids: string;
+  song_apple: string;
   bonus_answers: string[];
   is_active: boolean;
 }
 
-interface session {
-  accessToken: string;
-  user: {
-    name: string;
-    email: string;
-    image: string;
-  }
-}
-
-export default function Question() {
+export default function Question({ params: paramsPromise }: { params: Promise<{ id: string, roundId: string, questionId: string }> }) {
+  const params = use(paramsPromise);
   const router = useTransitionRouter();
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
-  const params = useParams();
-  const editionId = typeof params?.id === "string" ? params.id : undefined;
-  const questionId = typeof params?.questionId === "string" ? params.questionId : undefined;
-  const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
+  const editionId = params.id;
+  const questionId = params.questionId;
+  const roundId = params.roundId;
   const [questionText, setQuestionText] = useState<string>("");
   const [answer, setAnswer] = useState<string>("");
   const [answerGif, setAnswerGif] = useState<string | null>(null);
@@ -63,13 +55,14 @@ export default function Question() {
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [bonusAnswers, setBonusAnswers] = useState<string[] | null>(null);
+  const [excelsiorAnswers, setExcelsiorAnswers] = useState<any[]>([]);
+
   const [isActive, setIsActive] = useState<boolean | null>(null);
 
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [hasSession, setHasSession] = useState<boolean>(false);
   const { data: session } = useSession();
 
   // Use the hook and pass the callback for question_toggle
@@ -189,14 +182,25 @@ export default function Question() {
   });
 
   useHotkeys("right", () => {
+    fetchExcelsior();
     emblaApi?.scrollNext()
   });
 
   useEffect(() => {
     if (emblaApi) {
-      console.log(emblaApi.slideNodes()) // Access API
+      console.log("Embla API ready");
+      emblaApi.on('select', () => {
+        fetchExcelsior();
+      });
     }
   }, [emblaApi])
+
+  // Re-initialize Embla when slides are added dynamically
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.reInit();
+    }
+  }, [emblaApi, excelsiorAnswers, isBanthaShitQuestion]);
 
 
   // function to grab the album art, song name, and artist name from the Apple Music API
@@ -213,6 +217,48 @@ export default function Question() {
     }
   }
 
+  const initializeApp = async () => {
+    if (!pb.authStore.isValid) {
+      console.log("Not authenticated with Pocketbase.");
+      setLoading(false);
+      return;
+    }
+
+    console.log("Authenticated with Pocketbase successfully.");
+    const authData = localStorage.getItem("pocketbase_auth");
+
+    if (!authData) {
+      console.error("No auth data found.");
+      setLoading(false);
+      setIsAdmin(false);
+      return;
+    }
+
+    const parsedAuth = JSON.parse(authData);
+    if (!parsedAuth.record.is_admin) {
+      console.log("Not an admin.");
+      setLoading(false);
+      setIsAdmin(false);
+      return;
+    }
+
+    console.log("Admin authenticated.");
+    setIsAdmin(true);
+  };
+
+  const fetchExcelsior = async () => {
+    try {
+      const excelsiorList = await pb.collection("answers").getFullList({
+        filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && excelsior = true`,
+        expand: "team_id",
+      });
+      console.log("Excelsior answers fetched:", excelsiorList);
+      setExcelsiorAnswers(excelsiorList);
+    } catch (err) {
+      console.log("No excelsior answers found or error fetching:", err);
+      setExcelsiorAnswers([]);
+    }
+  };
 
   const fetchQuestion = async () => {
     try {
@@ -222,6 +268,9 @@ export default function Question() {
         .getFirstListItem<Question>(`edition_id = "${editionId}" && question_number = "${questionId}" && round_number = "${roundId}"`);
 
       console.log("Question fetched:", response);
+
+      // Fetch excelsior answers
+      await fetchExcelsior();
 
       setAnswerGif(response.answer_gif);
       setIsBanthaShitQuestion(response.is_banthashit_question);
@@ -269,64 +318,30 @@ export default function Question() {
       }
 
       setIsActive(response.is_active);
+      setLoading(false);
 
     } catch (error) {
       console.error("Failed to fetch edition:", error);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-
-    const initializeApp = async () => {
-      if (!pb.authStore.isValid) {
-        console.error("Not authenticated with Pocketbase.");
-        setLoading(false);
-        return;
-      }
-
-      console.log("Authenticated with Pocketbase successfully.");
-      const authData = localStorage.getItem("pocketbase_auth");
-
-      if (!authData) {
-        console.error("No auth data found.");
-        setLoading(false);
-        setIsAdmin(false);
-        return;
-      }
-
-      const parsedAuth = JSON.parse(authData);
-      if (!parsedAuth.record.is_admin) {
-        console.log("Not an admin.");
-        setLoading(false);
-        setIsAdmin(false);
-        return;
-      }
-
-      console.log("Admin authenticated.");
-      setIsAdmin(true);
-      setLoading(false);
-
-
-      if (editionId) {
-        //initializeApp();
-      }
-    };
-
-    initializeApp();
-    fetchQuestion();
-    fetchQuestion();
-
-  }, []);
-
-  useEffect(() => {
-    if (song && isAdmin) {
-      getSongInfo(song);
+    if (editionId && questionId && roundId) {
+      initializeApp();
+      fetchQuestion();
     }
-  }, [song, isAdmin]);
+  }, [editionId, questionId, roundId]);
 
   useEffectOnce(() => {
     getLoadingQuote();
   });
+
+  useEffect(() => {
+    if (song) {
+      getSongInfo(song);
+    }
+  }, [song, isAdmin]);
 
   return loading ? (
     <div className="flex flex-col justify-center items-center h-screen bg-black">
@@ -395,6 +410,23 @@ export default function Question() {
             </div>
           </div>
 
+          {/* Excelsior Slide */}
+          {excelsiorAnswers.length > 0 && (
+            <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-8">
+              <h2 className="text-6xl font-linebeam text-glow-blue-400 mb-8">EXCELSIOR ANSWERS</h2>
+              <div className="flex flex-col gap-4 items-center w-full max-w-4xl overflow-y-auto">
+                {excelsiorAnswers.map((ans, idx) => (
+                  <div key={idx} className="flex flex-col items-center p-4 border-b border-gray-700 w-full">
+                    <span className="text-4xl font-bold text-yellow-400 mb-2">
+                      {ans.expand?.team_id?.team_name || "Unknown Team"}
+                    </span>
+                    <span className="text-2xl text-white italic">"{ans.answer}"</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isBanthaShitQuestion && (
             <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
               <div className="p-8 flex items-center justify-center">
@@ -437,5 +469,4 @@ export default function Question() {
       </div>
     </div>
   );
-
 }

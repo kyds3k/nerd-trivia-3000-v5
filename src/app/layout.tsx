@@ -66,6 +66,7 @@ export default function RootLayout({
 			</head>
 			<body
 				className={`${play.variable} ${dos.variable} ${playBold.variable} ${reboot.variable} ${linebeam.variable} font-sans antialiased grid-bg`}
+				suppressHydrationWarning
 			>
 				<Providers>
 					{children}

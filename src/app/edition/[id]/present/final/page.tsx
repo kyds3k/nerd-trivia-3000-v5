@@ -1,9 +1,7 @@
 "use client"
 
-import React, { use } from 'react';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, use } from 'react';
 import { useEffectOnce } from 'react-use';
-import { useParams } from "next/navigation";
 import Pocketbase from "pocketbase";
 //import { Image } from "@heroui/react";
 import Image from 'next/image';
@@ -32,11 +30,11 @@ interface Question {
   is_active: boolean;
 }
 
-export default function Question() {
+export default function Question({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
+  const params = use(paramsPromise);
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useTransitionRouter();
-  const params = useParams();
-  const editionId = typeof params?.id === "string" ? params.id : undefined;
+  const editionId = params.id;
   const [questionText, setQuestionText] = useState<string>("");
   const [answer, setAnswer] = useState<string>("");
   const [answerGif, setAnswerGif] = useState<string | null>(null);
@@ -45,6 +43,7 @@ export default function Question() {
   const [songTitle, setSongTitle] = useState<string | null>(null);
   const [songAlbumArt, setSongAlbumArt] = useState<string | null>(null);
   const [isActive, setIsActive] = useState<boolean | null>(null);
+  const [excelsiorAnswers, setExcelsiorAnswers] = useState<any[]>([]);
 
   const [questionActive, setQuestionActive] = useState<boolean | null>(null);
   const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
@@ -147,14 +146,25 @@ export default function Question() {
   });
 
   useHotkeys("right", () => {
+    fetchExcelsior();
     emblaApi?.scrollNext()
   });
 
   useEffect(() => {
     if (emblaApi) {
-      console.log(emblaApi.slideNodes()) // Access API
+      console.log("Embla API ready");
+      emblaApi.on('select', () => {
+        fetchExcelsior();
+      });
     }
   }, [emblaApi])
+
+  // Re-initialize Embla when slides are added dynamically
+  useEffect(() => {
+    if (emblaApi) {
+      emblaApi.reInit();
+    }
+  }, [emblaApi, excelsiorAnswers]);
 
   // function to grab the album art, song name, and artist name from the Apple Music API
   const getSongInfo = async (songId: string) => {
@@ -169,6 +179,20 @@ export default function Question() {
       console.error("Failed to fetch song info:", error);
     }
   }
+
+  const fetchExcelsior = async () => {
+    try {
+      const excelsiorList = await pb.collection("answers").getFullList({
+        filter: `edition_id = "${editionId}" && answer_type = "final" && excelsior = true`,
+        expand: "team_id",
+      });
+      console.log("Excelsior answers fetched for final round:", excelsiorList);
+      setExcelsiorAnswers(excelsiorList);
+    } catch (err) {
+      console.log("No excelsior answers found for final round or error fetching:", err);
+      setExcelsiorAnswers([]);
+    }
+  };
 
   useEffect(() => {
 
@@ -201,10 +225,6 @@ export default function Question() {
       setIsAdmin(true);
     };
 
-
-
-
-
     const fetchQuestion = async () => {
       try {
         pb.autoCancellation(false);
@@ -214,7 +234,8 @@ export default function Question() {
 
         console.log("Question fetched:", response);
 
-
+        // Fetch excelsior answers for final round
+        await fetchExcelsior();
 
         setAnswerGif(response.final_answer_gif);
         setIsActive(response.is_active);
@@ -233,17 +254,19 @@ export default function Question() {
         setSong(response.final_song_apple);
 
         setIsActive(response.is_active);
+        setLoading(false);
 
       } catch (error) {
         console.log("Failed to fetch edition:", error);
+        setLoading(false);
       }
     };
 
     if (editionId) {
+      initializeApp();
       fetchQuestion();
-
     }
-  }, []);
+  }, [editionId]);
 
   useEffectOnce(() => {
     getLoadingQuote();
@@ -284,6 +307,22 @@ export default function Question() {
             )}
           </div>
 
+          {/* Excelsior Slide - BEFORE answer for Final Round */}
+          {excelsiorAnswers.length > 0 && (
+            <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-8">
+              <h2 className="text-6xl font-linebeam text-glow-blue-400 mb-8">EXCELSIOR ANSWERS</h2>
+              <div className="flex flex-col gap-4 items-center w-full max-w-4xl overflow-y-auto">
+                {excelsiorAnswers.map((ans, idx) => (
+                  <div key={idx} className="flex flex-col items-center p-4 border-b border-gray-700 w-full">
+                    <span className="text-4xl font-bold text-yellow-400 mb-2">
+                      {ans.expand?.team_id?.team_name || "Unknown Team"}
+                    </span>
+                    <span className="text-2xl text-white italic">"{ans.answer}"</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             <div className="p-8 flex items-center justify-center">
