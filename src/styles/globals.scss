@@ -1,0 +1,284 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+}
+
+
+html, body {
+  height: 100%;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  word-spacing: .3rem;
+}
+
+.nextui-table {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background-color: black !important;
+}
+
+.grid-bg {
+  background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+  url("/images/vector-smallest.png") bottom center no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.neonBorder {
+  transition: border-color 0.15s ease-in-out 0s, box-shadow 0.15s ease-in-out 0s;
+  border: 1px solid #c4c4c4;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  border-radius: 4px;
+  -moz-box-shadow: 0px 0px 8px #d9d9d9;
+  -webkit-box-shadow: 0px 0px 8px #d9d9d9;
+  box-shadow: 0px 0px 8px #d9d9d9;
+
+  &:focus {
+    outline: none;
+    border: 1px solid #7bc1f7;
+    -moz-box-shadow: 0px 0px 8px #7bc1f7;
+    -webkit-box-shadow: 0px 0px 8px #7bc1f7;
+    box-shadow: 0px 0px 8px #7bc1f7;
+  }
+}
+
+
+/* Basic editor styles */
+.tiptap {
+  :first-child {
+    margin-top: 0;
+  }
+
+  span {
+    strong {
+      color: inherit;
+    }
+  }
+
+  /* List styles */
+  ul, 
+  ol {
+    padding: 0 1rem;
+    margin: 1.25rem 1rem 1.25rem 0.4rem;
+    
+    li p {
+      margin-top: 0.25em;
+      margin-bottom: 0.25em;
+    }
+  }
+
+  /* Heading styles */
+  h1, 
+  h2, 
+  h3, 
+  h4, 
+  h5, 
+  h6 {
+    line-height: 1.1;
+    margin-top: 2.5rem;
+    text-wrap: pretty;
+  }
+
+  h1, 
+  h2 {
+    margin-top: 3.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 { 
+    font-size: 1.4rem; 
+  }
+
+  h2 { 
+    font-size: 1.2rem; 
+  }
+
+  h3 { 
+    font-size: 1.1rem; 
+  }
+
+  h4, 
+  h5, 
+  h6 { 
+    font-size: 1rem; 
+  }
+
+  /* Code and preformatted text styles */
+  code {
+    background-color: var(--purple-light);
+    border-radius: 0.4rem;
+    color: var(--black);
+    font-size: 0.85rem;
+    padding: 0.25em 0.3em;
+  }
+
+  pre {
+    background: var(--black);
+    border-radius: 0.5rem;
+    color: var(--white);
+    font-family: 'JetBrainsMono', monospace;
+    margin: 1.5rem 0;
+    padding: 0.75rem 1rem;
+
+    code {
+      background: none;
+      color: inherit;
+      font-size: 0.8rem;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 3px solid var(--gray-3);
+    margin: 1.5rem 0;
+    padding-left: 1rem;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--gray-2);
+    margin: 2rem 0;
+  }
+}
+
+/* Bubble menu */
+.bubble-menu {
+  button {
+    opacity: .5;
+
+    &.is-active {
+      opacity: 1;
+    }
+  }
+
+  label {
+    display: none;
+  }
+
+  #setColor {
+    height: 32px;
+    width: 32px;
+    border-radius: 4px;
+    display: block;
+  }
+
+}
+
+/* Embla styles */
+.embla {
+  overflow: hidden;
+}
+.embla__container {
+  display: flex;
+}
+.embla__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+
+/* 0 opacity for switch checkbox checkbox with role "switch" */
+[role="switch"] {
+  opacity: 0;
+}
+
+/* Just an animation */
+
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  opacity: 0;
+  animation: fadeInUp 0.8s ease forwards;
+}
+
+/* Augmented UI */
+
+.nerd-aug {
+  &.bluecard {
+    --aug-border-all: 1px;
+    --aug-b-extend1: 10%;
+    --aug-b-center: 70%;
+    --aug-b-inset1: 0%;
+    --aug-t-inset1: 0%;
+    --aug-t-extend1: 10%;
+    --aug-t-center: 95%;
+    --aug-r-inset1: 0%;
+    --aug-r-extend1: 15%;
+    --aug-r-center: 50%;
+    --aug-border-bg: #06b6d4;
+    --aug-inlay-bg: linear-gradient(to bottom right, #06b6d4, #000000);
+    --aug-inlay-opacity: .2;
+    --aug-inlay-all: 3px;
+
+    &__alt {
+      --aug-r-inset1: 0%;
+      --aug-r-extend1: 15%;
+      --aug-r-center: 80%;
+    }
+  }
+
+  &.bluebutton {
+    --aug-border-all: 1px;
+    --aug-border-bg: #06b6d4;    
+    --aug-inlay-bg: #06b6d4;
+
+    &:hover {
+      opacity: .5;
+      animation: flicker 2s infinite;
+    }
+  }  
+
+  &.blackbutton {
+    --aug-border-all: 1px;
+    --aug-border-bg: #000000;    
+    --aug-inlay-bg: #000000;
+
+    &:hover {
+      opacity: .5;
+      animation: flicker 2s infinite;
+    }
+  }
+
+}
+
+// flickering keyframe animation
+@keyframes flicker {
+  0%, 19.999%, 22%, 62.999%, 64%, 64.999%, 70%, 100% {
+    opacity: 1;
+  }
+  20%, 21.999%, 63%, 63.999%, 65%, 69.999% {
+    opacity: 0;
+  }
+}
+
+/* React Toastify Overrides */
+.Toastify__toast {
+  font-family: var(--font-dos), monospace !important;
+}
+
+.Toastify__toast-body {
+  text-align: left !important;
+}
+
+.presentation-toast {
+  width: 600px !important;
+  max-width: 90vw !important;
+  margin: 0 auto;
+}

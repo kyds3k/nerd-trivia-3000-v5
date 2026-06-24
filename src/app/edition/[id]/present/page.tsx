@@ -1,0 +1,145 @@
+"use client";
+import { useEffect, useState, useMemo } from "react";
+import { useParams } from "next/navigation";
+import { Image, Progress } from "@heroui/react";
+import DOMPurify from "dompurify";
+import AppleScriptPlayer from "@/components/AppleScriptPlayer";
+import { useHotkeys } from "react-hotkeys-hook";
+import ShallNotPass from "@/components/ShallNotPass";
+import { useSession } from "next-auth/react";
+import SpotTimer from "@/components/SpotTimer";
+import { useTransitionRouter } from "next-transition-router";
+import { getPocketbaseClient } from "@/lib/pocketbase";
+import type { Edition } from "@/types/pocketbase";
+
+export default function EditionPage() {
+  const pb = getPocketbaseClient();
+  const params = useParams();
+  const router = useTransitionRouter();
+  const editionId = useMemo(() => {
+    return typeof params?.id === "string" ? params.id : undefined;
+  }, [params]);
+
+  const [date, setDate] = useState<string | null>(null);
+  const [editionTitle, setEditionTitle] = useState<string | null>(null);
+  const [editionGif, setEditionGif] = useState<string | null>(null);
+  const [blurb, setBlurb] = useState<string | null>(null);
+  const [pageSong, setPageSong] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const { data: session } = useSession();
+
+
+  useHotkeys("ctrl+ArrowRight", () => {
+    // Navigate to the first round, aka adding /round/1 to the URL
+    router.push(`/edition/${editionId}/present/round/1`)
+  });
+
+
+  const time = new Date();
+  time.setSeconds(time.getSeconds() + 600);
+
+  useEffect(() => {
+    const fetchEdition = async (id: string) => {
+      try {
+        const randomRequestKey = Math.random().toString(36).substring(7);
+        const response = await pb
+          .collection("editions")
+          .getOne<Edition>(id, { requestKey: randomRequestKey });
+
+        if (response.date) {
+          const formattedDate = new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(response.date));
+          setDate(formattedDate);
+        }
+
+        setEditionTitle(response.title);
+        setEditionGif(response.edition_gif);
+        setPageSong(response.home_song_apple ?? null);
+
+        if (response.blurb) {
+          const sanitizedHtml = DOMPurify.sanitize(response.blurb);
+          setBlurb(sanitizedHtml);
+        }
+      } catch (error) {
+        console.error("Failed to fetch edition:", error);
+      }
+    };
+
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        setGoogleAuth(false);
+        setLoading(false);
+        return;
+      }
+
+      const authData = localStorage.getItem("pocketbase_auth");
+      if (!authData) {
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      const parsedAuth = JSON.parse(authData);
+      if (!parsedAuth.record.is_admin) {
+        setGoogleAuth(false);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsAdmin(true);
+      setGoogleAuth(true);
+      setLoading(false);
+    };
+
+    if (editionId) {
+      initializeApp();
+      fetchEdition(editionId);
+    }
+  }, [editionId]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-5 justify-center items-center h-screen w-screen">
+        <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
+        <h3 className="text-2xl">Loading...</h3>
+      </div>
+    );
+  }
+
+
+  return (
+    <div className="p-4">
+      <div className="p-2 flex flex-col items-center justify-center">
+        <h3 className="text-8xl mb-4 font-linebeam text-glow-blue-400 uppercase">Nerd Trivia 3000</h3>
+        <p className="text-3xl mb-4">{date}</p>
+        <h1 className="text-5xl">{editionTitle}</h1>
+        {editionGif && (
+          <Image
+            src={editionGif}
+            alt="Edition GIF"
+            width="600"
+            className="my-16"
+          />
+        )}
+        {blurb && (
+          <div
+            className="text-3xl mb-8 w-3/4 text-center"
+            dangerouslySetInnerHTML={{ __html: blurb }}
+          />
+        )}
+        {pageSong && (
+          <div>
+            <AppleScriptPlayer trackId={pageSong} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

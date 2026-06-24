@@ -5,9 +5,9 @@ import { useState, ReactNode } from "react";
 const tabs = [
   "Landing",
   "Round 1",
-  "Bonus 1",
+  "Impossible 1",
   "Round 2",
-  "Bonus 2",
+  "Impossible 2",
   "Round 3",
   "Wager/Final",
 ];
@@ -15,9 +15,9 @@ const tabs = [
 interface EditionManagementTabsProps {
   landingContent: ReactNode;
   round1Content: ReactNode;
-  bonus1Content: ReactNode;
+  impossible1Content: ReactNode;
   round2Content: ReactNode;
-  bonus2Content: ReactNode;
+  impossible2Content: ReactNode;
   round3Content: ReactNode;
   wagerFinalContent: ReactNode;
 }
@@ -25,9 +25,9 @@ interface EditionManagementTabsProps {
 export default function EditionManagementTabs({
   landingContent,
   round1Content,
-  bonus1Content,
+  impossible1Content,
   round2Content,
-  bonus2Content,
+  impossible2Content,
   round3Content,
   wagerFinalContent,
 }: EditionManagementTabsProps) {
@@ -50,9 +50,9 @@ export default function EditionManagementTabs({
       <div className="tab-content">
         {activeTab === "Landing" && landingContent}
         {activeTab === "Round 1" && round1Content}
-        {activeTab === "Bonus 1" && bonus1Content}
+        {activeTab === "Impossible 1" && impossible1Content}
         {activeTab === "Round 2" && round2Content}
-        {activeTab === "Bonus 2" && bonus2Content}
+        {activeTab === "Impossible 2" && impossible2Content}
         {activeTab === "Round 3" && round3Content}
         {activeTab === "Wager/Final" && wagerFinalContent}
       </div>

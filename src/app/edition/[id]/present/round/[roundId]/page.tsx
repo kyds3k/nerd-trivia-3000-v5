@@ -1,0 +1,136 @@
+"use client"
+
+import React from 'react';
+
+import { useEffect, useState } from 'react';
+import { useParams } from "next/navigation";
+import Pocketbase from "pocketbase";
+import { Image } from "@heroui/react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { Spinner, Progress } from "@heroui/react";
+import { useTransitionRouter } from "next-transition-router";
+import ShallNotPass from "@/components/ShallNotPass";
+
+interface Round {
+  edition_id: string;
+  round_gif: string;
+}
+
+export default function Round() {
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const router = useTransitionRouter();
+  const params = useParams();
+  const editionId = typeof params?.id === "string" ? params.id : undefined;
+  const roundId = Array.isArray(params?.roundId)
+    ? parseInt(params.roundId[0], 10)
+    : params?.roundId
+      ? parseInt(params.roundId, 10)
+      : undefined;
+  const [roundGif, setRoundGif] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+
+  useHotkeys("ctrl+ArrowRight", () => {
+    // Navigate to the first question in that round
+    if (roundId === 3) {
+      router.push(`/edition/${editionId}/present/doubled`);
+    } else {
+      router.push(`/edition/${editionId}/present/round/${roundId}/question/1`);
+    }
+  });
+
+  useHotkeys("ctrl+ArrowLeft", () => {
+    if (typeof roundId === "number" && roundId > 1) {
+      // Navigate to the previous round
+      router.push(`/edition/${editionId}/present/scoreboard`);
+    } else if (roundId === 1) {
+      // Navigate to the 'present' page
+      router.push(`/edition/${editionId}/present`);
+    } else {
+      console.error("Invalid roundId:", roundId);
+    }
+  });
+
+  useEffect(() => {
+
+    const initializeApp = async () => {
+      if (!pb.authStore.isValid) {
+        console.log("Not authenticated with Pocketbase.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("Authenticated with Pocketbase successfully.");
+      const authData = localStorage.getItem("pocketbase_auth");
+
+      if (!authData) {
+        console.error("No auth data found.");
+        setLoading(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      const parsedAuth = JSON.parse(authData);
+      console.log("Parsed auth data:", parsedAuth);
+      if (!parsedAuth.record.is_admin) {
+        console.log("Not an admin.");
+        setLoading(false);
+        setIsAdmin(false);
+        return;
+      }
+
+      console.log("Admin authenticated.");
+      setIsAdmin(true);
+      setLoading(false);
+    };
+
+
+    const fetchRound = async () => {
+      pb.autoCancellation(false);
+      try {
+        const round = await pb.collection('rounds').getFirstListItem(
+          `edition_id = "${editionId}" && round = ${roundId}` // Removed quotes around roundId
+        );
+        if (round) {
+          console.log("Raw round_gif value:", round.round_gif);
+          let url = round.round_gif;
+          // If it looks like a filename (no protocol), prepend PB URL
+          if (!url.includes('://')) {
+            url = `${process.env.NEXT_PUBLIC_POCKETBASE_URL}/api/files/${round.collectionId}/${round.id}/${round.round_gif}`;
+          }
+          console.log("Final round_gif URL:", url);
+          setRoundGif(url);
+        }
+      } catch (error) {
+        console.error("Failed to fetch round:", error);
+      }
+    };
+
+    if (editionId) {
+      initializeApp();
+      fetchRound();
+    }
+
+  }, [editionId]);
+
+
+
+  return (
+    <div className="flex h-screen justify-center items-center">
+      {loading ? (
+        <Progress isIndeterminate aria-label="Loading..." className="max-w-md" size="sm" />
+      ) : !isAdmin ? (
+        <ShallNotPass />
+      ) : !roundGif ? (
+        <Spinner size="lg" />
+      ) : (
+        <div className="roundContainer flex flex-col gap-4 items-center">
+          <h1 className="text-4xl md:text-8xl">Round {roundId}</h1>
+          <img src={roundGif} alt="Round Gif" className="max-h-[70vh] w-auto object-contain" />
+        </div>
+      )}
+    </div>
+  );
+
+}

@@ -1,0 +1,431 @@
+"use client"
+
+import React, { useEffect, useState, useRef } from "react";
+import useEffectOnce from "react-use/lib/useEffectOnce";
+import { useParams } from "next/navigation";
+import Pocketbase from "pocketbase";
+import { Spinner, Button, Form, Input, Image, Switch } from "@heroui/react";
+import DOMPurify from "dompurify"; // Import the sanitizer
+import Typed from "typed.js";
+import { useRouter } from "next/navigation";
+import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
+import { toast } from "react-toastify";
+import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
+import CyberButton from "@/components/CyberButton";
+import { motion } from "framer-motion";
+
+
+export default function Question() {
+  const params = useParams();
+  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const router = useRouter();
+  const editionId = typeof params?.id === "string" ? params.id : undefined;
+  const questionId = typeof params?.questionId === "string" ? params.questionId : undefined;
+  const roundId = typeof params?.roundId === "string" ? params.roundId : undefined;
+  const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
+  const [teamName, setTeamName] = useState<string | null>(null);
+  const typedTeamName = useRef<HTMLSpanElement | null>(null);
+  const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
+  const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
+  const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
+  const submittingRef = useRef(false);
+  const [questionText, setQuestionText] = useState<string>("");
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [showForm, setShowForm] = React.useState<boolean>(false);
+  const [loadingQuote, setLoadingQuote] = useState<string | null>(null);
+  const [questionActive, setQuestionActive] = useState<boolean>(false);
+  const [action, setAction] = useState<string | null>(null);
+  const [answerSubmitted, setAnswerSubmitted] = useState<boolean>(false);
+
+
+  // Use the hook and pass the callback for question_toggle
+  // Assuming active might be a string, convert it to a boolean
+  usePrimeDirectives(
+    "directives",
+    editionId,
+    teamId,
+    (message, team) => {
+      console.log("Received message:", message, "for team:", team);
+      // Handle notification messages
+    },
+    (active) => {
+      console.log("Question active status:", active);
+      setQuestionActive(active); // Ensure the type matches
+      if (!active) {
+        setShowForm(false); // Hide the form if the question is not active
+      }
+    }
+  );
+
+
+  usePrimeDirectives("notifications", editionId, teamId, (message, team) => {
+    console.log(`Notification received from team ${teamId}: ${message}`);
+    if (teamName && message.includes(teamName)) return;
+    toast.info(message, {
+      position: "top-right",
+      autoClose: 3000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+      theme: "dark",
+      transition: Flip,
+    });
+  });
+
+
+  const getLoadingQuote = async () => {
+    try {
+      pb.autoCancellation(false);
+      const loadingQuotes = await pb.collection("loading_quotes").getFullList();
+      const listCount = loadingQuotes.length;
+      const randomIndex = Math.floor(Math.random() * listCount);
+      setLoadingQuote(loadingQuotes[randomIndex].quote);
+    } catch (error) {
+      console.error("Failed to get loading quote:", error);
+    }
+  };
+
+  const submitAnswer = async (data: any) => {
+    // Synchronous lock: blocks a double-click from firing two creates before the
+    // first finishes. `answerSubmitted` covers the already-done case.
+    if (submittingRef.current || answerSubmitted) return;
+    submittingRef.current = true;
+    try {
+      pb.autoCancellation(false);
+
+      // Duplicate guard: if this team already has an answer for this question
+      // (reconnect, second device, or a race), don't create a second record.
+      const existing = await pb.collection("answers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setAnswerSubmitted(true);
+        setShowForm(false);
+        return;
+      }
+
+      data.edition_id = editionId;
+      data.answer_type = "regular";
+      data.team_identifier = teamIdentifier;
+      data.team_name = teamName;
+      data.team_id = teamId;
+      data.round_number = roundId;
+      data.question_number = questionId;
+      data.bantha_used = banthaUsed;
+      data.team_name_lower = teamName?.toLowerCase();
+      // Music artist is optional; default to "<none>" when left blank.
+      if (!data.music_answer || String(data.music_answer).trim() === "") {
+        data.music_answer = "<none>";
+      }
+      const answer = await pb.collection("answers").create(data);
+      console.log("Answer submitted:", answer);
+      localStorage.setItem("answerSubmitted", "true");
+
+      if (banthaUsed) {
+        try {
+          const updatedTeam = await pb.collection("teams").update(`${teamId}`, { banthashit_card: false });
+          console.log("Banthashit card updated:", updatedTeam);
+        } catch (error) {
+          console.error("Failed to update banthashit card:", error);
+        }
+      }
+
+      setAnswerSubmitted(true);
+      setShowForm(false);
+      sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
+    } catch (error: any) {
+      const responseData = error?.response?.data;
+      if (
+        error?.status === 400 &&
+        responseData?.id?.code === "validation_not_unique"
+      ) {
+        console.error("Failed to submit answer: The ID already exists.");
+      } else {
+        console.error("Failed to submit answer:", error);
+      }
+    } finally {
+      submittingRef.current = false;
+    }
+
+  };
+
+  const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
+    console.log("sendMessage called with:", { type, message, team });
+
+    try {
+      const response = await fetch('/api/notify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ type, message })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const json = await response.json();
+      console.log("Data sent successfully:", json);
+    } catch (error) {
+      console.error("Error sending data:", error);
+    }
+  };
+
+
+  useEffectOnce(() => {
+    if (localStorage.getItem("answerSubmitted") === "true")
+      setAnswerSubmitted(true);
+
+    console.log('answer submitted:', answerSubmitted);
+
+    const fetchQuestion = async () => {
+      pb.autoCancellation(false);
+      try {
+        // Check if the answer is already submitted
+        const answerList = await pb.collection("answers").getList(1, 1, {
+          filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
+        });
+
+        if (answerList.items.length > 0) {
+          setAnswerSubmitted(true);
+          setShowForm(false);
+          return;
+        }
+
+        // Fetch the question
+        const question = await pb
+          .collection("questions")
+          .getFirstListItem(
+            `edition_id = "${editionId}" && round_number = ${roundId} && question_number = ${questionId}`,
+            { fields: "id, is_active, question_text" }
+          );
+        console.log(question);
+
+        const sanitizedQuestion = DOMPurify.sanitize(question.question_text);
+        setQuestionText(sanitizedQuestion);
+        setQuestionActive(question.is_active);
+      } catch (error) {
+        console.error("Failed to get question:", error);
+      }
+    };
+    ``
+
+
+
+    const fetchTeam = async () => {
+      console.log("teamId", teamId);
+      try {
+        const team = await pb.collection("teams").getFirstListItem(`id = "${teamId}"`, { fields: "team_name, team_identifier, banthashit_card" });
+        console.log("Team:", team);
+        setTeamName(team.team_name);
+        setTeamIdentifier(team.team_identifier);
+        setBanthashitCard(team.banthashit_card);
+      } catch (error) {
+        console.error("Failed to get team:", error);
+      }
+    }
+
+    getLoadingQuote();
+    fetchTeam();
+    fetchQuestion();
+  });
+
+  const el = useRef<HTMLSpanElement | null>(null);
+
+  useEffect(() => {
+    if (!typedTeamName.current) return;
+
+    const typed = new Typed(typedTeamName.current, {
+      strings: [teamName || ""], // Use a default string if teamName is null
+      typeSpeed: 20,
+      backSpeed: 30,
+      showCursor: false,
+      loop: false,
+    });
+
+    // Destroying
+    return () => {
+      typed.destroy();
+    };
+  }, [teamName]); // Add teamName as a dependency if it can change
+
+
+  useEffect(() => {
+    if (el.current && questionActive && questionText) {
+      const typed = new Typed(el.current, {
+        strings: [questionText],
+        typeSpeed: 20,
+        backSpeed: 30,
+        showCursor: false,
+        loop: false,
+        onComplete: (self) => {
+          setShowForm(true);
+          console.log("Question typed out");
+        }
+      });
+
+      return () => typed.destroy(); // Cleanup Typed.js instance on unmount or rerun
+    }
+  }, [questionText, questionActive]);
+
+  return (
+    <div className="p-6 ">
+      <div data-augmented-ui="tl-clip bl-clip b-clip-xy r-clip-xy both " className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard">
+        <div className="flex justify-between mb-5 ">
+          <h1 className="text-lg mb-5">
+            R{roundId} Q{questionId}
+          </h1>
+          {teamName != null && (
+            <h2 className="text-lg">
+              <strong>Team:</strong><span ref={typedTeamName}></span>
+            </h2>
+          )}
+        </div>
+        {questionActive ? (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <span ref={el} className="text-2xl text-white drop-shadow-[0_0_5px_rgba(56,189,248,0.8)"></span>
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <p className="text-2xl flex">{loadingQuote}</p>
+          </motion.div>
+        )}
+      </div>
+      {answerSubmitted === false ? (
+        showForm ? (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+            animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+            exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+            transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+            className="mt-6 w-full"
+          >
+            <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 pb-10 md:p-10 w-full nerd-aug bluecard bluecard__alt">
+              <Form
+                validationBehavior="native"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const data = Object.fromEntries(new FormData(e.currentTarget));
+                  console.log("data", data);
+                  submitAnswer(data);
+                }}
+                onReset={() => setAction("reset")}
+              >
+                <div className="w-full md:max-w-lg flex flex-col gap-6">
+                  <Input
+                    isRequired
+                    errorMessage="Please enter a valid answer"
+                    label="Answer"
+                    labelPlacement="outside"
+                    name="answer"
+                    placeholder="Enter your answer"
+                    type="text"
+                    size="lg"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
+                  />
+                  {questionId == "3" && roundId == "1" && (
+                    <Input
+                      isRequired
+                      errorMessage="Please enter a valid answer"
+                      label="Banthashit Answer"
+                      labelPlacement="outside"
+                      name="bantha_answer"
+                      placeholder="Enter your banthashit answer"
+                      type="text"
+                      size="lg"
+                      classNames={{
+                        inputWrapper:
+                          "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                        input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                      }}
+                      radius="none" // Removes rounded edges
+                      variant="bordered"
+                    />
+                  )}
+                  {banthashitCard && (
+                    <div className="flex flex-col gap-3">
+                      {roundId == "3" && questionId == "5" && (
+                        <p className="text-yellow-400 font-bold text-lg border-2 border-yellow-500 bg-yellow-900/20 p-3 motion-safe:animate-pulse">
+                          ⚠️ Last chance to use your Banthashit Card! This is the final question &mdash; it expires after this.
+                        </p>
+                      )}
+                      <div className="flex gap-4">
+                        <Switch
+                          name="bantha_used"
+                          size="lg"
+                          onChange={(e) => setBanthaUsed(e.target.checked)}
+                        >
+                          <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
+                          Use Banthashit Card?
+                        </Switch>
+                      </div>
+                    </div>
+                  )}
+                  <Input
+                    label="Music Artist"
+                    labelPlacement="outside"
+                    name="music_answer"
+                    placeholder="Enter the artist's name (100 points if correct!)"
+                    type="text"
+                    size="lg"
+                    classNames={{
+                      inputWrapper:
+                        "border-2 border-cyan-500 focus-within:border-cyan-500 focus-within:animate-neon bg-black text-white focus-visible:border-cyan-500 !border-cyan-500",
+                      input: "placeholder-gray-400 text-white focus-visible:outline-none",
+                    }}
+                    radius="none" // Removes rounded edges
+                    variant="bordered"
+                  />
+                  <CyberButton
+                    text="SUBMIT"
+                    glitchText="ANSWER"
+                    onClick={() => console.log("Button Clicked!")}
+                    className="mt-4 w-fit"
+                    buttonType="submit"
+                  />
+                </div>
+              </Form>
+            </div>
+          </motion.div>
+        ) : (
+          null
+        )
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }} // Start hidden and slightly above
+          animate={{ opacity: 1, y: 0 }} // Slide down and become visible
+          exit={{ opacity: 0, y: -20 }} // Hide when the component is removed
+          transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
+          className="mt-6 w-full"
+        >
+          <div className="mt-6">
+            <p className="text-2xl">Answer submitted!</p>
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+
+
+}

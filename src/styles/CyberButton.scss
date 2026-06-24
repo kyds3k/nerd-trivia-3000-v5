@@ -1,0 +1,87 @@
+.cybr-btn,
+.cybr-btn::after {
+  cursor: pointer;
+  width: 190px; /* Reduced from 380px to half */
+  height: 43px; /* Reduced from 86px to half */
+  font-size: 18px; /* Reduced from 36px to half */
+  background: linear-gradient(45deg, transparent 5%, #FF013C 5%);
+  border: 0;
+  color: #fff;
+  letter-spacing: 1.5px; /* Adjusted for better readability at smaller size */
+  line-height: 44px; /* Adjusted to match height */
+  box-shadow: 3px 0px 0px #00E6F6; /* Reduced shadow size proportionally */
+  outline: transparent;
+  position: relative;
+}
+
+.cybr-btn::after {
+  --slice-0: inset(50% 50% 50% 50%);
+  --slice-1: inset(80% -3px 0 0); /* Adjusted offsets for smaller size */
+  --slice-2: inset(50% -3px 30% 0);
+  --slice-3: inset(10% -3px 85% 0);
+  --slice-4: inset(40% -3px 43% 0);
+  --slice-5: inset(80% -3px 5% 0);
+
+  content: attr(data-glitch);
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 3%, #00E6F6 3%, #00E6F6 5%, #FF013C 5%);
+  text-shadow: -1.5px -1.5px 0px #F8F005, 1.5px 1.5px 0px #00E6F6; /* Reduced shadow size */
+  clip-path: var(--slice-0);
+}
+
+.cybr-btn:hover::after {
+  animation: 1s glitch;
+  animation-timing-function: steps(2, end);
+}
+
+@keyframes glitch {
+  0% {
+    clip-path: var(--slice-1);
+    transform: translate(-10px, -5px); /* Halved translate values */
+  }
+  10% {
+    clip-path: var(--slice-3);
+    transform: translate(5px, 5px); /* Halved translate values */
+  }
+  20% {
+    clip-path: var(--slice-1);
+    transform: translate(-5px, 5px); /* Halved translate values */
+  }
+  30% {
+    clip-path: var(--slice-3);
+    transform: translate(0px, 2.5px); /* Halved translate values */
+  }
+  40% {
+    clip-path: var(--slice-2);
+    transform: translate(-2.5px, 0px); /* Halved translate values */
+  }
+  50% {
+    clip-path: var(--slice-3);
+    transform: translate(2.5px, 0px); /* Halved translate values */
+  }
+  60% {
+    clip-path: var(--slice-4);
+    transform: translate(2.5px, 5px); /* Halved translate values */
+  }
+  70% {
+    clip-path: var(--slice-2);
+    transform: translate(-5px, 5px); /* Halved translate values */
+  }
+  80% {
+    clip-path: var(--slice-5);
+    transform: translate(10px, -5px); /* Halved translate values */
+  }
+  90% {
+    clip-path: var(--slice-1);
+    transform: translate(-5px, 0px); /* Halved translate values */
+  }
+  100% {
+    clip-path: var(--slice-1);
+    transform: translate(0);
+  }
+}
