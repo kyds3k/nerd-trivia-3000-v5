@@ -34,12 +34,12 @@ interface Impossible {
   is_active: boolean;
 }
 
-export default function Impossible() {
+export default function Impossible({ params }: { params: Promise<{ id: string, impossibleId: string }> }) {
+  const unwrappedParams = use(params);
   const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
   const router = useTransitionRouter();
-  const params = useParams();
-  const editionId = typeof params?.id === "string" ? params.id : undefined;
-  const impossibleId = typeof params?.impossibleId === "string" ? params.impossibleId : undefined;
+  const editionId = unwrappedParams.id;
+  const impossibleId = unwrappedParams.impossibleId;
   const [introGif, setIntroGif] = useState<string | null>(null);
   const [theme, setTheme] = useState<string | null>(null);
   const [themeGif, setThemeGif] = useState<string | null>(null);
@@ -104,44 +104,31 @@ export default function Impossible() {
     emblaApi?.scrollNext()
   });
 
-  useEffect(() => {
-    if (emblaApi) {
-      console.log(emblaApi.slideNodes()) // Access API
-    }
-  }, [emblaApi])
 
   useEffect(() => {
     const initializeApp = async () => {
       if (!pb.authStore.isValid) {
-        console.log("Not authenticated with Pocketbase.");
         setLoading(false);
         return;
       }
 
-      console.log("Authenticated with Pocketbase successfully.");
       const authData = localStorage.getItem("pocketbase_auth");
 
       if (!authData) {
-        console.log("No auth data found.");
         setLoading(false);
         setIsAdmin(false);
         return;
       }
 
       const parsedAuth = JSON.parse(authData);
-      console.log("Parsed auth data:", parsedAuth);
       if (!parsedAuth.record.is_admin) {
-        console.log("Not an admin.");
         setLoading(false);
         setIsAdmin(false);
         return;
       }
 
-      console.log("Admin authenticated.");
       setIsAdmin(true);
       setLoading(false);
-
-
     };
 
     const fetchQuestion = async () => {
@@ -150,8 +137,6 @@ export default function Impossible() {
         const response = await pb
           .collection("impossible_rounds")
           .getFirstListItem<Impossible>(`edition_id = "${editionId}" && impossible_number = ${impossibleId}`);
-
-        console.log("Question fetched:", response);
 
         setIntroGif(response.intro_gif);
         setTheme(response.theme);
@@ -165,32 +150,27 @@ export default function Impossible() {
 
         setAnswerGifs(response.answer_gifs);
 
-        console.log("response.apple_music_ids:", response.apple_music_ids);
-
         let ids: string[] = [];
         if (Array.isArray(response.apple_music_ids)) {
           ids = response.apple_music_ids;
         } else {
           ids = Object.values(response.apple_music_ids).map((id) => id as string);
-          console.log("ids:", ids);
         }
 
         setSongs(ids); // Update state
         return ids; // Return the updated ids for immediate use
       } catch (error) {
-        console.log("Failed to fetch edition:", error);
+        console.error("Failed to fetch impossible question:", error);
         return [];
       }
     };
 
     const getSongsInfo = async (songs: string[]) => {
-      console.log("Getting song info...");
       // Temporary arrays to collect the song data
       const artists: string[] = [];
       const titles: string[] = [];
       const albumArts: string[] = [];
 
-      console.log("Songs:", songs);
       // Iterate over each song ID in the `songs` array
       for (const songId of songs) {
         try {
@@ -201,7 +181,7 @@ export default function Impossible() {
             albumArts.push(track.artworkUrl);
           }
         } catch (error) {
-          console.log("Error fetching song info:", error);
+          console.error("Error fetching song info:", error);
         }
       }
 
@@ -274,15 +254,14 @@ export default function Impossible() {
             />
           </div>
           {answers.map((answer, index) => (
-            <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4" key={index}>
-              <h3 className="text-6xl flex justify-items-center leading-[1.3]" dangerouslySetInnerHTML={{ __html: answer }}></h3>
-              <div className="flex items-center justify-center w-full grow relative">
-                {answerGifs[index] ? (
-                  <Image src={answerGifs[index]} className="h-full w-auto object-contain" alt="Answer GIF" fill={true} unoptimized={true} />
-                ) : (
-                  <p>Loading GIF...</p>
-                )}
-              </div>
+            <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-6 overflow-hidden" key={index}>
+              <h3 className="text-6xl flex justify-items-center leading-[1.3] shrink-0" dangerouslySetInnerHTML={{ __html: answer }}></h3>
+              {answerGifs[index] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={answerGifs[index]} className="h-[75vh] max-w-full object-contain" alt="Answer GIF" />
+              ) : (
+                <p>Loading GIF...</p>
+              )}
             </div>
           ))}
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex items-center justify-center gap-10">
@@ -290,7 +269,9 @@ export default function Impossible() {
               songAlbumArts.map((albumArt, index) => (
                 <div key={index} className="song-info flex flex-col gap-4 items-center">
                   {albumArt ? (
-                    <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" height="600" />
+                    <div className="animate-fade-in">
+                      <Image src={albumArt} alt={`Album Art for ${songTitles[index]}`} width="600" height="600" />
+                    </div>
                   ) : (
                     <div className="w-[600px] h-[600px] bg-gray-800 flex items-center justify-center">
                       <span className="text-gray-400">No Artwork</span>

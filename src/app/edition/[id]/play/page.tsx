@@ -2,38 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
 import { Image, Form, Input, Button, Alert } from "@heroui/react";
-import DOMPurify from "dompurify"; // Import the sanitizer
-import { set } from "lodash";
+import DOMPurify from "dompurify";
 import { sendMessage } from "@/app/utils/toolbox";
-import { send } from "process";
-
-
-interface Edition {
-  title: string;
-  date: string;
-  edition_gif: string;
-  blurb: string;
-  home_song: string;
-  // Add other fields if needed, e.g., `id: string`, `description: string`, etc.
-}
+import { getPocketbaseClient } from "@/lib/pocketbase";
+import type { GoogleData } from "@/types/pocketbase";
 
 export default function EditionPage() {
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = getPocketbaseClient();
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [date, setDate] = useState<string | null>(null);
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
   const [blurb, setBlurb] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
-  const [googleUser, setGoogleUser] = useState<string>("");
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string>("");
-  const [googleAvatar, setGoogleAvatar] = useState<string>("");
-  const [action, setAction] = useState<string | null>(null);
   const attributes = ["str", "dex", "con", "dex", "int", "wis", "cha"];
   const randomAttribute = attributes[Math.floor(Math.random() * attributes.length)];
   const teamId = Math.floor(10000 + Math.random() * 90000) + "-" + randomAttribute;
@@ -46,33 +31,19 @@ export default function EditionPage() {
   const [teamSearched, setTeamSearched] = useState<boolean>(false);
   const [teamFound, setTeamFound] = useState<boolean>(false);
 
-  interface GoogleData {
-    meta: {
-      name: string;
-      avatarURL: string;
-      email: string;
-    };
-  }
-
-  const logoutGoogle = async () => {
-    try {
-      const response = await pb.authStore.clear();
-      if (response !== null) {
-        setGoogleAuth(false);
-        localStorage.removeItem("google_data");
-      }
-      console.log("Logout response:", response);
-    }
-    catch (error) {
-      console.error("Failed to logout:", error);
-    }
-  }
+  const logoutGoogle = () => {
+    // pb.authStore.clear() returns void — no null check needed (#10)
+    pb.authStore.clear();
+    setGoogleAuth(false);
+    localStorage.removeItem("google_data");
+    localStorage.removeItem("pocketbase_auth");
+    router.push("/");
+  };
 
   const getEdition = async () => {
     try {
-      pb.autoCancellation(false)
+      pb.autoCancellation(false);
       const edition = await pb.collection("editions").getFirstListItem(`is_active = true`);
-      console.log("Edition:", edition);
       setEditionTitle(edition.title);
       if (edition.date) {
         const formattedDate = new Intl.DateTimeFormat("en-US", {
@@ -178,13 +149,7 @@ export default function EditionPage() {
             if (googleData) {
               setGoogleAuth(true);
               try {
-
-                // Parse the JSON and type it as GoogleData
                 const parsedGoogleData: GoogleData = JSON.parse(googleData);
-
-                // Access properties safely
-                setGoogleUser(parsedGoogleData.meta.name);
-                setGoogleAvatar(parsedGoogleData.meta.avatarURL);
                 setUserEmail(parsedGoogleData.meta.email);
               } catch (error) {
                 console.error("Error parsing google_data:", error);
@@ -199,7 +164,7 @@ export default function EditionPage() {
         fetchUser();
         getEdition();
       } else {
-        console.log("No pocketbase_auth data found in localStorage.");
+        // Not authenticated
       }
     } else {
       router.push("/");
@@ -223,11 +188,12 @@ export default function EditionPage() {
         <Form
           className="w-full md:max-w-screen-xl flex flex-col gap-4"
           validationBehavior="native"
-          onReset={() => setAction("reset")}
+          onReset={() => {
+            // Reset handled by browser form reset
+          }}
           onSubmit={(e) => {
             e.preventDefault();
             let data = Object.fromEntries(new FormData(e.currentTarget));
-            console.log("data", data);
             submitTeam(data);
           }}
         >
@@ -287,7 +253,9 @@ export default function EditionPage() {
         <Form
           className="w-full md:max-w-screen-xl flex flex-col gap-4"
           validationBehavior="native"
-          onReset={() => setAction("reset")}
+          onReset={() => {
+            // Reset handled by browser form reset
+          }}
           onSubmit={(e) => {
             e.preventDefault();
             let data = Object.fromEntries(new FormData(e.currentTarget));

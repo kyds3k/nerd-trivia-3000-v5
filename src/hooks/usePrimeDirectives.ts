@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getPusherClient } from "@/lib/pusher/client";
 
@@ -24,15 +24,22 @@ export function usePrimeDirectives(
   const [navigationPath, setNavigationPath] = useState<string | null>(null);
   const currentPath = usePathname();
 
+  // Keep the consumer callbacks in refs so the Pusher effect doesn't re-subscribe
+  // every render. Consumers almost always pass inline functions (new identity each
+  // render); listing them as effect deps churned the subscription — unbinding and
+  // rebinding constantly, with a brief window where a directive could slip through.
+  const onMessageRef = useRef(onMessage);
+  const onQuestionToggleRef = useRef(onQuestionToggle);
   useEffect(() => {
-    console.log(`Subscribing to Pusher channel: ${channelName}`);
-    // activeChannels[channelName] = true; // Removed to allow multiple listeners/bindings
+    onMessageRef.current = onMessage;
+    onQuestionToggleRef.current = onQuestionToggle;
+  });
 
+  useEffect(() => {
     const pusher = getPusherClient();
     const channel = pusher.subscribe(channelName);
 
     const handleEvent = (data: Message) => {
-      console.log("Event received:", data);
 
       switch (data.type) {
         case "question_jump":
@@ -68,9 +75,12 @@ export function usePrimeDirectives(
           }
           break;
         case "question_toggle":
-          if (onQuestionToggle) {
-            onQuestionToggle(data.active);
+          if (onQuestionToggleRef.current) {
+            onQuestionToggleRef.current(data.active);
           }
+          break;
+        case "request_location":
+          // Only the presenter responds to this; ignore elsewhere.
           break;
         default:
           console.warn(`Unhandled directive type: ${data.type}`);
@@ -78,24 +88,22 @@ export function usePrimeDirectives(
     };
 
     const handleNotification = (data: { type: string; message: string; team: string }) => {
-      console.log("Notification received:", data);
-      if (onMessage) {
-        onMessage(data.message, data.team); // Pass the message to the provided callback
+      if (onMessageRef.current) {
+        onMessageRef.current(data.message, data.team);
       }
     };
 
     channel.bind("evt::direct", handleEvent);
-    channel.bind("evt::notify", handleNotification); // Bind to evt::notify
+    channel.bind("evt::notify", handleNotification);
 
     return () => {
-      console.log(`Unsubscribing from Pusher channel: ${channelName}`);
+      // Only unbind THIS instance's handlers. Don't unsubscribe the whole
+      // channel — it's a shared singleton (e.g. PresenterBroadcaster also binds
+      // to "directives"), and unsubscribing would tear down everyone's handlers.
       channel.unbind("evt::direct", handleEvent);
-      channel.unbind("evt::notify", handleNotification); // Unbind notification
-      pusher.unsubscribe(channelName);
-      pusher.unsubscribe(channelName);
-      // activeChannels[channelName] = false;
+      channel.unbind("evt::notify", handleNotification);
     };
-  }, [channelName, editionId, teamId, onMessage, onQuestionToggle]);
+  }, [channelName, editionId, teamId]);
 
   useEffect(() => {
     if (navigationPath && !currentPath.includes("present")) {

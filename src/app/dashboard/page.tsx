@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import Pocketbase from "pocketbase";
+import { useEffect, useState, useMemo } from "react";
+import { getElevatableClient, getPocketbaseClient } from "@/lib/pocketbase";
+import { elevateAuth } from "@/lib/elevate";
 import { Edition } from "../../types/pocketbase";
 import { Button } from "@heroui/button";
 import { Progress, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
@@ -20,7 +21,8 @@ type EditionWithFlags = Edition & { isWip?: boolean; progress?: any };
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export default function DashboardPage() {
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  // Stable instance across renders (in-memory auth store, elevatable on demand).
+  const pb = useMemo(() => getElevatableClient(), []);
   const router = useRouter();
 
   // Updated state to use the new type
@@ -46,18 +48,18 @@ export default function DashboardPage() {
     };
   }
 
-  const logoutGoogle = async () => {
-    try {
-      const response = await pb.authStore.clear();
-      if (response !== null) {
-        setGoogleAuth(false);
-        router.push("/");
-      }
-      console.log("Logout response:", response);
-    }
-    catch (error) {
-      console.error("Failed to logout:", error);
-    }
+  const logoutGoogle = () => {
+    // Clear the PERSISTED session. The dashboard's `pb` is the in-memory
+    // elevatable client, so clearing its store wouldn't touch localStorage.
+    // Clear the shared (persistent) client and remove the stored keys directly.
+    getPocketbaseClient().authStore.clear();
+    localStorage.removeItem("pocketbase_auth");
+    localStorage.removeItem("google_data");
+    localStorage.removeItem("spotifyAuthToken");
+    localStorage.removeItem("spotifyAuthTokenExpiry");
+    localStorage.removeItem("spotifyAuthRefreshToken");
+    setGoogleAuth(false);
+    router.push("/");
   }
 
 
@@ -129,21 +131,10 @@ export default function DashboardPage() {
 
 
   const refreshAuthState = async () => {
-    if (!pb.authStore.isValid) {
-      try {
-        const adminEmail = process.env.NEXT_PUBLIC_POCKETBASE_ADMIN_EMAIL ?? '';
-        const adminPass = process.env.NEXT_PUBLIC_POCKETBASE_ADMIN_PW ?? '';
-
-        if (!adminEmail || !adminPass) {
-          throw new Error("Admin email or password is not set in environment variables");
-        }
-
-        await pb.collection("_superusers").authWithPassword(adminEmail, adminPass);
-        console.log("Authenticated successfully:", pb.authStore.isValid);
-      } catch (error) {
-        console.error("Failed to refresh auth state:", error);
-      }
-    }
+    // Elevate to a superuser session via the server, which verifies the
+    // logged-in user is an admin. The superuser password is no longer shipped
+    // to the browser. Requires being logged in (Google OAuth) as an admin.
+    await elevateAuth(pb);
   };
 
   const handleEditWip = (edition: EditionWithFlags) => {
@@ -213,7 +204,9 @@ export default function DashboardPage() {
               const parsedData = JSON.parse(authData);
               const id = parsedData.record.id;
               pb.autoCancellation(false)
-              const user = await pb.collection("users").getOne(id);
+              // requestKey: null opts this request out of auto-cancellation so a
+              // concurrent auth/elevation change can't abort it (ClientResponseError 0).
+              const user = await pb.collection("users").getOne(id, { requestKey: null });
 
               console.log("ID:", id);
               if (user.is_admin)

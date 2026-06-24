@@ -1,0 +1,54 @@
+/* ---------------------------------------------------------------------------
+   Tiptap table styling (editor view).
+   Makes tables visible and editable inside the rich-text editor. On the
+   presenter/play pages a table without borders still lays out as columns,
+   which is what an ordering-style question (prompt | list) wants.
+--------------------------------------------------------------------------- */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.5rem 0;
+  overflow: hidden;
+}
+
+.tiptap td,
+.tiptap th {
+  border: 1px solid #4b5563;
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  min-width: 4rem;
+}
+
+.tiptap th {
+  background-color: rgba(75, 85, 99, 0.4);
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Highlight the cell(s) the user has selected. */
+.tiptap .selectedCell:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(59, 130, 246, 0.2);
+  pointer-events: none;
+}
+
+/* Column resize handle (Table.configure({ resizable: true })). */
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: #3b82f6;
+  cursor: col-resize;
+  pointer-events: none;
+}
+
+.tiptap.resize-cursor {
+  cursor: col-resize;
+}

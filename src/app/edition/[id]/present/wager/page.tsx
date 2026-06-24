@@ -68,11 +68,6 @@ export default function Wager() {
     emblaApi?.scrollNext()
   });
 
-  useEffect(() => {
-    if (emblaApi) {
-      console.log(emblaApi.slideNodes()) // Access API
-    }
-  }, [emblaApi])
 
   // function to grab the album art, song name, and artist name from the Apple Music API
   const getSongInfo = async (songId: string) => {
@@ -236,7 +231,9 @@ export default function Wager() {
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
-                <Image src={songAlbumArt} alt="Song Album Art" height="600" width="600" />
+                <div className="animate-fade-in">
+                  <Image src={songAlbumArt} alt="Song Album Art" height="600" width="600" />
+                </div>
                 <h3 className="text-3xl">"{songTitle}" by {songArtist}</h3>
               </>
             ) : (

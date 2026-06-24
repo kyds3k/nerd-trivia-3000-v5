@@ -91,7 +91,7 @@ export function Providers({ children, session }: ProvidersProps) {
             ref={firstLayer}
             className="fixed inset-0 z-50 translate-y-full"
             style={{
-              backgroundImage: "url('https://media1.tenor.com/m/ufGNJfK-2qsAAAAC/tardis-doctor-who.gif')",
+              backgroundImage: "url('/tardis-transition.gif')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",

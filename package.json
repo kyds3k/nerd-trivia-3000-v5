@@ -2,6 +2,7 @@
   "name": "nerd-trivia-3000-v5",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -14,7 +15,10 @@
       "@types/react": "19.0.1"
     },
     "onlyBuiltDependencies": [
-      "@heroui/shared-utils"
+      "@heroui/shared-utils",
+      "@parcel/watcher",
+      "sharp",
+      "unrs-resolver"
     ]
   },
   "dependencies": {
@@ -30,6 +34,10 @@
     "@tiptap/extension-color": "^2.10.4",
     "@tiptap/extension-list-item": "^2.10.4",
     "@tiptap/extension-strike": "^2.10.4",
+    "@tiptap/extension-table": "^2.11.7",
+    "@tiptap/extension-table-cell": "^2.11.7",
+    "@tiptap/extension-table-header": "^2.11.7",
+    "@tiptap/extension-table-row": "^2.11.7",
     "@tiptap/extension-text-style": "^2.10.4",
     "@tiptap/pm": "^2.10.4",
     "@tiptap/react": "^2.10.4",
@@ -63,9 +71,10 @@
     "@types/node": "^22.10.2",
     "@types/react": "19.0.1",
     "@types/react-dom": "^19.0.2",
+    "baseline-browser-mapping": "^2.10.38",
     "embla-carousel": "^8.5.1",
     "eslint": "^9.17.0",
-    "eslint-config-next": "15.0.2",
+    "eslint-config-next": "16.0.7",
     "knip": "^5.41.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",

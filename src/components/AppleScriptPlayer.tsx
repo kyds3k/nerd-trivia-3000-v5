@@ -131,12 +131,15 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
     }
   }, []);
 
-  // Poll every 1 second
+  // Poll the bridge: every 1s while it's online (for smooth playback sync),
+  // but back off to every 5s while it's offline so a non-running bridge doesn't
+  // flood the console with connection-refused errors.
   useEffect(() => {
     checkBridge();
-    const interval = setInterval(checkBridge, 1000);
+    const intervalMs = bridgeOnline ? 1000 : 5000;
+    const interval = setInterval(checkBridge, intervalMs);
     return () => clearInterval(interval);
-  }, [checkBridge]);
+  }, [checkBridge, bridgeOnline]);
 
   // Detect auto-finish
   useEffect(() => {
@@ -162,8 +165,11 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
 
     console.log("handlePlay called. isPlaying:", isPlaying, "nowPlaying:", nowPlaying);
 
-    // Check if we are already playing the correct track
-    const isTrackLoaded = nowPlaying?.name && nowPlaying.name === allTracksMetadata[currentTrackIndex]?.title;
+    // Check if the currently-loaded track is the one we want (so we resume
+    // instead of restarting). For multi-track rounds the title comes from
+    // allTracksMetadata; for a single-song question it comes from `metadata`.
+    const currentTitle = trackIds ? allTracksMetadata[currentTrackIndex]?.title : metadata?.title;
+    const isTrackLoaded = !!(nowPlaying?.name && currentTitle && nowPlaying.name === currentTitle);
 
     console.log("isTrackLoaded:", isTrackLoaded);
 
@@ -192,7 +198,7 @@ export default function AppleScriptPlayer({ trackId, trackIds, autoplay = false 
         console.error("Error playing:", e);
       }
     }
-  }, [bridgeOnline, isPlaying, nowPlaying, allTracksMetadata, currentTrackIndex, effectiveTrackId]);
+  }, [bridgeOnline, isPlaying, nowPlaying, allTracksMetadata, currentTrackIndex, effectiveTrackId, metadata, trackIds]);
 
   const handlePause = useCallback(async () => {
     isManuallyPaused.current = true;

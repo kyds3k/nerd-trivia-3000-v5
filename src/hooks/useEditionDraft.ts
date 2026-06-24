@@ -34,18 +34,18 @@ export interface EditionDraftData {
   imp1Gif: string;
   imp1Question: string;
   imp1Ppa: string;
-  imp1SongsApple: string[];
+  imp1SongsApple: { [key: number]: string };
   imp1Answers: string[];
-  imp1AnswerGifs: string[];
+  imp1AnswerGifs: { [key: number]: string };
   // Impossible 2
   imp2IntroGif: string;
   imp2Theme: string;
   imp2Gif: string;
   imp2Question: string;
   imp2Ppa: string;
-  imp2SongsApple: string[];
+  imp2SongsApple: { [key: number]: string };
   imp2Answers: string[];
-  imp2AnswerGifs: string[];
+  imp2AnswerGifs: { [key: number]: string };
   // Wager
   wagerGif: string;
   wagerPlacingGif: string;
@@ -64,6 +64,63 @@ export interface EditionDraftData {
   numImpossibleSongs: number;
   numImpossibleSongs2: number;
 }
+
+export const defaultEditionData: EditionDraftData = {
+  title: "",
+  date: null,
+  blurb: "",
+  editionGif: "",
+  homeSongApple: "",
+  endGif1: "",
+  endGif2: "",
+  r1Gif: "",
+  r2Gif: "",
+  r3Gif: "",
+  round1Questions: [],
+  round2Questions: [],
+  round3Questions: [],
+  round1Answers: [],
+  round2Answers: [],
+  round3Answers: [],
+  round1SongsApple: [],
+  round2SongsApple: [],
+  round3SongsApple: [],
+  round1AnswerGifs: [],
+  round2AnswerGifs: [],
+  round3AnswerGifs: [],
+  banthaAnswer: "",
+  banthaAnswerGif: "",
+  imp1IntroGif: "",
+  imp1Theme: "",
+  imp1Gif: "",
+  imp1Question: "",
+  imp1Ppa: "",
+  imp1SongsApple: {},
+  imp1Answers: [],
+  imp1AnswerGifs: {},
+  imp2IntroGif: "",
+  imp2Theme: "",
+  imp2Gif: "",
+  imp2Question: "",
+  imp2Ppa: "",
+  imp2SongsApple: {},
+  imp2Answers: [],
+  imp2AnswerGifs: {},
+  wagerGif: "",
+  wagerPlacingGif: "",
+  wagerSongApple: "",
+  finalCat: "",
+  finalCatGif: "",
+  finalIntroGif: "",
+  finalQuestion: "",
+  finalAnswer: "",
+  finalAnswerGif: "",
+  finalSongApple: "",
+  numImpossibleAnswers: 0,
+  numImpossibleAnswers2: 0,
+  numImpossibleSongs: 0,
+  numImpossibleSongs2: 0,
+};
 
 const STORAGE_KEY = "edition_draft_v2"; // Changed key to avoid conflicts with old structure
 

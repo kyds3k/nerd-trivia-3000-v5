@@ -156,6 +156,15 @@ export default function TiebreakerScoreboardPage({ params }: { params: Promise<{
       <h1 className="text-6xl mb-4 font-linebeam text-glow-blue-400">TIEBREAKER RESULTS</h1>
       <h2 className="text-4xl mb-12">Correct Answer: <span className="text-green-400">{correctAnswer?.toLocaleString()}</span></h2>
 
+      {results.filter((r) => r.isWinner).length > 1 && (
+        <div className="w-full max-w-4xl mb-8 p-5 border-2 border-yellow-500 bg-yellow-900/20 text-center">
+          <h3 className="text-3xl font-bold text-yellow-400 animate-pulse font-linebeam">STILL TIED!</h3>
+          <p className="text-lg text-white mt-2">
+            These teams are exactly the same distance from the answer — the host needs to pick a winner (or run another tiebreaker).
+          </p>
+        </div>
+      )}
+
       <div className="w-full max-w-4xl flex flex-col gap-6">
         {results.map((result, index) => (
           <motion.div

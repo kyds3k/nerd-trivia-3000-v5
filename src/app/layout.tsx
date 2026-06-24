@@ -4,8 +4,9 @@ import "./globals.css";
 import "../styles/globals.scss";
 import { Providers } from "./providers";
 import React from 'react';
-import { ToastContainer, Flip, Bounce } from 'react-toastify';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 
 
 const geistSans = localFont({
@@ -36,7 +37,7 @@ const playBold = localFont({
 
 const reboot = localFont({
 	src: "fonts/reboot-crush.ttf",
-	variable: "--font-linebeam",
+	variable: "--font-reboot",
 	weight: "400",
 });
 
@@ -45,6 +46,7 @@ const linebeam = localFont({
 	variable: "--font-linebeam",
 	weight: "400",
 });
+
 
 export const metadata: Metadata = {
 	title: "Nerd Trivia 3000",

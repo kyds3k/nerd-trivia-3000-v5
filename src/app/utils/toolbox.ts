@@ -1,9 +1,8 @@
-// utils/apiUtils.ts
-import { signIn } from "next-auth/react"
+// utils/toolbox.ts
+
+import { getPocketbaseClient } from "@/lib/pocketbase";
 
 export const sendMessage = async (type: string | null, message: string | null, team: string | null) => {
-  console.log("sendMessage called with:", { type, message, team });
-
   try {
     const response = await fetch('/api/notify', {
       method: 'POST',
@@ -17,25 +16,20 @@ export const sendMessage = async (type: string | null, message: string | null, t
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    const json = await response.json();
-    console.log("Data sent successfully:", json);
-    return json; // Return the response JSON for further use if needed
+    return await response.json();
   } catch (error) {
-    console.error("Error sending data:", error);
-    throw error; // Re-throw the error to handle it in the calling function
+    console.error("Error sending message:", error);
+    throw error;
   }
 };
 
-
-
 export const sendDirective = async (type: string, round: string | null, question: string | null, active: boolean | null) => {
-  console.log("sendDirective called with:", { type, round, question, active });
-
   try {
     const response = await fetch('/api/direct', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${getPocketbaseClient().authStore.token}`,
       },
       body: JSON.stringify({ type, round, question, active }),
     });
@@ -44,9 +38,7 @@ export const sendDirective = async (type: string, round: string | null, question
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
 
-    const json = await response.json();
-    console.log("Directive sent successfully:", json);
-    return json;
+    return await response.json();
   } catch (error) {
     console.error("Error sending directive:", error);
     throw error;

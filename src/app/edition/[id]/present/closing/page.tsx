@@ -250,7 +250,9 @@ export default function Question({ params, searchParams }: { params: Promise<{ i
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
-                <Image src={songAlbumArt} alt="Song Album Art" width="600" height="600" />
+                <div className="animate-fade-in">
+                  <Image src={songAlbumArt} alt="Song Album Art" width="600" height="600" />
+                </div>
                 <h3 className="text-3xl">"{songTitle}" by {songArtist}</h3>
               </>
             ) : (

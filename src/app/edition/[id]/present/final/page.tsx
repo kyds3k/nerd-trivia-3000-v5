@@ -365,24 +365,21 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 1 }}
-                  className="w-full h-full flex flex-col items-center justify-start gap-4"
+                  className="w-full h-full flex flex-col items-center justify-center gap-6 overflow-hidden"
                 >
-                  <div className="p-8 flex items-center justify-center">
+                  <div className="p-4 flex items-center justify-center shrink-0">
                     <h3 className="text-6xl flex justify-items-center" dangerouslySetInnerHTML={{ __html: answer }}></h3>
                   </div>
-                  <div className="flex items-center justify-center w-full grow relative">
-                    {answerGif ? (
-                      <Image
-                        src={answerGif}
-                        alt="Answer GIF"
-                        fill={true}
-                        unoptimized={true}
-                        className="object-contain"
-                      />
-                    ) : (
-                      <Spinner size="lg" />
-                    )}
-                  </div>
+                  {answerGif ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={answerGif}
+                      alt="Answer GIF"
+                      className="h-[75vh] max-w-full object-contain"
+                    />
+                  ) : (
+                    <Spinner size="lg" />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -391,7 +388,9 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
           <div className="embla__slide p-8 h-[calc(100vh-4rem)] flex flex-col items-center justify-start gap-4">
             {songAlbumArt ? (
               <>
-                <Image src={songAlbumArt} alt="Song Album Art" width="600" height="600" />
+                <div className="animate-fade-in">
+                  <Image src={songAlbumArt} alt="Song Album Art" width="600" height="600" />
+                </div>
                 <h3 className="text-3xl">"{songTitle}" by {songArtist}</h3>
               </>
             ) : (

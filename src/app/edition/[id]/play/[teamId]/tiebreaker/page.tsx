@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, useRef, use } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Pocketbase from "pocketbase";
 import { Button, Input } from "@heroui/react";
@@ -15,6 +15,7 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
   const [answer, setAnswer] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const submittingRef = useRef(false);
 
   const [teamName, setTeamName] = useState<string | null>(null);
 
@@ -103,6 +104,8 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
 
   const handleSubmit = async () => {
     if (!answer) return;
+    if (submittingRef.current || submitted) return;
+    submittingRef.current = true;
 
     // Strip commas for submission
     const numericAnswer = answer.replace(/,/g, "");
@@ -111,13 +114,7 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
     try {
       pb.autoCancellation(false);
 
-      // Check if team already submitted for this tiebreaker?
-      // For simplicity, we'll just create a new answer record or update if we had a unique constraint.
-      // We'll use a specific "tiebreaker" collection or the "answers" collection with a special type.
-      // The plan mentioned "tiebreaker_answers" or "answers" with type "tiebreaker".
-      // Let's use "answers" collection with answer_type="tiebreaker".
-
-      // First, get the active tiebreaker question to link it (optional, but good for data integrity)
+      // Get the active tiebreaker question to link the answer to it.
       const tiebreakerList = await pb.collection('tiebreakers').getFullList({
         filter: 'is_active=true'
       });
@@ -125,6 +122,17 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
 
       if (!tiebreakerRecord) {
         toast.error("No active tiebreaker found.");
+        setLoading(false);
+        submittingRef.current = false;
+        return;
+      }
+
+      // Duplicate guard: one tiebreaker answer per team (reconnect / double-click).
+      const existing = await pb.collection("answers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && answer_type = "tiebreaker" && tiebreaker_id = "${tiebreakerRecord.id}" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setSubmitted(true);
         setLoading(false);
         return;
       }
@@ -154,6 +162,7 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
       toast.error("Failed to submit answer. Please try again.");
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 

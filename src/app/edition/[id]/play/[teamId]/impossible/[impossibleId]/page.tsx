@@ -37,6 +37,7 @@ export default function Question() {
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [action, setAction] = useState<string | null>(null);
   const [answerSubmitted, setAnswerSubmitted] = useState<boolean>(false);
+  const submittingRef = useRef(false);
 
 
   // Use the hook and pass the callback for question_toggle
@@ -88,7 +89,21 @@ export default function Question() {
   };
 
   const submitAnswer = async (data: any) => {
+    if (submittingRef.current || answerSubmitted) return;
+    submittingRef.current = true;
     try {
+      pb.autoCancellation(false);
+
+      // Duplicate guard: one impossible answer per team (reconnect / double-click).
+      const existing = await pb.collection("answers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && answer_type = "impossible" && impossible_number = "${impossibleId}" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setAnswerSubmitted(true);
+        setShowForm(false);
+        return;
+      }
+
       data.edition_id = editionId;
       data.team_id = teamId;
       data.answer_type = "impossible";
@@ -96,7 +111,6 @@ export default function Question() {
       data.team_name = teamName;
       data.impossible_number = impossibleId;
       data.team_name_lower = teamName?.toLowerCase();
-      pb.autoCancellation(false);
 
       console.log("Submitting answer:", data);
 
@@ -116,6 +130,8 @@ export default function Question() {
       } else {
         console.error("Failed to submit answer:", error);
       }
+    } finally {
+      submittingRef.current = false;
     }
   };
 

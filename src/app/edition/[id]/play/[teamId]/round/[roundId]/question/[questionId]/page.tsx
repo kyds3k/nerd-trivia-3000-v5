@@ -28,6 +28,7 @@ export default function Question() {
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
   const [banthashitCard, setBanthashitCard] = useState<boolean>(false);
   const [banthaUsed, setBanthaUsed] = useState<boolean>(false);
+  const submittingRef = useRef(false);
   const [questionText, setQuestionText] = useState<string>("");
   const [loading, setLoading] = React.useState<boolean>(true);
   const [showForm, setShowForm] = React.useState<boolean>(false);
@@ -87,7 +88,24 @@ export default function Question() {
   };
 
   const submitAnswer = async (data: any) => {
+    // Synchronous lock: blocks a double-click from firing two creates before the
+    // first finishes. `answerSubmitted` covers the already-done case.
+    if (submittingRef.current || answerSubmitted) return;
+    submittingRef.current = true;
     try {
+      pb.autoCancellation(false);
+
+      // Duplicate guard: if this team already has an answer for this question
+      // (reconnect, second device, or a race), don't create a second record.
+      const existing = await pb.collection("answers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setAnswerSubmitted(true);
+        setShowForm(false);
+        return;
+      }
+
       data.edition_id = editionId;
       data.answer_type = "regular";
       data.team_identifier = teamIdentifier;
@@ -97,7 +115,10 @@ export default function Question() {
       data.question_number = questionId;
       data.bantha_used = banthaUsed;
       data.team_name_lower = teamName?.toLowerCase();
-      pb.autoCancellation(false);
+      // Music artist is optional; default to "<none>" when left blank.
+      if (!data.music_answer || String(data.music_answer).trim() === "") {
+        data.music_answer = "<none>";
+      }
       const answer = await pb.collection("answers").create(data);
       console.log("Answer submitted:", answer);
       localStorage.setItem("answerSubmitted", "true");
@@ -124,6 +145,8 @@ export default function Question() {
       } else {
         console.error("Failed to submit answer:", error);
       }
+    } finally {
+      submittingRef.current = false;
     }
 
   };
@@ -214,7 +237,7 @@ export default function Question() {
 
   useEffect(() => {
     if (!typedTeamName.current) return;
-  
+
     const typed = new Typed(typedTeamName.current, {
       strings: [teamName || ""], // Use a default string if teamName is null
       typeSpeed: 20,
@@ -222,13 +245,13 @@ export default function Question() {
       showCursor: false,
       loop: false,
     });
-  
+
     // Destroying
     return () => {
       typed.destroy();
     };
   }, [teamName]); // Add teamName as a dependency if it can change
-  
+
 
   useEffect(() => {
     if (el.current && questionActive && questionText) {
@@ -256,9 +279,9 @@ export default function Question() {
             R{roundId} Q{questionId}
           </h1>
           {teamName != null && (
-          <h2 className="text-lg">
-            <strong>Team:</strong><span ref={typedTeamName}></span>
-          </h2>
+            <h2 className="text-lg">
+              <strong>Team:</strong><span ref={typedTeamName}></span>
+            </h2>
           )}
         </div>
         {questionActive ? (
@@ -341,25 +364,29 @@ export default function Question() {
                     />
                   )}
                   {banthashitCard && (
-                    <div className="flex gap-4">
-                      <Switch
-                        name="bantha_used"
-                        size="lg"
-                        className="overflow-hidden"
-                        onChange={(e) => setBanthaUsed(e.target.checked)}
-                      >
-                        <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
-                        Use Banthashit Card?
-                      </Switch>
+                    <div className="flex flex-col gap-3">
+                      {roundId == "3" && questionId == "5" && (
+                        <p className="text-yellow-400 font-bold text-lg border-2 border-yellow-500 bg-yellow-900/20 p-3 motion-safe:animate-pulse">
+                          ⚠️ Last chance to use your Banthashit Card! This is the final question &mdash; it expires after this.
+                        </p>
+                      )}
+                      <div className="flex gap-4">
+                        <Switch
+                          name="bantha_used"
+                          size="lg"
+                          onChange={(e) => setBanthaUsed(e.target.checked)}
+                        >
+                          <Image src="https://i.imgur.com/pWDb7GL.gif" width="89" height="64" alt="Bantha Card" />
+                          Use Banthashit Card?
+                        </Switch>
+                      </div>
                     </div>
                   )}
                   <Input
-                    isRequired
-                    errorMessage="Please enter artist name"
                     label="Music Artist"
                     labelPlacement="outside"
                     name="music_answer"
-                    placeholder="Enter the artist's name"
+                    placeholder="Enter the artist's name (100 points if correct!)"
                     type="text"
                     size="lg"
                     classNames={{

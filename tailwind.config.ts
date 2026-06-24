@@ -27,10 +27,15 @@ const config: Config = {
           "50%": { boxShadow: "0 0 4px #06d4c2, 0 0 8px #06d4c2" }, // Slightly brighter mid-state
           "75%": { boxShadow: "0 0 3.5px #06a6cc, 0 0 7px #06a6cc" }, // Smooth transition
         },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         neon: 'neonFlicker 2s infinite',
-      },      
+        "fade-in": "fadeIn 1600ms ease-in-out both",
+      },
     },
   },
   darkMode: "class",

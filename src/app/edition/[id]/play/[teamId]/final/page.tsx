@@ -35,6 +35,7 @@ export default function Question() {
   const [questionActive, setQuestionActive] = useState<boolean>(false);
   const [action, setAction] = useState<string | null>(null);
   const [answerSubmitted, setAnswerSubmitted] = useState<boolean>(false);
+  const submittingRef = useRef(false);
 
 
   // Use the hook and pass the callback for question_toggle
@@ -87,7 +88,21 @@ export default function Question() {
   };
 
   const submitAnswer = async (data: any) => {
+    if (submittingRef.current || answerSubmitted) return;
+    submittingRef.current = true;
     try {
+      pb.autoCancellation(false);
+
+      // Duplicate guard: one final answer per team (reconnect / double-click).
+      const existing = await pb.collection("answers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && answer_type = "final" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setAnswerSubmitted(true);
+        setShowForm(false);
+        return;
+      }
+
       data.edition_id = editionId;
       data.team_id = teamId;
       data.answer_type = "final";
@@ -95,7 +110,6 @@ export default function Question() {
       data.team_name = teamName;
       data.bantha_used = false;
       data.team_name_lower = teamName?.toLowerCase();
-      pb.autoCancellation(false);
 
       const answer = await pb.collection("answers").create(data);
       console.log("Answer submitted:", answer);
@@ -113,6 +127,8 @@ export default function Question() {
       } else {
         console.error("Failed to submit answer:", error);
       }
+    } finally {
+      submittingRef.current = false;
     }
   };
 

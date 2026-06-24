@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Pocketbase from "pocketbase";
 import { useRouter } from "next/navigation";
-import { Button, Link, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
-import { toast } from "react-toastify";
-import { Slide, Zoom, Flip, Bounce } from 'react-toastify';
+import { Button, Popover, PopoverTrigger, PopoverContent } from "@heroui/react";
+import { toast, Flip } from "react-toastify";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import { motion } from "framer-motion";
+import { getPocketbaseClient } from "@/lib/pocketbase";
+import { getPusherClient } from "@/lib/pusher/client";
+import { sendDirective } from "@/app/utils/toolbox";
+import { useAuth } from "@/hooks/useAuth";
 
 
 interface Edition {
@@ -20,18 +22,13 @@ interface Edition {
 }
 
 export default function TeamPage() {
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = getPocketbaseClient();
   const router = useRouter();
   const params = useParams();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [date, setDate] = useState<string | null>(null);
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
-  const [googleUser, setGoogleUser] = useState<string>("");
-  const [userEmail, setUserEmail] = useState<string>("");
-  const [googleAvatar, setGoogleAvatar] = useState<string>("");
-  const [action, setAction] = useState<string | null>(null);
+  const { isAuthenticated, logout } = useAuth();
   const teamId = typeof params?.teamId === "string" ? params.teamId : undefined;
   const [teamName, setTeamName] = useState<string | null>(null);
   const [teamIdentifier, setTeamIdentifier] = useState<string | null>(null);
@@ -67,16 +64,6 @@ export default function TeamPage() {
       transition: Flip,
     });
   });
-
-  interface GoogleData {
-    meta: {
-      name: string;
-      avatarURL: string;
-      email: string;
-    };
-  }
-
-
   const getTeam = async () => {
     try {
       pb.autoCancellation(false)
@@ -93,18 +80,8 @@ export default function TeamPage() {
   }
 
   const logoutGoogle = async () => {
-    try {
-      const response = await pb.authStore.clear();
-      if (response !== null) {
-        setGoogleAuth(false);
-        localStorage.removeItem("google_data");
-        router.push("/");
-      }
-      console.log("Logout response:", response);
-    }
-    catch (error) {
-      console.error("Failed to logout:", error);
-    }
+    await logout();
+    router.push("/");
   }
 
   const getEdition = async () => {
@@ -129,64 +106,38 @@ export default function TeamPage() {
 
 
   useEffect(() => {
-    console.log("pb.authStore", pb.authStore);
-    console.log("teamId", teamId);
-    // if pocketbase_auth is in localstorage, use it to authenticate
-    if (pb.authStore.isValid) {
-      setGoogleAuth(true);
-
-      // Retrieve and parse the data from localStorage
-      const authData = localStorage.getItem("pocketbase_auth");
-      const googleData = localStorage.getItem("google_data");
-
-      if (authData) {
-
-        const fetchUser = async () => {
-          try {
-            // Parse the JSON
-            const parsedData = JSON.parse(authData);
-
-            // Access the `id`
-            const id = parsedData.record.id;
-
-            // Fetch user data asynchronously
-            pb.autoCancellation(false)
-            const user = await pb.collection("users").getOne(id);
-
-
-            // You can set additional state here if needed
-            if (googleData) {
-              setGoogleAuth(true);
-              try {
-
-                // Parse the JSON and type it as GoogleData
-                const parsedGoogleData: GoogleData = JSON.parse(googleData);
-
-                // Access properties safely
-                setGoogleUser(parsedGoogleData.meta.name);
-                setGoogleAvatar(parsedGoogleData.meta.avatarURL);
-                setUserEmail(parsedGoogleData.meta.email);
-              } catch (error) {
-                console.error("Error parsing google_data:", error);
-              }
-            }
-          } catch (error) {
-            console.error("Error parsing pocketbase_auth data or fetching user:", error);
-          }
-        };
-
-        // Call the async function
-        fetchUser();
-        getEdition();
-        getTeam();
-
-      } else {
-        console.log("No pocketbase_auth data found in localStorage.");
-      }
-    } else {
-      router.push("/");
+    // Load data once auth resolves. We don't redirect here on `false` because
+    // `isAuthenticated` starts false and only flips true after useAuth's async
+    // check — redirecting on the initial false bounced teams straight back to
+    // the join screen. useAuth itself redirects to "/" if genuinely unauthed.
+    if (isAuthenticated) {
+      getEdition();
+      getTeam();
     }
-  }, []);
+  }, [isAuthenticated]);
+
+  // Reconnect: if a team lands here mid-game (e.g. they closed the browser and
+  // logged back in), ask the presenter to re-announce where the game is. The
+  // presenter re-broadcasts its current location and usePrimeDirectives (above)
+  // navigates this team to the live question. We wait for the channel to be
+  // subscribed so we don't miss the presenter's reply.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const channel = getPusherClient().subscribe("directives");
+    const askWhereWeAre = () => {
+      sendDirective("request_location", null, null, null).catch(() => {
+        /* presenter may be offline; non-fatal */
+      });
+    };
+    if (channel.subscribed) {
+      askWhereWeAre();
+    } else {
+      channel.bind("pusher:subscription_succeeded", askWhereWeAre);
+    }
+    return () => {
+      channel.unbind("pusher:subscription_succeeded", askWhereWeAre);
+    };
+  }, [isAuthenticated]);
 
   return (
     <div className="p-4 pb-10 md:p-10 flex flex-col items-center md:justify-center w-screen overflow-x-hidden">

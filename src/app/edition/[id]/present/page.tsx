@@ -1,51 +1,24 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Pocketbase from "pocketbase";
 import { Image, Progress } from "@heroui/react";
-import DOMPurify from "dompurify"; // Import the sanitizer
+import DOMPurify from "dompurify";
 import AppleScriptPlayer from "@/components/AppleScriptPlayer";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useTimer } from "react-timer-hook";
-import { set } from "lodash";
 import ShallNotPass from "@/components/ShallNotPass";
 import { useSession } from "next-auth/react";
 import SpotTimer from "@/components/SpotTimer";
-
 import { useTransitionRouter } from "next-transition-router";
-
-
-interface Edition {
-  title: string;
-  date: string;
-  edition_gif: string;
-  blurb: string;
-  home_song_apple: string;
-}
-
-interface session {
-  accessToken: string;
-  user: {
-    name: string;
-    email: string;
-    image: string;
-  }
-}
+import { getPocketbaseClient } from "@/lib/pocketbase";
+import type { Edition } from "@/types/pocketbase";
 
 export default function EditionPage() {
-  const pb = new Pocketbase(process.env.NEXT_PUBLIC_POCKETBASE_URL);
+  const pb = getPocketbaseClient();
   const params = useParams();
   const router = useTransitionRouter();
   const editionId = useMemo(() => {
     return typeof params?.id === "string" ? params.id : undefined;
   }, [params]);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") {
-      console.log("Edition ID:", editionId);
-    }
-  }, [editionId]);
-
 
   const [date, setDate] = useState<string | null>(null);
   const [editionTitle, setEditionTitle] = useState<string | null>(null);
@@ -53,14 +26,9 @@ export default function EditionPage() {
   const [blurb, setBlurb] = useState<string | null>(null);
   const [pageSong, setPageSong] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [googleAuth, setGoogleAuth] = useState<boolean>(false)
+  const [googleAuth, setGoogleAuth] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [hasSession, setHasSession] = useState<boolean>(false);
   const { data: session } = useSession();
-
-  interface SpotTimerProps {
-    expiryTimestamp: Date;
-  }
 
 
   useHotkeys("ctrl+ArrowRight", () => {
@@ -91,7 +59,7 @@ export default function EditionPage() {
 
         setEditionTitle(response.title);
         setEditionGif(response.edition_gif);
-        setPageSong(response.home_song_apple);
+        setPageSong(response.home_song_apple ?? null);
 
         if (response.blurb) {
           const sanitizedHtml = DOMPurify.sanitize(response.blurb);
@@ -109,9 +77,7 @@ export default function EditionPage() {
         return;
       }
 
-      console.log("Authenticated with Pocketbase successfully.");
       const authData = localStorage.getItem("pocketbase_auth");
-
       if (!authData) {
         setGoogleAuth(false);
         setIsAdmin(false);
@@ -127,7 +93,6 @@ export default function EditionPage() {
         return;
       }
 
-      console.log("Admin authenticated.");
       setIsAdmin(true);
       setGoogleAuth(true);
       setLoading(false);

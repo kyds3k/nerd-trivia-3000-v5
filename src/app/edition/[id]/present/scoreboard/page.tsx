@@ -86,6 +86,7 @@ export default function Scoreboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${pb.authStore.token}`,
         },
         body: JSON.stringify({
           type: 'tiebreaker_jump',
@@ -134,6 +135,24 @@ export default function Scoreboard() {
     getScores();
   }, []);
 
+  // Gold/silver/bronze medals for the top three — only on the FINAL scoreboard.
+  // Medals are tier-based, not row-based: the distinct point totals (highest first)
+  // define the gold/silver/bronze tiers. A team in tier 0/1/2 gets that medal UNLESS
+  // more than one team shares that exact total — then the placement is contested and
+  // everyone in that tier shows "❓" so the host knows it still needs resolving.
+  const medals = ["🥇", "🥈", "🥉"];
+  const distinctScores = Array.from(
+    new Set(scores.map((s) => s.points_for_game as number))
+  ).sort((a, b) => b - a);
+
+  const medalFor = (points: number) => {
+    if (origin !== "final") return null;
+    const tier = distinctScores.indexOf(points);
+    if (tier < 0 || tier >= medals.length) return null;
+    const tiedCount = scores.filter((s) => s.points_for_game === points).length;
+    return tiedCount > 1 ? "❓" : medals[tier];
+  };
+
   return (
     <motion.div
       initial={{ scale: 0 }} // Starts at 0 size
@@ -168,7 +187,12 @@ export default function Scoreboard() {
                         animationDelay: `${3 + (scores.length - index - 1) * 3}s`, // Base 3s delay + reverse index delay
                       }}
                     >
-                      <TableCell className="text-2xl">{score.team_name}</TableCell>
+                      <TableCell className="text-2xl">
+                        {medalFor(score.points_for_game) && (
+                          <span className="mr-3" aria-hidden="true">{medalFor(score.points_for_game)}</span>
+                        )}
+                        {score.team_name}
+                      </TableCell>
                       <TableCell className="text-2xl">{score.points_for_game}</TableCell>
                     </TableRow>
                   ))}

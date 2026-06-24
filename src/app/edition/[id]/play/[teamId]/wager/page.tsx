@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from "next/navigation";
 import { usePrimeDirectives } from "@/hooks/usePrimeDirectives";
 import { Button, Form, Input, Image, Slider } from "@heroui/react";
@@ -26,6 +26,7 @@ export default function Wager() {
   const [maxWager, setMaxWager] = useState<number>(0);
   const [wagerAmount, setWagerAmount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const submittingRef = useRef(false);
 
   // Use the hook and pass the callback for question_toggle
   // Assuming active might be a string, convert it to a boolean
@@ -87,10 +88,23 @@ export default function Wager() {
   };
 
   const submitWager = async (data: any) => {
+    if (submittingRef.current || wagerSubmitted) return;
+    submittingRef.current = true;
     try {
+      pb.autoCancellation(false);
+
+      // Duplicate guard: one wager per team (reconnect / double-click).
+      const existing = await pb.collection("wagers").getList(1, 1, {
+        filter: `edition_id = "${editionId}" && team_id = "${teamId}"`,
+      });
+      if (existing.items.length > 0) {
+        setWagerSubmitted(true);
+        setShowForm(false);
+        return;
+      }
+
       data.edition_id = editionId;
       data.team_id = teamId;
-      data.team_name = teamName;
       data.team_name = teamName;
       pb.autoCancellation(false);
 
@@ -110,6 +124,8 @@ export default function Wager() {
       } else {
         console.error("Failed to submit answer:", error);
       }
+    } finally {
+      submittingRef.current = false;
     }
   };
 

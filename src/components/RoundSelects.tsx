@@ -18,7 +18,8 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
       3: ["1", "2", "3", "4", "5"],
       impossible: ["1", "2"],
       wager: ["Wager"],
-      final: ["Final"]
+      final: ["Final"],
+      tiebreaker: ["Tiebreaker"]
     };
 
     setSecondSelectOptions(optionsMap[value] || []);
@@ -44,7 +45,7 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
   return (
     <div>
       <Form onSubmit={handleSubmit}>
-        <div className="flex gap-4 w-screen">
+        <div className="flex gap-4 w-full">
           {/* First Select */}
           <Select
             label="Round"
@@ -53,23 +54,26 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
             value={firstSelectValue}
             className="w-1/4"
           >
-            <SelectItem key="1" value="1">
+            <SelectItem key="1">
               Round 1
             </SelectItem>
-            <SelectItem key="2" value="2">
+            <SelectItem key="2">
               Round 2
             </SelectItem>
-            <SelectItem key="3" value="3">
+            <SelectItem key="3">
               Round 3
             </SelectItem>
-            <SelectItem key="impossible" value="impossible">
+            <SelectItem key="impossible">
               Impossible
             </SelectItem>
-            <SelectItem key="wager" value="wager">
+            <SelectItem key="wager">
               Wager
             </SelectItem>
-            <SelectItem key="final" value="final">
+            <SelectItem key="final">
               Final
+            </SelectItem>
+            <SelectItem key="tiebreaker">
+              Tiebreaker
             </SelectItem>
           </Select>
 
@@ -83,7 +87,7 @@ const RoundSelects = ({ onSubmit }: { onSubmit: (round: string, question: string
             className="w-1/4"
           >
             {secondSelectOptions.map((option) => (
-              <SelectItem key={option} value={option}>
+              <SelectItem key={option}>
                 {option}
               </SelectItem>
             ))}
