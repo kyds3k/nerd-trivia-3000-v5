@@ -281,7 +281,7 @@ export default function Question() {
             transition={{ duration: 0.5, ease: "easeInOut" }} // Smooth transition
             className="mt-6 w-full"
           >
-            <p className="text-2xl flex">{loadingQuote}</p>
+            <div className="text-2xl flex [&_p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(loadingQuote || "") }} />
           </motion.div>
         )}
       </div>

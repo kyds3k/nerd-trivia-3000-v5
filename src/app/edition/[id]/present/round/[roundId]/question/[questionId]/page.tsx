@@ -385,7 +385,7 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
                 )}
               </div>
             ) : (
-              <p className="text-4xl flex">{loadingQuote}</p>
+              <div className="text-4xl flex [&_p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(loadingQuote || "") }} />
             )}
           </div>
           <div className="embla__slide p-4 h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-6 overflow-hidden">
