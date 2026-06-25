@@ -17,8 +17,6 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
   const [loading, setLoading] = useState<boolean>(false);
   const submittingRef = useRef(false);
 
-  const [teamName, setTeamName] = useState<string | null>(null);
-
   usePrimeDirectives("directives", editionId, teamId);
 
   const onNotification = useCallback((message: string, team: string) => {
@@ -112,51 +110,30 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
 
     setLoading(true);
     try {
-      pb.autoCancellation(false);
-
-      // Get the active tiebreaker question to link the answer to it.
-      const tiebreakerList = await pb.collection('tiebreakers').getFullList({
-        filter: 'is_active=true'
+      // Server finds the active tiebreaker, validates the team, dedups, and
+      // writes the answer as superuser. The browser no longer writes `answers`.
+      const res = await fetch("/api/play/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({
+          editionId,
+          teamId,
+          answerType: "tiebreaker",
+          data: { answer: numericAnswer },
+        }),
       });
-      const tiebreakerRecord = tiebreakerList[0];
 
-      if (!tiebreakerRecord) {
-        toast.error("No active tiebreaker found.");
-        setLoading(false);
-        submittingRef.current = false;
-        return;
-      }
-
-      // Duplicate guard: one tiebreaker answer per team (reconnect / double-click).
-      const existing = await pb.collection("answers").getList(1, 1, {
-        filter: `edition_id = "${editionId}" && answer_type = "tiebreaker" && tiebreaker_id = "${tiebreakerRecord.id}" && team_id = "${teamId}"`,
-      });
-      if (existing.items.length > 0) {
+      if (res.ok) {
         setSubmitted(true);
-        setLoading(false);
-        return;
+        sendMessage("answer", "A team submitted their tiebreaker answer!", teamId);
+      } else {
+        const json = await res.json().catch(() => ({}));
+        console.error("Failed to submit tiebreaker:", json);
+        toast.error(json?.error || "Failed to submit answer. Please try again.");
       }
-
-      // Fetch team details to include in the answer
-      const teamRecord = await pb.collection('teams').getOne(teamId as string);
-      setTeamName(teamRecord.team_name);
-
-      const data = {
-        edition_id: editionId,
-        team_id: teamId,
-        team_name: teamRecord.team_name,
-        team_identifier: teamRecord.team_identifier,
-        answer: numericAnswer, // This is a string field in DB but we treat it as number
-        answer_type: "tiebreaker",
-        round_number: "tiebreaker", // or null
-        question_number: "1", // assuming 1 for now
-        tiebreaker_id: tiebreakerRecord.id
-      };
-
-      await pb.collection("answers").create(data);
-
-      setSubmitted(true);
-      sendMessage("answer", `${teamRecord.team_name} submitted an answer!`, teamId);
     } catch (error) {
       console.error("Failed to submit answer:", error);
       toast.error("Failed to submit answer. Please try again.");

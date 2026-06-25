@@ -91,39 +91,30 @@ export default function Wager() {
     if (submittingRef.current || wagerSubmitted) return;
     submittingRef.current = true;
     try {
-      pb.autoCancellation(false);
-
-      // Duplicate guard: one wager per team (reconnect / double-click).
-      const existing = await pb.collection("wagers").getList(1, 1, {
-        filter: `edition_id = "${editionId}" && team_id = "${teamId}"`,
+      // Server validates team/edition + active wager round, checks the wager is
+      // within the team's points, dedups, and writes as superuser.
+      const res = await fetch("/api/play/wager", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({ editionId, teamId, data }),
       });
-      if (existing.items.length > 0) {
+
+      if (res.ok) {
+        localStorage.setItem("wagerSubmitted", "true");
         setWagerSubmitted(true);
         setShowForm(false);
-        return;
-      }
-
-      data.edition_id = editionId;
-      data.team_id = teamId;
-      data.team_name = teamName;
-      pb.autoCancellation(false);
-
-      const answer = await pb.collection("wagers").create(data);
-      console.log("Wager submitted:", answer);
-      localStorage.setItem("wagerSubmitted", "true");
-      setWagerSubmitted(true);
-      setShowForm(false);
-      sendMessage("answer", `${teamName} submitted their wager!`, `$teamId`);
-    } catch (error: any) {
-      const responseData = error?.response?.data;
-      if (
-        error?.status === 400 &&
-        responseData?.id?.code === "validation_not_unique"
-      ) {
-        console.error("Failed to submit answer: The ID already exists.");
+        sendMessage("answer", `${teamName} submitted their wager!`, `$teamId`);
       } else {
-        console.error("Failed to submit answer:", error);
+        const json = await res.json().catch(() => ({}));
+        console.error("Failed to submit wager:", json);
+        toast.error(json?.error || "Failed to submit wager. Please try again.");
       }
+    } catch (error) {
+      console.error("Failed to submit wager:", error);
+      toast.error("Failed to submit wager. Please try again.");
     } finally {
       submittingRef.current = false;
     }

@@ -92,44 +92,36 @@ export default function Question() {
     if (submittingRef.current || answerSubmitted) return;
     submittingRef.current = true;
     try {
-      pb.autoCancellation(false);
-
-      // Duplicate guard: one impossible answer per team (reconnect / double-click).
-      const existing = await pb.collection("answers").getList(1, 1, {
-        filter: `edition_id = "${editionId}" && answer_type = "impossible" && impossible_number = "${impossibleId}" && team_id = "${teamId}"`,
+      // Server validates team/edition + active round, dedups, and writes as
+      // superuser. The browser no longer writes `answers` directly.
+      const res = await fetch("/api/play/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({
+          editionId,
+          teamId,
+          answerType: "impossible",
+          impossibleNumber: impossibleId,
+          data,
+        }),
       });
-      if (existing.items.length > 0) {
+
+      if (res.ok) {
+        localStorage.setItem("answerSubmitted", "true");
         setAnswerSubmitted(true);
         setShowForm(false);
-        return;
-      }
-
-      data.edition_id = editionId;
-      data.team_id = teamId;
-      data.answer_type = "impossible";
-      data.team_identifier = teamIdentifier;
-      data.team_name = teamName;
-      data.impossible_number = impossibleId;
-      data.team_name_lower = teamName?.toLowerCase();
-
-      console.log("Submitting answer:", data);
-
-      const answer = await pb.collection("answers").create(data);
-      console.log("Answer submitted:", answer);
-      localStorage.setItem("answerSubmitted", "true");
-      setAnswerSubmitted(true);
-      setShowForm(false);
-      sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
-    } catch (error: any) {
-      const responseData = error?.response?.data;
-      if (
-        error?.status === 400 &&
-        responseData?.id?.code === "validation_not_unique"
-      ) {
-        console.error("Failed to submit answer: The ID already exists.");
+        sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
       } else {
-        console.error("Failed to submit answer:", error);
+        const json = await res.json().catch(() => ({}));
+        console.error("Failed to submit answer:", json);
+        toast.error(json?.error || "Failed to submit answer. Please try again.");
       }
+    } catch (error) {
+      console.error("Failed to submit answer:", error);
+      toast.error("Failed to submit answer. Please try again.");
     } finally {
       submittingRef.current = false;
     }
