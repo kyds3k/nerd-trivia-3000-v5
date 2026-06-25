@@ -239,7 +239,7 @@ export default function Question() {
           {questionActive ? (
             <span ref={el} className="text-2xl"></span>
           ) : (
-            <p className="text-2xl flex">{loadingQuote}</p>
+            <div className="text-2xl flex [&_p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(loadingQuote || "") }} />
           )}
         </motion.div>
       </div>

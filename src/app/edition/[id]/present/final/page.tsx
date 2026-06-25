@@ -337,7 +337,7 @@ export default function Question({ params: paramsPromise }: { params: Promise<{ 
                 )}
               </div>
             ) : (
-              <p className="text-2xl flex">{loadingQuote}</p>
+              <div className="text-2xl flex [&_p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(loadingQuote || "") }} />
             )}
           </div>
 

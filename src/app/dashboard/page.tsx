@@ -423,6 +423,13 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+        <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt mb-10">
+          <h2 className="text-2xl mb-8">Game Content</h2>
+          <div className="flex flex-wrap gap-4">
+            <Button className="w-fit" as={Link} href="/tiebreakers">Add Tiebreakers</Button>
+            <Button className="w-fit" as={Link} href="/quotes">Add Quotes</Button>
+          </div>
+        </div>
         <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt">
           <h2 className="text-2xl mb-8">I/O</h2>
           <div className="flex flex-col gap-4">
