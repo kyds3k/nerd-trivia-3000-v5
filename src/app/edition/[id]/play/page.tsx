@@ -62,27 +62,33 @@ export default function EditionPage() {
 
   const submitTeam = async (data: any) => {
     try {
-      pb.autoCancellation(false)
+      // Team creation goes through the server (superuser): it enforces name
+      // uniqueness and generates the team identifier. The browser can't write
+      // `teams` directly anymore.
+      const res = await fetch("/api/play/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({ action: "create", editionId, teamName: data.team_name, userEmail }),
+      });
+      const json = await res.json().catch(() => ({}));
 
-      // add "team_name_lower" field to data
-      data.team_name_lower = data.team_name.toLowerCase();
-      data.current_edition = editionId;
-
-      const exists = await pb.collection("teams").getList(1, 100, { filter: `team_name_lower = "${data.team_name_lower}"` });
-      console.log("Team exists:", exists);
-      if (exists.totalItems > 0) {
-        setSubmitResults(true);
-        setTeamExists(true);
-        return;
-      } else {
-        const team = await pb.collection("teams").create(data);
-        console.log("Team created:", team);
+      if (res.ok && json.ok) {
         setSubmitResults(true);
         setTeamCreated(true);
-        sendMessage("team", `A new team! ${data.team_name} has joined the fray!`, team.id);
+        sendMessage("team", `A new team! ${json.teamName} has joined the fray!`, json.teamId);
         setTimeout(() => {
-          router.push(`/edition/${editionId}/play/${team.id}`);
+          router.push(`/edition/${editionId}/play/${json.teamId}`);
         }, 4000);
+      } else if (res.status === 409 || json.error === "exists") {
+        setSubmitResults(true);
+        setTeamExists(true);
+      } else {
+        console.log("Failed to create team:", json);
+        setSubmitResults(true);
+        setTeamExists(true);
       }
     } catch (error) {
       console.log("Failed to create team:", error);
@@ -92,27 +98,29 @@ export default function EditionPage() {
   const captainTeam = async (data: any) => {
     setTeamSearched(true);
     try {
-      pb.autoCancellation(false)
-      let team = await pb.collection('teams').getFirstListItem(`team_identifier = "${data.team_identifier}"`);
-      if (team) {
+      // Captaining (re-pointing an existing team at this edition) is handled
+      // server-side; the browser can't update `teams` directly anymore.
+      const res = await fetch("/api/play/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({ action: "captain", editionId, teamIdentifier: data.team_identifier }),
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (res.ok && json.ok) {
         setSearchResults(true);
         setTeamFound(true);
-        sendMessage("team", `Team ${team.team_name} is back for more!`, team.id);
-        // update current_edition field in team
-        try {
-          const updatedTeam = await pb.collection('teams').update(team.id, {
-            current_edition: editionId
-          });
-          console.log("Team updated:", updatedTeam);
-          setTimeout(() => {
-            router.push(`/edition/${editionId}/play/${team.id}`);
-          }, 3000);
-        } catch (error) {
-          console.log("Failed to update team:", error);
-        }
+        sendMessage("team", `Team ${json.teamName} is back for more!`, json.teamId);
+        setTimeout(() => {
+          router.push(`/edition/${editionId}/play/${json.teamId}`);
+        }, 3000);
+      } else {
+        setSearchResults(true);
+        setTeamFound(false);
       }
-
-
     } catch (error) {
       setSearchResults(true);
       setTeamFound(false);

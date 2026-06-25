@@ -99,9 +99,6 @@ export function useAuth({ requireAuth = true }: UseAuthOptions = {}): AuthState 
     setIsAdmin(false);
     localStorage.removeItem("google_data");
     localStorage.removeItem("pocketbase_auth");
-    localStorage.removeItem("spotifyAuthToken");
-    localStorage.removeItem("spotifyAuthTokenExpiry");
-    localStorage.removeItem("spotifyAuthRefreshToken");
     router.push("/");
   }, [pb, router]);
 

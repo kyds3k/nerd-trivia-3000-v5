@@ -88,67 +88,46 @@ export default function Question() {
   };
 
   const submitAnswer = async (data: any) => {
-    // Synchronous lock: blocks a double-click from firing two creates before the
-    // first finishes. `answerSubmitted` covers the already-done case.
+    // Synchronous lock blocks a double-click; `answerSubmitted` covers done.
     if (submittingRef.current || answerSubmitted) return;
     submittingRef.current = true;
     try {
-      pb.autoCancellation(false);
-
-      // Duplicate guard: if this team already has an answer for this question
-      // (reconnect, second device, or a race), don't create a second record.
-      const existing = await pb.collection("answers").getList(1, 1, {
-        filter: `edition_id = "${editionId}" && round_number = "${roundId}" && question_number = "${questionId}" && team_id = "${teamId}"`,
+      // Submission goes through the server, which authoritatively validates the
+      // team/edition, that the question is active, dedups, and writes the record
+      // as the superuser. The browser can no longer write `answers`/`teams`.
+      const res = await fetch("/api/play/answer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${pb.authStore.token}`,
+        },
+        body: JSON.stringify({
+          editionId,
+          teamId,
+          answerType: "regular",
+          roundNumber: roundId,
+          questionNumber: questionId,
+          banthaUsed,
+          data,
+        }),
       });
-      if (existing.items.length > 0) {
+
+      if (res.ok) {
+        localStorage.setItem("answerSubmitted", "true");
         setAnswerSubmitted(true);
         setShowForm(false);
-        return;
-      }
-
-      data.edition_id = editionId;
-      data.answer_type = "regular";
-      data.team_identifier = teamIdentifier;
-      data.team_name = teamName;
-      data.team_id = teamId;
-      data.round_number = roundId;
-      data.question_number = questionId;
-      data.bantha_used = banthaUsed;
-      data.team_name_lower = teamName?.toLowerCase();
-      // Music artist is optional; default to "<none>" when left blank.
-      if (!data.music_answer || String(data.music_answer).trim() === "") {
-        data.music_answer = "<none>";
-      }
-      const answer = await pb.collection("answers").create(data);
-      console.log("Answer submitted:", answer);
-      localStorage.setItem("answerSubmitted", "true");
-
-      if (banthaUsed) {
-        try {
-          const updatedTeam = await pb.collection("teams").update(`${teamId}`, { banthashit_card: false });
-          console.log("Banthashit card updated:", updatedTeam);
-        } catch (error) {
-          console.error("Failed to update banthashit card:", error);
-        }
-      }
-
-      setAnswerSubmitted(true);
-      setShowForm(false);
-      sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
-    } catch (error: any) {
-      const responseData = error?.response?.data;
-      if (
-        error?.status === 400 &&
-        responseData?.id?.code === "validation_not_unique"
-      ) {
-        console.error("Failed to submit answer: The ID already exists.");
+        sendMessage("answer", `${teamName} submitted an answer!`, `$teamId`);
       } else {
-        console.error("Failed to submit answer:", error);
+        const json = await res.json().catch(() => ({}));
+        console.error("Failed to submit answer:", json);
+        toast.error(json?.error || "Failed to submit answer. Please try again.");
       }
+    } catch (error) {
+      console.error("Failed to submit answer:", error);
+      toast.error("Failed to submit answer. Please try again.");
     } finally {
       submittingRef.current = false;
     }
-
   };
 
   const sendMessage = async (type: string | null, message: string | null, team: string | null) => {

@@ -55,9 +55,6 @@ export default function DashboardPage() {
     getPocketbaseClient().authStore.clear();
     localStorage.removeItem("pocketbase_auth");
     localStorage.removeItem("google_data");
-    localStorage.removeItem("spotifyAuthToken");
-    localStorage.removeItem("spotifyAuthTokenExpiry");
-    localStorage.removeItem("spotifyAuthRefreshToken");
     setGoogleAuth(false);
     router.push("/");
   }
