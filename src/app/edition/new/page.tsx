@@ -531,8 +531,8 @@ export default function NewEditionPage() {
           <rect x="18" y="15" width="6" height="3" />
         </svg>
       </button>
-      <div className="p-10">
-        <div className="absolute top-10 right-10 flex gap-4">
+      <div className="p-4 md:p-10">
+        <div className="flex flex-wrap gap-3 mb-4 md:mb-0 md:absolute md:top-10 md:right-10">
           <Button
             color="secondary" // or "primary" to make it stand out
             onPress={handleSaveProgress}

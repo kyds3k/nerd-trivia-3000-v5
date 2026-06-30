@@ -368,7 +368,7 @@ export default function DashboardPage() {
       </Modal>
 
       <div className="p-10 w-full">
-        <h1 className="text-5xl mb-10 text-center">Welcome to the <span className="font-linebeam text-5xl uppercase text-glow-blue-400">Nerd Trivia 3000</span> Admin Terminal</h1>
+        <h1 className="text-3xl md:text-5xl mb-10 text-center">Welcome to the <span className="font-linebeam text-3xl md:text-5xl uppercase text-glow-blue-400">Nerd Trivia 3000</span> Admin Terminal</h1>
         <div data-augmented-ui="tl-clip t-clip-xy bl-clip r-clip-xy both" className="p-4 md:p-10 w-full nerd-aug bluecard bluecard__alt mb-10">
           <h2 className="text-2xl mb-8">Editions</h2>
           <div className="ml-4">
@@ -388,7 +388,7 @@ export default function DashboardPage() {
                   <li key={edition.id} className="mb-8">
                     <strong>{edition.title}</strong> -{" "}
                     {new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(edition.date))}
-                    <div className="my-4 flex gap-2">
+                    <div className="my-4 flex flex-wrap gap-2">
                       {!edition.isWip && (
                         <Button onPress={() => handlePresent(edition.id)}>Present</Button>
                       )}
@@ -408,7 +408,7 @@ export default function DashboardPage() {
 
                       {/* CONDITIONALLY CALL THE CORRECT DELETE FUNCTION */}
                       <Button
-                        className="mx-6"
+                        className="md:ml-6"
                         color="danger"
                         onClick={() => edition.isWip ? handleDeleteWip(edition.id) : handleDelete(edition.id)}
                       >

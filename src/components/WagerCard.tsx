@@ -19,7 +19,7 @@ export default function WagerCard({ wager, onSubmit }: WagerProps) {
   };
 
   return (
-    <div className="relative w-1/3 max-w-80">
+    <div className="relative w-full sm:w-1/2 lg:w-1/3 max-w-full sm:max-w-80">
       <Card className="bg-gray-600" key={wager.id}>
         <Form
           id={wager.id}

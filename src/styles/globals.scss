@@ -12,9 +12,13 @@ html, body {
   height: 100%;
 }
 
+html {
+  background: var(--background);
+}
+
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: transparent;
   word-spacing: .3rem;
 }
 
@@ -24,11 +28,18 @@ body {
   background-color: black !important;
 }
 
-.grid-bg {
+/* Grid backdrop pinned to the bottom of the viewport on every device.
+   Uses a fixed pseudo-element instead of `background-attachment: fixed`,
+   which mobile browsers ignore (which made the grid drift up the page). */
+.grid-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-  url("/images/vector-smallest.png") bottom center no-repeat;
+    url("/images/vector-smallest.png") bottom center no-repeat;
   background-size: cover;
-  background-attachment: fixed;
 }
 
 .neonBorder {

@@ -53,8 +53,8 @@ export default function HomePage() {
   }, [isAuthenticated, isAdmin]);
 
   return (
-    <div className="p-4 pb-10 md:p-10 w-screen flex flex-col pt-10 md:pt-0 md:justify-center items-center h-svh">
-      <h1 className="font-linebeam text-6xl flex md:text-8xl text-center text-glow-blue-400 mb-10 uppercase">Nerd Trivia 3000</h1>
+    <div className="p-4 pb-10 md:p-10 w-full flex flex-col pt-10 md:pt-0 md:justify-center items-center h-svh">
+      <h1 className="font-linebeam text-5xl flex md:text-8xl text-center text-glow-blue-400 mb-10 uppercase">Nerd Trivia 3000</h1>
       {isAuthenticated ? (
         <>
           <div className="user flex items-center gap-4 mb-4">
@@ -73,9 +73,8 @@ export default function HomePage() {
             </Link>
             {isAdmin && (
               <Button
-                as={Link}
                 className="w-fit"
-                href="/dashboard">Admin Dashboard
+                onPress={() => router.push("/dashboard")}>Admin Dashboard
               </Button>
             )}
             <Button

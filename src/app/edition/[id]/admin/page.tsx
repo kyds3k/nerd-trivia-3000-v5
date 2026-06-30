@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import useEffectOnce from "react-use/lib/useEffectOnce";
-import { Button, Image, Link, Tabs, Tab, Form, Select, Switch, cn } from "@heroui/react";
-import { useParams } from "next/navigation";
+import { Button, Image, Tabs, Tab, Form, Select, Switch, cn } from "@heroui/react";
+import { useParams, useRouter } from "next/navigation";
 import { getPocketbaseClient } from '@/lib/pocketbase';
 import { getPusherClient } from "@/lib/pusher/client";
 import Scoring from '@/components/Scoring';
@@ -34,6 +34,7 @@ export default function Admin() {
   const pb = getPocketbaseClient();
 
   const params = useParams();
+  const router = useRouter();
   const editionId = typeof params?.id === "string" ? params.id : undefined;
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [editionTitle, setEditionTitle] = useState<string>("");
@@ -463,9 +464,9 @@ export default function Admin() {
         </>
       ) : (
         <>
-          <div className="flex w-full justify-between items-center">
-            <h1 className='text-4xl mb-4'><span className="font-linebeam text-5xl mr-3 text-glow-blue-400">NERD TRIVIA 3000</span> Admin - {editionTitle}</h1>
-            <Button as={Link} href="/dashboard">Return to Dashboard</Button>
+          <div className="flex flex-col gap-3 mb-2 md:flex-row md:w-full md:justify-between md:items-center">
+            <h1 className='text-2xl md:text-4xl'><span className="font-linebeam text-3xl md:text-5xl md:mr-3 text-glow-blue-400">NERD TRIVIA 3000</span> Admin - {editionTitle}</h1>
+            <Button onPress={() => router.push("/dashboard")} className="w-fit shrink-0">Return to Dashboard</Button>
           </div>
           <Tabs
             aria-label='Admin Tabs'
@@ -478,7 +479,7 @@ export default function Admin() {
               <SubmissionTracker editionId={editionId} activeButton={activeButton} />
               <div className='md:px-4 pt-0 pb-4 mb-3'>
                 <h3 className='text-3xl mb-2'>Rounds</h3>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   {/* Round Buttons */}
                   {['1', '2', '3'].map(round => {
                     const identifier = `round_${round}`;
@@ -500,7 +501,8 @@ export default function Admin() {
                 <h3 className='text-3xl mb-2'>Questions</h3>
                 <Tabs
                   aria-label="Question Sections"
-                  className="mt-2"
+                  className="mt-2 max-w-full"
+                  classNames={{ tabList: "flex-wrap md:flex-nowrap md:overflow-x-auto max-w-full" }}
                   selectedKey={questionSection}
                   onSelectionChange={(k) => setQuestionSection(String(k))}
                 >
@@ -517,7 +519,7 @@ export default function Admin() {
                     <Tab key={item.title} title={item.title}>
                       <div className="flex flex-col gap-4 pt-4">
                         {item.type === 'round' && item.number && (
-                          <div className="flex gap-6">
+                          <div className="flex flex-wrap gap-4 md:gap-6">
                             {[...Array(5)].map((_, questionIndex) => {
                               const questionNumber = questionIndex + 1;
                               const key = `switchR${item.number}Q${questionNumber}`;

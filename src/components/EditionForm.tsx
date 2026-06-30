@@ -109,7 +109,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
             <h3 className="mb-8 text-2xl">Landing Page</h3>
 
             <div className="ml-4">
-              <div className="mb-4 w-1/2">
+              <div className="mb-4 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="edition_title">
                   Title:
                 </label>
@@ -136,7 +136,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="edition_date"
                 />
               </div>
-              <div className="mb-4 w-1/2">
+              <div className="mb-4 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="edition_blurb">
                   Blurb:
                 </label>
@@ -150,7 +150,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 />
               </div>
               <div className="mb-4 w-full flex flex-col gap-8">
-                <div className="gif-input w-1/2">
+                <div className="gif-input w-full md:w-1/2">
                   <label className="mb-2 block" htmlFor="edition_gif">
                     Edition GIF:
                   </label>
@@ -169,7 +169,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     {showEditionGifPicker ? "Hide GIF Picker" : "Select GIF"}
                   </Button>
                   {showEditionGifPicker && (
-                    <div className="gif-picker flex gap-4 mt-2">
+                    <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                       <GifPicker
                         onGifClick={(gif) => updateField("editionGif")(gif.url)}
                         width={500}
@@ -188,7 +188,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   )}
                 </div>
                 {/* Landing Page Song input */}
-                <div className="song-input w-1/2">
+                <div className="song-input w-full md:w-1/2">
                   <label className="mb-2 block" htmlFor="home_song">
                     Landing Page Song
                   </label>
@@ -223,7 +223,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showR1GifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showR1GifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("r1Gif")(gif.url)}
                       width={500}
@@ -250,7 +250,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <div className="w-1/2 mb-2">
+                  <div className="w-full md:w-1/2 mb-2">
                     <AppleMusicSearch
                       initialValue={editionData.round1SongsApple?.[index]}
                       onSelect={(track) => updateArrayItem("round1SongsApple", index, track.id)}
@@ -268,7 +268,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     data-identifier={`r1g${index + 1}`}
                     type="text"
                     data-type="gif"
-                    className="w-1/2 mb-6"
+                    className="w-full md:w-1/2 mb-6"
                     value={editionData.round1AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("round1AnswerGifs", index, newVal)}
                   />
@@ -294,7 +294,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                         data-identifier={`bantha_answer_gif`}
                         type="text"
                         data-type="gif"
-                        className="w-1/2 mb-6"
+                        className="w-full md:w-1/2 mb-6"
                         value={editionData.banthaAnswerGif}
                         onValueChange={updateField("banthaAnswerGif")}
                       />
@@ -325,7 +325,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i1_intro_gif"
                   type="text"
                   data-type="gif"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp1IntroGif}
                   onValueChange={updateField("imp1IntroGif")}
                 />
@@ -333,7 +333,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showImp1IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showImp1IntroGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp1IntroGif")(gif.url)}
                       width={500}
@@ -357,7 +357,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i1_theme"
                   data-type="text"
                   type="text"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp1Theme}
                   onValueChange={updateField("imp1Theme")}
                 />
@@ -369,7 +369,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i1_gif"
                   type="text"
                   data-type="gif"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp1Gif}
                   onValueChange={updateField("imp1Gif")}
                 />
@@ -380,7 +380,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showImp1ThemeGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showImp1ThemeGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp1Gif")(gif.url)}
                       width={500}
@@ -431,7 +431,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
-                        <div className="w-1/2">
+                        <div className="w-full md:w-1/2">
                           <AppleMusicSearch
                             key={`imp1_song_${index}`}
                             initialValue={editionData.imp1SongsApple?.[index] || ""}
@@ -505,7 +505,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                           data-identifier={`i1a${index + 1}_gif`}
                           data-type="gif"
                           type="text"
-                          className="w-1/2"
+                          className="w-full md:w-1/2"
                           value={editionData.imp1AnswerGifs[index] || ""}
                           onValueChange={(newGif: string) => updateArrayItem("imp1AnswerGifs", index, newGif)}
                         />
@@ -546,7 +546,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showR2GifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showR2GifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("r2Gif")(gif.url)}
                       width={500}
@@ -572,7 +572,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <div className="w-1/2 mb-2">
+                  <div className="w-full md:w-1/2 mb-2">
                     <AppleMusicSearch
                       initialValue={editionData.round2SongsApple?.[index]}
                       onSelect={(track) => updateArrayItem("round2SongsApple", index, track.id)}
@@ -590,11 +590,11 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     data-identifier={`r2g${index + 1}`}
                     type="text"
                     data-type="gif"
-                    className="w-1/2 mb-6"
+                    className="w-full md:w-1/2 mb-6"
                     value={editionData.round2AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("round2AnswerGifs", index, newVal)}
                   />
-                  <div className="gif-picker flex gap-4">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto">
                     <GifAnswerPickerToggle
                       show={editionData.round2AnswerGifs?.[index]}
                       onToggle={(_show: boolean) => updateArrayItem("round2AnswerGifs", index, _show)}
@@ -623,7 +623,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i2_intro_gif"
                   type="text"
                   data-type="gif"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp2IntroGif}
                   onValueChange={updateField("imp2IntroGif")}
                 />
@@ -631,7 +631,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showImp2IntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showImp2IntroGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp2IntroGif")(gif.url)}
                       width={500}
@@ -655,7 +655,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i2_theme"
                   data-type="text"
                   type="text"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp2Theme}
                   onValueChange={updateField("imp2Theme")}
                 />
@@ -667,7 +667,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   data-identifier="i2_gif"
                   type="text"
                   data-type="gif"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.imp2Gif}
                   onValueChange={updateField("imp2Gif")}
                 />
@@ -678,7 +678,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showImp2ThemeGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showImp2ThemeGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("imp2Gif")(gif.url)}
                       width={500}
@@ -732,7 +732,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     <div key={index}>
                       <div className="mb-4">
                         <h4 className="mb-2">Song {index + 1}</h4>
-                        <div className="w-1/2">
+                        <div className="w-full md:w-1/2">
                           <AppleMusicSearch
                             key={`imp2_song_${index}`}
                             initialValue={editionData.imp2SongsApple?.[index] || ""}
@@ -803,7 +803,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                           data-identifier={`i2a${index + 1}_gif`}
                           data-type="gif"
                           type="text"
-                          className="w-1/2"
+                          className="w-full md:w-1/2"
                           value={editionData.imp2AnswerGifs[index] || ""}
                           onValueChange={(newGif: string) => updateArrayItem("imp2AnswerGifs", index, newGif)}
                         />
@@ -848,7 +848,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showR3GifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showR3GifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("r3Gif")(gif.url)}
                       width={500}
@@ -875,7 +875,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     classes="tiptap p-4 mb-6 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc"
                   />
                   <h3 className="mb-2">Song</h3>
-                  <div className="w-1/2 mb-2">
+                  <div className="w-full md:w-1/2 mb-2">
                     <AppleMusicSearch
                       initialValue={editionData.round3SongsApple?.[index]}
                       onSelect={(track) => updateArrayItem("round3SongsApple", index, track.id)}
@@ -893,7 +893,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                     data-identifier={`r3g${index + 1}`}
                     type="text"
                     data-type="gif"
-                    className="w-1/2 mb-6"
+                    className="w-full md:w-1/2 mb-6"
                     value={editionData.round3AnswerGifs?.[index] || ""}
                     onValueChange={(newVal) => updateArrayItem("round3AnswerGifs", index, newVal)}
                   />
@@ -918,7 +918,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
           <Tab key="wager" title="Wager">
             <h3 className="mb-8 text-2xl">Wager</h3>
             <div className="ml-5">
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="wager_gif">
                   Wager Intro GIF:
                 </label>
@@ -936,7 +936,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showWagerIntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showWagerIntroGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("wagerGif")(gif.url)}
                       width={500}
@@ -954,7 +954,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 )}
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="final_category">
                   Final Category:
                 </label>
@@ -967,7 +967,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 />
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="final_cat_gif">
                   Final Category GIF:
                 </label>
@@ -985,7 +985,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showFinalCategoryGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showFinalCategoryGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("finalCatGif")(gif.url)}
                       width={500}
@@ -1003,7 +1003,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 )}
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="wager_placing_gif">
                   Wager Placing GIF:
                 </label>
@@ -1021,7 +1021,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showWagerPlacingGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showWagerPlacingGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif: any) => updateField("wagerPlacingGif")(gif.url)}
                       width={500}
@@ -1039,7 +1039,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 )}
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="wager_song">
                   Wager Placing Song:
                 </label>
@@ -1057,7 +1057,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
 
             <div className="ml-5">
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="final_intro_gif">
                   Final Question Intro GIF:
                 </label>
@@ -1075,7 +1075,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showFinalIntroGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showFinalIntroGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("finalIntroGif")(gif.url)}
                       width={500}
@@ -1103,12 +1103,12 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 <Tiptap state={editionData.finalAnswer || ""} setState={updateField("finalAnswer")} identifier="final_answer" classes="tiptap p-4 w-full bg-editor-bg text-white rounded-xl min-h-48 prose max-w-none [&_ol]:list-decimal [&_ul]:list-disc" />
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <h4 className="mb-2">Answer GIF:</h4>
                 <Input
                   data-identifier="final_answer_gif"
                   data-type="gif"
-                  className="w-1/2"
+                  className="w-full md:w-1/2"
                   value={editionData.finalAnswerGif}
                   onValueChange={updateField("finalAnswerGif")}
                 />
@@ -1119,7 +1119,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showFinalAnswerGifPicker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showFinalAnswerGifPicker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif: any) => updateField("finalAnswerGif")(gif.url)}
                       width={500}
@@ -1139,7 +1139,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
 
               <div className="mb-8">
                 <h4 className="mb-2">Song:</h4>
-                <div className="w-1/2">
+                <div className="w-full md:w-1/2">
                   <AppleMusicSearch
                     initialValue={editionData.finalSongApple}
                     onSelect={(track) => updateField("finalSongApple")(track.id)}
@@ -1147,7 +1147,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 </div>
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="edition_end_gif_1">
                   End GIF 1:
                 </label>
@@ -1165,7 +1165,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showEndGif1Picker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showEndGif1Picker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("endGif1")(gif.url)}
                       width={500}
@@ -1183,7 +1183,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                 )}
               </div>
 
-              <div className="mb-8 w-1/2">
+              <div className="mb-8 w-full md:w-1/2">
                 <label className="mb-2 block" htmlFor="edition_end_gif_2">
                   End GIF 2:
                 </label>
@@ -1201,7 +1201,7 @@ export default function EditionForm({ editionData, setEditionData, parsedDate, o
                   {showEndGif2Picker ? "Hide GIF Picker" : "Select GIF"}
                 </Button>
                 {showEndGif2Picker && (
-                  <div className="gif-picker flex gap-4 mt-2">
+                  <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
                     <GifPicker
                       onGifClick={(gif) => updateField("endGif2")(gif.url)}
                       width={500}
@@ -1236,7 +1236,7 @@ function GifAnswerPickerToggle({ show, onToggle, gifUrl, onGifPick, gifInputsRef
         {open ? "Hide GIF Picker" : "Select GIF"}
       </Button>
       {open && (
-        <div className="gif-picker flex gap-4 mt-2">
+        <div className="gif-picker flex flex-col md:flex-row gap-4 max-w-full overflow-x-auto mt-2">
           <GifPicker
             onGifClick={(gif: any) => {
               onGifPick(gif);

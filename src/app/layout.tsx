@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import "../styles/globals.scss";
@@ -51,6 +51,11 @@ const linebeam = localFont({
 export const metadata: Metadata = {
 	title: "Nerd Trivia 3000",
 	description: "Trivia for nerds, by a nerd.",
+};
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
 };
 
 export default function RootLayout({
