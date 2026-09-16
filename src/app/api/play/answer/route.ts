@@ -65,7 +65,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Team is not registered for this edition" }, { status: 403 });
     }
 
-    const idF = `edition_id = "${editionId}" && team_id = "${teamId}"`;
     const record: Record<string, unknown> = {
       edition_id: editionId,
       team_id: teamId,
@@ -86,7 +85,11 @@ export async function POST(req: Request) {
         q = await pb
           .collection("questions")
           .getFirstListItem(
-            `edition_id = "${editionId}" && round_number = ${Number(roundNumber)} && question_number = ${Number(questionNumber)}`
+            pb.filter("edition_id = {:editionId} && round_number = {:roundNumber} && question_number = {:questionNumber}", {
+              editionId,
+              roundNumber: Number(roundNumber),
+              questionNumber: Number(questionNumber),
+            })
           );
       } catch {
         return NextResponse.json({ error: "Question not found" }, { status: 404 });
@@ -103,7 +106,12 @@ export async function POST(req: Request) {
       if (typeof data.bantha_answer === "string" && data.bantha_answer.trim() !== "") {
         record.bantha_answer = data.bantha_answer;
       }
-      dedupFilter = `${idF} && round_number = "${roundNumber}" && question_number = "${questionNumber}"`;
+      dedupFilter = pb.filter("edition_id = {:editionId} && team_id = {:teamId} && round_number = {:roundNumber} && question_number = {:questionNumber}", {
+        editionId,
+        teamId,
+        roundNumber: String(roundNumber),
+        questionNumber: String(questionNumber),
+      });
     } else if (answerType === "impossible") {
       if (impossibleNumber == null) {
         return NextResponse.json({ error: "Missing impossible number" }, { status: 400 });
@@ -112,7 +120,12 @@ export async function POST(req: Request) {
       try {
         q = await pb
           .collection("impossible_rounds")
-          .getFirstListItem(`edition_id = "${editionId}" && impossible_number = ${Number(impossibleNumber)}`);
+          .getFirstListItem(
+            pb.filter("edition_id = {:editionId} && impossible_number = {:impossibleNumber}", {
+              editionId,
+              impossibleNumber: Number(impossibleNumber),
+            })
+          );
       } catch {
         return NextResponse.json({ error: "Impossible round not found" }, { status: 404 });
       }
@@ -122,11 +135,16 @@ export async function POST(req: Request) {
       record.impossible_number = String(impossibleNumber);
       if (typeof data.music_answer === "string") record.music_answer = data.music_answer;
       if (typeof data.music_answer_2 === "string") record.music_answer_2 = data.music_answer_2;
-      dedupFilter = `${idF} && answer_type = "impossible" && impossible_number = "${impossibleNumber}"`;
+      dedupFilter = pb.filter("edition_id = {:editionId} && team_id = {:teamId} && answer_type = {:answerType} && impossible_number = {:impossibleNumber}", {
+        editionId,
+        teamId,
+        answerType: "impossible",
+        impossibleNumber: String(impossibleNumber),
+      });
     } else if (answerType === "final") {
       let q;
       try {
-        q = await pb.collection("final_rounds").getFirstListItem(`edition_id = "${editionId}"`);
+        q = await pb.collection("final_rounds").getFirstListItem(pb.filter("edition_id = {:editionId}", { editionId }));
       } catch {
         return NextResponse.json({ error: "Final round not found" }, { status: 404 });
       }
@@ -135,18 +153,27 @@ export async function POST(req: Request) {
       }
       record.bantha_used = false;
       if (typeof data.music_answer === "string") record.music_answer = data.music_answer;
-      dedupFilter = `${idF} && answer_type = "final"`;
+      dedupFilter = pb.filter("edition_id = {:editionId} && team_id = {:teamId} && answer_type = {:answerType}", {
+        editionId,
+        teamId,
+        answerType: "final",
+      });
     } else {
       // tiebreaker
       let tb;
       try {
-        tb = await pb.collection("tiebreakers").getFirstListItem(`is_active = true`);
+        tb = await pb.collection("tiebreakers").getFirstListItem("is_active = true");
       } catch {
         return NextResponse.json({ error: "No active tiebreaker" }, { status: 404 });
       }
       record.tiebreaker_id = tb.id;
       record.answer = answerText.replace(/,/g, "");
-      dedupFilter = `${idF} && answer_type = "tiebreaker" && tiebreaker_id = "${tb.id}"`;
+      dedupFilter = pb.filter("edition_id = {:editionId} && team_id = {:teamId} && answer_type = {:answerType} && tiebreaker_id = {:tiebreakerId}", {
+        editionId,
+        teamId,
+        answerType: "tiebreaker",
+        tiebreakerId: tb.id,
+      });
     }
 
     // Authoritative dedup — one submission per team per question.

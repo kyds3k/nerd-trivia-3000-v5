@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import DOMPurify from "dompurify";
-import { getPocketbaseClient } from "@/lib/pocketbase";
+import { getElevatableClient } from "@/lib/pocketbase";
+import { elevateAuth } from "@/lib/elevate";
 import { getAppleMusicTrack } from "@/lib/appleMusic";
 import RoundSelects from "./RoundSelects";
 import { Switch, Button, Divider, Input, Form, Checkbox } from "@heroui/react";
@@ -51,8 +52,16 @@ type HandleSelectSubmit = (round: string, question: string) => Promise<void>;
 
 export default function Scoring() {
   const params = useParams();
-  const pb = getPocketbaseClient();
+  // Stable instance across renders (in-memory auth store, elevatable on demand).
+  const pb = useMemo(() => getElevatableClient(), []);
   const editionId = typeof params?.id === "string" ? params.id : undefined;
+
+  const refreshAuthState = async () => {
+    // Elevate to a superuser session via the server, which verifies the
+    // logged-in user is an admin, before any scoring write. Mirrors the
+    // pattern used on the new/edit/dashboard pages.
+    await elevateAuth(pb);
+  };
 
   const [roundType, setRoundType] = useState<string | null>(null);
   const [currentRound, setCurrentRound] = useState<string | null>(null);
@@ -247,6 +256,7 @@ export default function Scoring() {
 
     // Compute differential points (new - previous) and apply the delta to the team.
     try {
+      await refreshAuthState();
       pb.autoCancellation(false);
 
       // For impossible rounds, fetch the per-round point value first.
@@ -285,8 +295,19 @@ export default function Scoring() {
       };
 
       const calculateFinalPoints = async (a: any): Promise<number> => {
-        const teamForWager = await pb.collection("teams").getFirstListItem(`id = "${a.team_id}"`);
-        const finalWager = teamForWager.wager || 0;
+        // Read the wager amount from the authoritative `wagers` record rather
+        // than `teams.wager`, which is only populated once the host has
+        // scored that team's Wager-round answer — scoring Final before Wager
+        // would otherwise silently compute a 0 delta regardless of the wager.
+        let finalWager = 0;
+        try {
+          const wagerRecord = await pb
+            .collection("wagers")
+            .getFirstListItem(pb.filter("edition_id = {:editionId} && team_id = {:teamId}", { editionId, teamId: a.team_id }));
+          finalWager = wagerRecord.wager || 0;
+        } catch {
+          finalWager = 0;
+        }
         let p = a.answer_correct ? finalWager : -finalWager;
         if (a.music_correct) p += 100;
         return p;
@@ -344,6 +365,7 @@ export default function Scoring() {
     updatedWager.music_correct = data.music_correct;
 
     try {
+      await refreshAuthState();
       pb.autoCancellation(false);
       // differential points for wager music bonus (100 if correct)
       const prevPoints = wager.music_correct ? 100 : 0;

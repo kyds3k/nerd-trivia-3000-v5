@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getPusherInstance } from "../../../lib/pusher/server";
+import { requireUser } from "@/lib/serverAuth";
 
 const pusherServer = getPusherInstance();
 
 export async function POST(req: Request) {
+  const user = await requireUser(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const body = await req.json();
 

@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     // Wager round must be active.
     let round;
     try {
-      round = await pb.collection("wager_rounds").getFirstListItem(`edition_id = "${editionId}"`);
+      round = await pb.collection("wager_rounds").getFirstListItem(pb.filter("edition_id = {:editionId}", { editionId }));
     } catch {
       return NextResponse.json({ error: "Wager round not found" }, { status: 404 });
     }
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     // One wager per team.
     const existing = await pb
       .collection("wagers")
-      .getList(1, 1, { filter: `edition_id = "${editionId}" && team_id = "${teamId}"` });
+      .getList(1, 1, { filter: pb.filter("edition_id = {:editionId} && team_id = {:teamId}", { editionId, teamId }) });
     if (existing.items.length > 0) {
       return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
     }

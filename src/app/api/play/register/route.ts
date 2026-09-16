@@ -8,7 +8,9 @@ async function generateUniqueIdentifier(pb: PocketBase): Promise<string> {
   for (let i = 0; i < 10; i++) {
     const attr = ATTRIBUTES[Math.floor(Math.random() * ATTRIBUTES.length)];
     const candidate = `${Math.floor(10000 + Math.random() * 90000)}-${attr}`;
-    const clash = await pb.collection("teams").getList(1, 1, { filter: `team_identifier = "${candidate}"` });
+    const clash = await pb
+      .collection("teams")
+      .getList(1, 1, { filter: pb.filter("team_identifier = {:candidate}", { candidate }) });
     if (clash.items.length === 0) return candidate;
   }
   // Extremely unlikely fallback.
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
 
       const exists = await pb
         .collection("teams")
-        .getList(1, 1, { filter: `team_name_lower = "${teamNameLower}"` });
+        .getList(1, 1, { filter: pb.filter("team_name_lower = {:teamNameLower}", { teamNameLower }) });
       if (exists.totalItems > 0) {
         return NextResponse.json({ error: "exists" }, { status: 409 });
       }
@@ -79,7 +81,9 @@ export async function POST(req: Request) {
 
     let team;
     try {
-      team = await pb.collection("teams").getFirstListItem(`team_identifier = "${teamIdentifier}"`);
+      team = await pb
+        .collection("teams")
+        .getFirstListItem(pb.filter("team_identifier = {:teamIdentifier}", { teamIdentifier }));
     } catch {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }

@@ -134,7 +134,8 @@ export default function Question() {
       const response = await fetch('/api/notify', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${pb.authStore.token}`,
         },
         body: JSON.stringify({ type, message })
       });

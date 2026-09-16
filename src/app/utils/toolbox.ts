@@ -8,6 +8,7 @@ export const sendMessage = async (type: string | null, message: string | null, t
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${getPocketbaseClient().authStore.token}`,
       },
       body: JSON.stringify({ type, message, team }),
     });

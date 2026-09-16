@@ -7,7 +7,15 @@ const path = require('path');
 const app = express();
 const PORT = 17171;
 
-app.use(cors());
+// This bridge drives a real, logged-in Apple Music session via Puppeteer with
+// no auth of its own — it's meant to be reachable only from the trivia app
+// running in a browser on this same machine. Restrict CORS to that origin
+// (configurable, since local dev and the deployed app differ) rather than
+// allowing any website's tab to POST playback commands here.
+const allowedOrigins = (process.env.BRIDGE_ALLOWED_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim());
+app.use(cors({ origin: allowedOrigins }));
 app.use(bodyParser.json());
 
 let browser = null;
@@ -250,8 +258,9 @@ app.get('/now-playing', async (req, res) => {
   }
 });
 
-// Start the server and the browser
-app.listen(PORT, () => {
+// Start the server and the browser. Bind to loopback only — this bridge has
+// no auth, so it must not be reachable from other devices on the LAN.
+app.listen(PORT, '127.0.0.1', () => {
   console.log(`Puppeteer Bridge running on http://localhost:${PORT}`);
   initBrowser();
 });

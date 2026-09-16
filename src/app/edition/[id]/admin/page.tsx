@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useEffectOnce from "react-use/lib/useEffectOnce";
 import { Button, Image, Tabs, Tab, Form, Select, Switch, cn } from "@heroui/react";
 import { useParams, useRouter } from "next/navigation";
-import { getPocketbaseClient } from '@/lib/pocketbase';
+import { getPocketbaseClient, getElevatableClient } from '@/lib/pocketbase';
+import { elevateAuth } from '@/lib/elevate';
 import { getPusherClient } from "@/lib/pusher/client";
 import Scoring from '@/components/Scoring';
 import SubmissionTracker from '@/components/SubmissionTracker';
@@ -32,6 +33,10 @@ type ActiveItem =
 
 export default function Admin() {
   const pb = getPocketbaseClient();
+  // Stable, elevatable instance for privileged writes (game-state toggles).
+  // Separate from `pb` so the persisted user session (used for reads and the
+  // /api/direct Authorization header) is never clobbered.
+  const pbElevated = useMemo(() => getElevatableClient(), []);
 
   const params = useParams();
   const router = useRouter();
@@ -285,66 +290,72 @@ export default function Admin() {
       if (round) data.round = round;
       if (question) data.question = question;
 
-      pb.autoCancellation(false);
+      // Elevate before any privileged write — game-state changes must go
+      // through an admin-verified superuser session, not the plain user
+      // client (whose writes depend entirely on PocketBase collection rules).
+      await elevateAuth(pbElevated);
+      pbElevated.autoCancellation(false);
 
       let recordId: string | null = null;
 
       if (type === 'question') {
         // Look up the specific question directly instead of pulling the whole
         // list and filtering on the client.
-        const questionRecord = await pb.collection('questions').getFirstListItem(
-          `edition_id="${editionId}" && round_number=${round} && question_number=${question}`
+        const questionRecord = await pbElevated.collection('questions').getFirstListItem(
+          pbElevated.filter('edition_id={:editionId} && round_number={:round} && question_number={:question}', { editionId, round, question })
         );
 
         recordId = questionRecord.id;
 
-        await pb.collection('questions').update(recordId, { is_active: isActive });
+        await pbElevated.collection('questions').update(recordId, { is_active: isActive });
 
         if (broadcast) sendDirective('question_toggle', round !== null ? round.toString() : null, question !== null ? question.toString() : null, isActive);
 
       }
 
       if (type === 'impossible') {
-        const impossibleRecord = await pb.collection('impossible_rounds').getFirstListItem(
-          `edition_id="${editionId}" && impossible_number=${round}`
+        const impossibleRecord = await pbElevated.collection('impossible_rounds').getFirstListItem(
+          pbElevated.filter('edition_id={:editionId} && impossible_number={:round}', { editionId, round })
         );
 
         recordId = impossibleRecord.id;
 
-        await pb.collection('impossible_rounds').update(recordId, { is_active: isActive });
+        await pbElevated.collection('impossible_rounds').update(recordId, { is_active: isActive });
 
         if (broadcast) sendDirective('question_toggle', "impossible", `${round?.toString()}`, isActive);
 
       }
 
       if (type === 'wager') {
-        const wagerRecord = await pb.collection('wager_rounds').getFirstListItem(
-          `edition_id="${editionId}"`,
+        const wagerRecord = await pbElevated.collection('wager_rounds').getFirstListItem(
+          pbElevated.filter('edition_id={:editionId}', { editionId }),
         );
 
         if (!wagerRecord) {
           throw new Error('Wager record not found.');
         }
         recordId = wagerRecord.id;
-        await pb.collection('wager_rounds').update(recordId, { is_active: isActive });
+        await pbElevated.collection('wager_rounds').update(recordId, { is_active: isActive });
         if (broadcast) sendDirective('question_toggle', null, null, isActive);
       }
 
       if (type === 'final') {
-        const finalRecord = await pb.collection('final_rounds').getFirstListItem(
-          `edition_id="${editionId}"`,
+        const finalRecord = await pbElevated.collection('final_rounds').getFirstListItem(
+          pbElevated.filter('edition_id={:editionId}', { editionId }),
         );
 
         if (!finalRecord) {
           throw new Error('Final record not found.');
         }
         recordId = finalRecord.id;
-        await pb.collection('final_rounds').update(recordId, { is_active: isActive });
+        await pbElevated.collection('final_rounds').update(recordId, { is_active: isActive });
         if (broadcast) sendDirective('question_toggle', null, null, isActive);
       }
 
       if (type === 'tiebreaker') {
-        const tiebreakerList = await pb.collection('tiebreakers').getFullList();
+        const tiebreakerList = await pbElevated.collection('tiebreakers').getFullList({
+          filter: pbElevated.filter('edition_id={:editionId}', { editionId }),
+        });
 
         if (tiebreakerList.length === 0) {
           console.warn('No tiebreaker records found.');
@@ -353,7 +364,7 @@ export default function Admin() {
 
         if (isActive) {
           // Deactivate all first (to be clean)
-          await Promise.all(tiebreakerList.map(t => pb.collection('tiebreakers').update(t.id, { is_active: false })));
+          await Promise.all(tiebreakerList.map(t => pbElevated.collection('tiebreakers').update(t.id, { is_active: false })));
 
           // Pick a random one
           const randomIndex = Math.floor(Math.random() * tiebreakerList.length);
@@ -361,11 +372,11 @@ export default function Admin() {
 
           console.log(`Activating random tiebreaker: ${randomTiebreaker.id} (Index: ${randomIndex})`);
 
-          await pb.collection('tiebreakers').update(randomTiebreaker.id, { is_active: true });
+          await pbElevated.collection('tiebreakers').update(randomTiebreaker.id, { is_active: true });
         } else {
           // Deactivate all
           console.log("Deactivating all tiebreakers.");
-          await Promise.all(tiebreakerList.map(t => pb.collection('tiebreakers').update(t.id, { is_active: false })));
+          await Promise.all(tiebreakerList.map(t => pbElevated.collection('tiebreakers').update(t.id, { is_active: false })));
         }
 
         if (broadcast) sendDirective('question_toggle', null, null, isActive);
@@ -646,24 +657,26 @@ export default function Admin() {
                   onPress={async () => {
                     if (confirm("Are you sure you want to FINISH IT? This will clear all team data for this edition.")) {
                       try {
+                        await elevateAuth(pbElevated);
+
                         // 1. Get winning team
-                        const edition = await pb.collection('editions').getOne(editionId!);
+                        const edition = await pbElevated.collection('editions').getOne(editionId!);
                         if (edition.winning_team_id) {
                           // 2. Add 1 to wins
-                          const winner = await pb.collection('teams').getOne(edition.winning_team_id);
-                          await pb.collection('teams').update(winner.id, {
+                          const winner = await pbElevated.collection('teams').getOne(edition.winning_team_id);
+                          await pbElevated.collection('teams').update(winner.id, {
                             wins: (winner.wins || 0) + 1
                           });
                           console.log(`Incremented wins for ${winner.team_name}`);
                         }
 
                         // 3. Reset all teams
-                        const allTeams = await pb.collection('teams').getFullList({
-                          filter: `current_edition = "${editionId}"`
+                        const allTeams = await pbElevated.collection('teams').getFullList({
+                          filter: pbElevated.filter('current_edition = {:editionId}', { editionId })
                         });
 
                         await Promise.all(allTeams.map(team => {
-                          return pb.collection('teams').update(team.id, {
+                          return pbElevated.collection('teams').update(team.id, {
                             banthashit_card: false,
                             current_edition: "",
                             wager: "0"

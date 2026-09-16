@@ -70,7 +70,8 @@ export default function TiebreakerTeamPage({ params }: { params: Promise<{ id: s
       const response = await fetch('/api/notify', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${pb.authStore.token}`,
         },
         body: JSON.stringify({ type, message, team })
       });
